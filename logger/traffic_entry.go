@@ -9,29 +9,29 @@ import (
 type TrafficTyp string
 
 const (
-	TrafficTypReq  TrafficTyp = "req_to"
-	TrafficTypResp TrafficTyp = "resp_from"
+	TrafficTypRecv TrafficTyp = "recv"
+	TrafficTypSend TrafficTyp = "send"
 )
 
 // Traffic is provided by user when logging
 type Traffic struct {
-	Typ  TrafficTyp    // Typ: type of traffic, access or request
+	Typ  TrafficTyp    // Typ: type of traffic, receive request or send request
 	Cmd  string        // Cmd: command
-	Code int           // Code: error code
-	Msg  string        // Msg: error message if you have
 	Cost time.Duration // Cost: elapse of processing
+	Code string        // Code: error code
+	Msg  string        // Msg: error message if you have
 	Req  any
 	Resp any
 }
 
-// TrafficReq is provided by user when logging
-type TrafficReq struct {
+// ReqEntity is provided by user when logging
+type ReqEntity struct {
 	Cmd string // Cmd: command
 	Req any
 }
 
-type TrafficResp struct {
-	Code int    // Code: error code
+type RespEntity struct {
+	Code string // Code: error code
 	Msg  string // Msg: error message if you have
 	Resp any
 }
@@ -39,20 +39,36 @@ type TrafficResp struct {
 type TrafficRec struct {
 	te        TrafficEntry
 	startTime time.Time
-	pairId    string
 	cmd       string
 }
 
-func newTrafficRec(te TrafficEntry, cmd, pairId string) *TrafficRec {
+func newTrafficRec(te TrafficEntry, cmd string) *TrafficRec {
 	return &TrafficRec{
 		te:        te,
 		startTime: time.Now(),
-		pairId:    pairId,
 		cmd:       cmd,
 	}
 }
 
-func (t *TrafficRec) End(resp *TrafficResp, fields Fields) {
+func (t *Traffic) headString(sep string) string {
+	if t == nil {
+		return ""
+	}
+
+	return strings.Join(append([]string{
+		ifThenFunc(t.Typ == "", func() string {
+			return defaultFieldOccupied
+		}, func() string {
+			return string(t.Typ)
+		}),
+		ifThen(t.Cmd == "", defaultFieldOccupied, t.Cmd),
+		fmt.Sprintf("%s", t.Cost),
+		t.Code,
+		t.Msg,
+	}), sep)
+}
+
+func (t *TrafficRec) End(resp *RespEntity, fields Fields) {
 	if t == nil || t.te == nil || resp == nil {
 		return
 	}
@@ -61,10 +77,8 @@ func (t *TrafficRec) End(resp *TrafficResp, fields Fields) {
 		fields = make(Fields)
 	}
 
-	fields[defaultPairFieldName] = t.pairId
-
 	t.te.DataWith(&Traffic{
-		Typ:  TrafficTypResp,
+		Typ:  TrafficTypSend,
 		Cmd:  t.cmd,
 		Code: resp.Code,
 		Msg:  resp.Msg,
@@ -89,7 +103,7 @@ type TrafficEntry interface {
 	// disable: true: disable policy, false: enable policy
 	WithPolicy(policy Policy) TrafficEntry
 
-	Start(req *TrafficReq, fields Fields) *TrafficRec
+	Start(req *ReqEntity, fields Fields) *TrafficRec
 }
 
 func copyFields(fields Fields) Fields {
@@ -101,32 +115,6 @@ func copyFields(fields Fields) Fields {
 		mapCopy[k] = v
 	}
 	return mapCopy
-}
-
-// convertToMessage converts a Traffic to a string
-func convertToMessage(tb *Traffic, separator string) string {
-	if tb == nil {
-		return ""
-	}
-	if tb.Typ == "" {
-		tb.Typ = defaultFieldOccupied
-	}
-	if tb.Msg == "" {
-		tb.Msg = defaultFieldOccupied
-	}
-	if tb.Cmd == "" {
-		tb.Cmd = defaultFieldOccupied
-	}
-
-	var reqTyp = tb.Typ == TrafficTypReq
-
-	return strings.Join(append([]string{
-		string(tb.Typ),
-		tb.Cmd,
-		ifThen(reqTyp, defaultFieldOccupied, fmt.Sprintf("%s", tb.Cost)).(string),
-		ifThen(reqTyp, defaultFieldOccupied, fmt.Sprintf("%d", tb.Code)).(string),
-		tb.Msg,
-	}), separator)
 }
 
 type emptyTrafficEntry struct{}
@@ -153,6 +141,6 @@ func (et *emptyTrafficEntry) WithPolicy(policy Policy) TrafficEntry {
 	return et
 }
 
-func (et *emptyTrafficEntry) Start(req *TrafficReq, fields Fields) *TrafficRec {
+func (et *emptyTrafficEntry) Start(req *ReqEntity, fields Fields) *TrafficRec {
 	return nil
 }

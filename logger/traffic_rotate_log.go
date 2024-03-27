@@ -8,43 +8,17 @@ import (
 )
 
 const (
-	defaultReqFieldName  = "request"
-	defaultRespFieldName = "response"
-	defaultPairFieldName = "__pair_id"
+	defaultReqFieldName  = "_request"
+	defaultRespFieldName = "_response"
 	defaultDataLevelName = "DATA"
 	defaultFieldOccupied = "-"
 )
 
 var (
-	// defaultTrafficLogConfig is used for defaultTrafficLogger below only
-	defaultTrafficLogConfig = TrafficLogConfig{}
-
 	// defaultTrafficLogger is the default dataLogger instance that should be used to log
-	// It's assigned a default value here for tests (which do not call log.ConfigureTrafficLog())
-	defaultTrafficLogger = newTrafficLogger(defaultTrafficLogConfig, os.Stdout)
+	// It's assigned a default value here for tests (which do not call log.ConfigureTraffic())
+	defaultTrafficLogger = newTrafficEntry(os.Stdout)
 )
-
-// TrafficLogConfig for traffic logging
-type TrafficLogConfig struct {
-
-	// FileLoggingEnabled makes the framework log to a file
-	// the fields below can be skipped if this value is false!
-	FileLoggingEnabled bool
-	// ConsoleLoggingEnabled makes the framework log to console
-	ConsoleLoggingEnabled bool
-	// LoggingDirectory to log to to when filelogging is enabled
-	LoggingDirectory string
-	// Filename is the name of the logfile which will be placed inside the directory
-	Filename string
-	// MaxSize the max size in MB of the logfile before it's rolled
-	MaxSize int
-	// MaxBackups the max number of rolled files to keep
-	MaxBackups int
-	// MaxAge the max age in days to keep a logfile
-	MaxAge int
-	// ConsoleStream
-	ConsoleStream *os.File
-}
 
 // Data Log a request
 func Data(tc *Traffic) {
@@ -72,7 +46,7 @@ func WithTrafficIgnores(ctx context.Context, ignores ...string) TrafficEntry {
 func TrafficEntryFromContext(ctx context.Context) TrafficEntry {
 	data := ctx.Value(trafficLogCtxKey)
 	if data == nil {
-		return defaultTrafficLogger.clone() // prevent the user from accidentally not setting the dataLogger
+		return defaultTrafficLogger
 	}
 	te, ok := data.(*LogTrafficEntry)
 	if !ok {
@@ -90,7 +64,7 @@ func WithTrafficEntry(ctx context.Context, te TrafficEntry) context.Context {
 }
 
 // StartTrafficRec starts a new traffic log entry
-func StartTrafficRec(ctx context.Context, req *TrafficReq, fields Fields) *TrafficRec {
+func StartTrafficRec(ctx context.Context, req *ReqEntity, fields Fields) *TrafficRec {
 	return TrafficEntryFromContext(ctx).Start(req, fields)
 }
 
@@ -103,18 +77,29 @@ func CopyTrafficToContext(srcCtx context.Context, dstCtx context.Context) contex
 	return dstCtx
 }
 
-// ConfigureTrafficLog sets up traffic logging
-func ConfigureTrafficLog(config TrafficLogConfig) {
-	var writers []zapcore.WriteSyncer
+// ConfigureTrafficWithOpts sets up traffic logging with options
+func ConfigureTrafficWithOpts(opts ...TrafficConfigOption) {
+	config := defaultTrafficConfig
+	for _, opt := range opts {
+		opt(&config)
+	}
+	ConfigureTraffic(config)
+}
 
-	if config.FileLoggingEnabled {
-		trafficLog := newRollingFile(config.LoggingDirectory, config.Filename, config.MaxSize, config.MaxAge, config.MaxBackups)
+// ConfigureTraffic sets up traffic logging
+func ConfigureTraffic(config TrafficConfig) {
+	var (
+		writers []zapcore.WriteSyncer
+	)
+
+	if config.FileEnabled {
+		trafficLog := newRollingFile(config.Directory, config.Filename, config.MaxSize, config.MaxAge, config.MaxBackups)
 		writers = append(writers, trafficLog)
 	} else {
-		config.ConsoleLoggingEnabled = true
+		config.ConsoleEnabled = true
 	}
 
-	if config.ConsoleLoggingEnabled {
+	if config.ConsoleEnabled {
 		if config.ConsoleStream != nil {
 			writers = append(writers, config.ConsoleStream)
 		} else {
@@ -122,10 +107,42 @@ func ConfigureTrafficLog(config TrafficLogConfig) {
 		}
 	}
 
-	defaultTrafficLogger = newTrafficLogger(config, zapcore.NewMultiWriteSyncer(writers...))
+	defaultTrafficLogger = newTrafficEntry(zapcore.NewMultiWriteSyncer(writers...))
 }
 
-func newTrafficLogger(config TrafficLogConfig, logOutput zapcore.WriteSyncer) *LogTrafficEntry {
+// NewTrafficEntryWithOpts creates a new traffic entry with options
+func NewTrafficEntryWithOpts(opts ...TrafficConfigOption) TrafficEntry {
+	config := defaultTrafficConfig
+	for _, opt := range opts {
+		opt(&config)
+	}
+	return NewTrafficEntry(config)
+}
+
+func NewTrafficEntry(config TrafficConfig) TrafficEntry {
+	var (
+		writers []zapcore.WriteSyncer
+	)
+
+	if config.FileEnabled {
+		trafficLog := newRollingFile(config.Directory, config.Filename, config.MaxSize, config.MaxAge, config.MaxBackups)
+		writers = append(writers, trafficLog)
+	} else {
+		config.ConsoleEnabled = true
+	}
+
+	if config.ConsoleEnabled {
+		if config.ConsoleStream != nil {
+			writers = append(writers, config.ConsoleStream)
+		} else {
+			writers = append(writers, os.Stdout)
+		}
+	}
+
+	return newTrafficEntry(zapcore.NewMultiWriteSyncer(writers...))
+}
+
+func newTrafficEntry(logOutput zapcore.WriteSyncer) TrafficEntry {
 	encCfg := zapcore.EncoderConfig{
 		TimeKey:          "@t",
 		MessageKey:       "msg",

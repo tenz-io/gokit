@@ -3,7 +3,6 @@ module github.com/tenz-io/trackingo/logger
 go 1.20
 
 require (
-	github.com/google/uuid v1.6.0
 	github.com/smarty/assertions v1.15.1
 	go.uber.org/zap v1.27.0
 	golang.org/x/time v0.5.0

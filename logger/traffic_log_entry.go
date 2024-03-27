@@ -1,7 +1,6 @@
 package logger
 
 import (
-	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"strings"
 )
@@ -14,23 +13,21 @@ type LogTrafficEntry struct {
 	allow      bool // for policy use, init true
 }
 
-func (le *LogTrafficEntry) Start(req *TrafficReq, fields Fields) *TrafficRec {
+func (le *LogTrafficEntry) Start(req *ReqEntity, fields Fields) *TrafficRec {
 	if !le.validate() || req == nil {
 		return nil
 	}
 
-	pairId := strings.ReplaceAll(uuid.NewString(), "-", "")
 	if fields == nil {
 		fields = make(Fields)
 	}
-	fields[defaultPairFieldName] = pairId
 
 	le.DataWith(&Traffic{
-		Typ: TrafficTypReq,
+		Typ: TrafficTypRecv,
 		Cmd: req.Cmd,
 		Req: req.Req,
 	}, fields)
-	return newTrafficRec(le, req.Cmd, pairId)
+	return newTrafficRec(le, req.Cmd)
 }
 
 // Data Log a request
@@ -56,7 +53,7 @@ func (le *LogTrafficEntry) DataWith(tc *Traffic, fields Fields) {
 	// async log
 	go func() {
 		le.dataLogger.Info(
-			le.withMeta(convertToMessage(tc, le.sep)),
+			le.withHead(tc.headString(le.sep)),
 			toZapFields(newFields, le.ignores...)...,
 		)
 	}()
@@ -120,14 +117,14 @@ func (le *LogTrafficEntry) WithPolicy(policy Policy) TrafficEntry {
 	}
 }
 
-func (le *LogTrafficEntry) withMeta(msg string) string {
+func (le *LogTrafficEntry) withHead(msg string) string {
 	if !le.validate() {
 		return msg
 	}
 
 	infos := append([]string{defaultDataLevelName})
 	if le.requestId == "" {
-		infos = append(infos, defaultTraceOccupy)
+		infos = append(infos, defaultLogEmpty)
 	} else {
 		infos = append(infos, le.requestId)
 	}

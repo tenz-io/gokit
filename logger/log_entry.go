@@ -7,10 +7,9 @@ import (
 )
 
 const (
-	defaultFieldName    = "-"   // defaultFieldName of fields of the log record
+	defaultLogEmpty     = "-"   // defaultLogEmpty of fields of the log record
 	defaultErrFieldName = "err" // defaultErrFieldName of error field of the log record
 	defaultSeparator    = "|"   // defaultSeparator of fields of the log record
-	defaultTraceOccupy  = "-:-:-"
 )
 
 type LogEntry struct {
@@ -144,7 +143,7 @@ func (le *LogEntry) ErrorWith(msg string, fields Fields) {
 
 // With binds a default field to a log message
 func (le *LogEntry) With(data any) Entry {
-	return le.WithField(defaultFieldName, data)
+	return le.WithField(defaultLogEmpty, data)
 }
 
 // WithError binds a default error field to a log message
@@ -196,13 +195,13 @@ func (le *LogEntry) Enabled(level Level) bool {
 func (le *LogEntry) withTrace(msg string) string {
 	if le == nil {
 		return strings.Join(append([]string{
-			defaultTraceOccupy,
+			defaultLogEmpty,
 			msg,
 		}), defaultSeparator)
 	}
 	if le.requestId == "" {
 		return strings.Join(append([]string{
-			defaultTraceOccupy,
+			defaultLogEmpty,
 			msg,
 		}), defaultSeparator)
 	}

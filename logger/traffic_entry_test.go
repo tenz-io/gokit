@@ -1,42 +1,57 @@
 package logger
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
-func Test_convertToMessage(t *testing.T) {
+func TestTraffic_HeadString(t1 *testing.T) {
+	type fields struct {
+		Typ  TrafficTyp
+		Cmd  string
+		Cost time.Duration
+		Code string
+		Msg  string
+		Req  any
+		Resp any
+	}
 	type args struct {
-		tb        *Traffic
-		separator string
+		sep string
 	}
 	tests := []struct {
-		name string
-		args args
-		want string
+		name   string
+		fields fields
+		args   args
+		want   string
 	}{
 		{
-			name: "when tb is nil then return empty string",
-			args: args{
-				tb:        nil,
-				separator: "|",
+			name: "when tb not nil then return string",
+			fields: fields{
+				Typ:  TrafficTypRecv,
+				Cmd:  "test_command",
+				Code: "200",
+				Cost: 15 * time.Millisecond,
+				Msg:  "test message",
 			},
-			want: "",
-		},
-		{
-			name: "when tb is not nil then return string",
 			args: args{
-				tb: &Traffic{
-					Typ: TrafficTypReq,
-					Cmd: "test_command",
-					Req: "request body",
-				},
-				separator: "|",
+				sep: "|",
 			},
-			want: "req_to|test_command|-|-|-",
+			want: `recv|test_command|15ms|200|test message`,
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := convertToMessage(tt.args.tb, tt.args.separator); got != tt.want {
-				t.Errorf("convertToMessage() = %v, want %v", got, tt.want)
+		t1.Run(tt.name, func(t1 *testing.T) {
+			t := &Traffic{
+				Typ:  tt.fields.Typ,
+				Cmd:  tt.fields.Cmd,
+				Cost: tt.fields.Cost,
+				Code: tt.fields.Code,
+				Msg:  tt.fields.Msg,
+				Req:  tt.fields.Req,
+				Resp: tt.fields.Resp,
+			}
+			if got := t.headString(tt.args.sep); got != tt.want {
+				t1.Errorf("headString() = %v, want %v", got, tt.want)
 			}
 		})
 	}

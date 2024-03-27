@@ -11,10 +11,6 @@ import (
 	"strings"
 )
 
-const (
-	maxWholeSize = 4096
-)
-
 type loggerCtxKeyType string
 
 const (
@@ -27,46 +23,10 @@ var (
 	defaultLevel = InfoLevel // default log level
 )
 
-// Config for logging
-type Config struct {
-	// LoggingLevel set log defaultLevel
-	LoggingLevel Level
-	// FileLoggingEnabled makes the framework log to a file
-	// the fields below can be skipped if this value is false!
-	FileLoggingEnabled bool
-	// ConsoleLoggingEnabled makes the framework log to console
-	ConsoleLoggingEnabled bool
-	// CallerEnabled makes the caller log to a file
-	CallerEnabled bool
-	// CallerSkip increases the number of callers skipped by caller
-	CallerSkip int
-	// Directory to log to to when filelogging is enabled
-	Directory string
-	// Filename is the name of the logfile which will be placed inside the directory
-	Filename string
-	// MaxSize the max size in MB of the logfile before it's rolled
-	MaxSize int
-	// MaxBackups the max number of rolled files to keep
-	MaxBackups int
-	// MaxAge the max age in days to keep a logfile
-	MaxAge int
-	// ConsoleInfoStream
-	ConsoleInfoStream *os.File
-	// ConsoleErrorStream
-	ConsoleErrorStream *os.File
-	// ConsoleDebugStream
-	ConsoleDebugStream *os.File
-}
-
-// Configure configures the default logger
-var defaultConfig = Config{
-	LoggingLevel:  InfoLevel,
-	CallerEnabled: false,
-	CallerSkip:    1,
-}
-
-// defaultLogger is the default logger
-var defaultLogger = newEntry(defaultConfig, os.Stdout, os.Stderr, os.Stdout, true)
+var (
+	// defaultLogger is the default logger
+	defaultLogger = newEntry(defaultConfig, os.Stdout, os.Stderr, os.Stdout, true)
+)
 
 // Debug Log a message at the debug defaultLevel
 func Debug(msg string) {
@@ -200,7 +160,7 @@ func WithField(k string, v any) Entry {
 
 // With binds a default field to a log message
 func With(data any) Entry {
-	return WithField(defaultFieldName, data)
+	return WithField(defaultLogEmpty, data)
 }
 
 // WithError binds an error to a log message
@@ -216,13 +176,13 @@ func WithTracing(requestId string) Entry {
 func withTrace(msg string) string {
 	if defaultLogger == nil {
 		return strings.Join(append([]string{
-			defaultTraceOccupy,
+			defaultLogEmpty,
 			msg,
 		}), defaultSeparator)
 	}
 	if defaultLogger.requestId == "" {
 		return strings.Join(append([]string{
-			defaultTraceOccupy,
+			defaultLogEmpty,
 			msg,
 		}), defaultSeparator)
 	}
@@ -232,34 +192,51 @@ func withTrace(msg string) string {
 	}), defaultSeparator)
 }
 
+func ConfigureWithOpts(opts ...ConfigOption) {
+	config := defaultConfig
+	for _, opt := range opts {
+		opt(&config)
+	}
+	Configure(config)
+}
+
 // Configure sets up the defaultLogger
 func Configure(config Config) {
-	var infoWriters []zapcore.WriteSyncer
-	var errWriters []zapcore.WriteSyncer
-	var debugWriters []zapcore.WriteSyncer
+	var (
+		errWriters   []zapcore.WriteSyncer
+		infoWriters  []zapcore.WriteSyncer
+		debugWriters []zapcore.WriteSyncer
+	)
 
-	if config.FileLoggingEnabled {
-		infoLog := newRollingFile(config.Directory, getNameByLogLevel(config.Filename, InfoLevel), config.MaxSize, config.MaxAge, config.MaxBackups)
-		errLog := newRollingFile(config.Directory, getNameByLogLevel(config.Filename, ErrorLevel), config.MaxSize, config.MaxAge, config.MaxBackups)
-		debugLog := newRollingFile(config.Directory, getNameByLogLevel(config.Filename, DebugLevel), config.MaxSize, config.MaxAge, config.MaxBackups)
-		infoWriters = append(infoWriters, infoLog)
+	if config.FileEnabled {
+		errLog := newRollingFile(config.Directory, getNameByLogLevel(config.Filename, ErrorLevel),
+			config.MaxSize, config.MaxAge, config.MaxBackups)
 		errWriters = append(errWriters, errLog)
+
+		infoLog := newRollingFile(config.Directory, getNameByLogLevel(config.Filename, InfoLevel),
+			config.MaxSize, config.MaxAge, config.MaxBackups)
+		infoWriters = append(infoWriters, infoLog)
+
+		debugLog := newRollingFile(config.Directory, getNameByLogLevel(config.Filename, DebugLevel),
+			config.MaxSize, config.MaxAge, config.MaxBackups)
 		debugWriters = append(debugWriters, debugLog)
 	} else {
-		config.ConsoleLoggingEnabled = true
+		config.ConsoleEnabled = true
 	}
 
-	if config.ConsoleLoggingEnabled {
-		if config.ConsoleInfoStream != nil {
-			infoWriters = append(infoWriters, config.ConsoleInfoStream)
-		} else {
-			infoWriters = append(infoWriters, os.Stdout)
-		}
+	if config.ConsoleEnabled {
 		if config.ConsoleErrorStream != nil {
 			errWriters = append(errWriters, config.ConsoleErrorStream)
 		} else {
 			errWriters = append(errWriters, os.Stderr)
 		}
+
+		if config.ConsoleInfoStream != nil {
+			infoWriters = append(infoWriters, config.ConsoleInfoStream)
+		} else {
+			infoWriters = append(infoWriters, os.Stdout)
+		}
+
 		if config.ConsoleDebugStream != nil {
 			debugWriters = append(debugWriters, config.ConsoleDebugStream)
 		} else {
@@ -281,23 +258,39 @@ func Configure(config Config) {
 
 }
 
+// NewEntryWithOpts create a new LogEntry with options
+func NewEntryWithOpts(opts ...ConfigOption) Entry {
+	config := defaultConfig
+	for _, opt := range opts {
+		opt(&config)
+	}
+	return NewEntry(config)
+}
+
 // NewEntry create a new LogEntry instead of override defaultzaplogger
 func NewEntry(config Config) Entry {
-	var infoWriters []zapcore.WriteSyncer
-	var errWriters []zapcore.WriteSyncer
-	var debugWriters []zapcore.WriteSyncer
+	var (
+		errWriters   []zapcore.WriteSyncer
+		infoWriters  []zapcore.WriteSyncer
+		debugWriters []zapcore.WriteSyncer
+	)
 
-	if config.FileLoggingEnabled {
-		infoLog := newRollingFile(config.Directory, getNameByLogLevel(config.Filename, InfoLevel), config.MaxSize, config.MaxAge, config.MaxBackups)
-		errLog := newRollingFile(config.Directory, getNameByLogLevel(config.Filename, ErrorLevel), config.MaxSize, config.MaxAge, config.MaxBackups)
-		debugLog := newRollingFile(config.Directory, getNameByLogLevel(config.Filename, DebugLevel), config.MaxSize, config.MaxAge, config.MaxBackups)
-		infoWriters = append(infoWriters, infoLog)
+	if config.FileEnabled {
+		errLog := newRollingFile(config.Directory, getNameByLogLevel(config.Filename, ErrorLevel),
+			config.MaxSize, config.MaxAge, config.MaxBackups)
 		errWriters = append(errWriters, errLog)
+
+		infoLog := newRollingFile(config.Directory, getNameByLogLevel(config.Filename, InfoLevel),
+			config.MaxSize, config.MaxAge, config.MaxBackups)
+		infoWriters = append(infoWriters, infoLog)
+
+		debugLog := newRollingFile(config.Directory, getNameByLogLevel(config.Filename, DebugLevel),
+			config.MaxSize, config.MaxAge, config.MaxBackups)
 		debugWriters = append(debugWriters, debugLog)
 	} else {
-		config.ConsoleLoggingEnabled = true
-		infoWriters = append(infoWriters, os.Stdout)
+		config.ConsoleEnabled = true
 		errWriters = append(errWriters, os.Stderr)
+		infoWriters = append(infoWriters, os.Stdout)
 		debugWriters = append(debugWriters, os.Stdout)
 	}
 
@@ -388,10 +381,10 @@ func newEntry(config Config, infoOutput, errOutput, debugOutput zapcore.WriteSyn
 	encoder := zapcore.NewConsoleEncoder(encCfg)
 
 	// level setting
-	localLoglv := zap.NewAtomicLevelAt(zapcore.Level(config.LoggingLevel))
+	localLoglv := zap.NewAtomicLevelAt(zapcore.Level(config.LoggerLevel))
 	if isDefaultLogger {
 		loglv = localLoglv
-		defaultLevel = config.LoggingLevel
+		defaultLevel = config.LoggerLevel
 	}
 
 	if config.CallerEnabled {
