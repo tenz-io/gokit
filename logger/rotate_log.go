@@ -224,39 +224,36 @@ func NewEntry(config Config) Entry {
 	)
 
 	if config.FileEnabled {
-		errLog := newRollingFile(config.Directory, getNameByLogLevel(config.Filename, ErrorLevel),
+		errRolling := newRollingFile(config.Directory, getNameByLogLevel(config.Filename, ErrorLevel),
 			config.MaxSize, config.MaxAge, config.MaxBackups)
-		errWriters = append(errWriters, errLog)
+		errWriters = append(errWriters, errRolling)
 
-		infoLog := newRollingFile(config.Directory, getNameByLogLevel(config.Filename, InfoLevel),
+		infoRolling := newRollingFile(config.Directory, getNameByLogLevel(config.Filename, InfoLevel),
 			config.MaxSize, config.MaxAge, config.MaxBackups)
-		infoWriters = append(infoWriters, infoLog)
+		infoWriters = append(infoWriters, infoRolling)
 
-		debugLog := newRollingFile(config.Directory, getNameByLogLevel(config.Filename, DebugLevel),
+		debugRolling := newRollingFile(config.Directory, getNameByLogLevel(config.Filename, DebugLevel),
 			config.MaxSize, config.MaxAge, config.MaxBackups)
-		debugWriters = append(debugWriters, debugLog)
+		debugWriters = append(debugWriters, debugRolling)
 	} else {
 		// if file logging is disabled, enable console logging
 		config.ConsoleEnabled = true
+		errWriters = append(errWriters, os.Stderr)
+		infoWriters = append(infoWriters, os.Stdout)
+		debugWriters = append(debugWriters, os.Stdout)
 	}
 
 	if config.ConsoleEnabled {
 		if config.ConsoleErrorStream != nil {
 			errWriters = append(errWriters, config.ConsoleErrorStream)
-		} else {
-			errWriters = append(errWriters, os.Stderr)
 		}
 
 		if config.ConsoleInfoStream != nil {
 			infoWriters = append(infoWriters, config.ConsoleInfoStream)
-		} else {
-			infoWriters = append(infoWriters, os.Stdout)
 		}
 
 		if config.ConsoleDebugStream != nil {
 			debugWriters = append(debugWriters, config.ConsoleDebugStream)
-		} else {
-			debugWriters = append(debugWriters, os.Stdout)
 		}
 	}
 

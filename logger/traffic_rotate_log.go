@@ -106,17 +106,17 @@ func NewTrafficEntry(config TrafficConfig) TrafficEntry {
 	)
 
 	if config.FileEnabled {
-		trafficLog := newRollingFile(config.Directory, config.Filename, config.MaxSize, config.MaxAge, config.MaxBackups)
-		writers = append(writers, trafficLog)
+		trafficRolling := newRollingFile(config.Directory, config.Filename,
+			config.MaxSize, config.MaxAge, config.MaxBackups)
+		writers = append(writers, trafficRolling)
 	} else {
 		config.ConsoleEnabled = true
+		writers = append(writers, os.Stdout)
 	}
 
 	if config.ConsoleEnabled {
 		if config.ConsoleStream != nil {
 			writers = append(writers, config.ConsoleStream)
-		} else {
-			writers = append(writers, os.Stdout)
 		}
 	}
 
