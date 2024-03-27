@@ -33,7 +33,7 @@ func Debug(msg string) {
 	if !Enabled(DebugLevel) {
 		return
 	}
-	msg = withTrace(msg)
+	msg = withHead(msg)
 	defaultLogger.infoLogger.Debug(msg)
 }
 
@@ -41,7 +41,7 @@ func Debugf(format string, args ...any) {
 	if !Enabled(DebugLevel) {
 		return
 	}
-	msg := withTrace(fmt.Sprintf(format, args...))
+	msg := withHead(fmt.Sprintf(format, args...))
 	defaultLogger.debugLogger.Debug(msg)
 }
 
@@ -50,7 +50,7 @@ func DebugWith(msg string, fields Fields) {
 	if !Enabled(DebugLevel) {
 		return
 	}
-	msg = withTrace(msg)
+	msg = withHead(msg)
 	if len(fields) > 0 {
 		defaultLogger.infoLogger.Debug(msg, toZapFields(fields)...)
 	} else {
@@ -63,7 +63,7 @@ func Info(msg string) {
 	if !Enabled(InfoLevel) {
 		return
 	}
-	msg = withTrace(msg)
+	msg = withHead(msg)
 	defaultLogger.infoLogger.Info(msg)
 }
 
@@ -71,7 +71,7 @@ func Infof(format string, args ...any) {
 	if !Enabled(InfoLevel) {
 		return
 	}
-	msg := withTrace(fmt.Sprintf(format, args...))
+	msg := withHead(fmt.Sprintf(format, args...))
 	defaultLogger.infoLogger.Info(msg)
 }
 
@@ -80,7 +80,7 @@ func InfoWith(msg string, fields Fields) {
 	if !Enabled(InfoLevel) {
 		return
 	}
-	msg = withTrace(msg)
+	msg = withHead(msg)
 	if len(fields) > 0 {
 		defaultLogger.infoLogger.Info(msg, toZapFields(fields)...)
 	} else {
@@ -93,7 +93,7 @@ func Warn(msg string) {
 	if !Enabled(WarnLevel) {
 		return
 	}
-	msg = withTrace(msg)
+	msg = withHead(msg)
 	defaultLogger.errLogger.Warn(msg)
 }
 
@@ -101,7 +101,7 @@ func Warnf(format string, args ...any) {
 	if !Enabled(WarnLevel) {
 		return
 	}
-	msg := withTrace(fmt.Sprintf(format, args...))
+	msg := withHead(fmt.Sprintf(format, args...))
 	defaultLogger.errLogger.Warn(msg)
 }
 
@@ -110,7 +110,7 @@ func WarnWith(msg string, fields Fields) {
 	if !Enabled(WarnLevel) {
 		return
 	}
-	msg = withTrace(msg)
+	msg = withHead(msg)
 	if len(fields) > 0 {
 		defaultLogger.errLogger.Warn(msg, toZapFields(fields)...)
 	} else {
@@ -123,7 +123,7 @@ func Error(msg string) {
 	if !Enabled(ErrorLevel) {
 		return
 	}
-	msg = withTrace(msg)
+	msg = withHead(msg)
 	defaultLogger.errLogger.Error(msg)
 }
 
@@ -131,7 +131,7 @@ func Errorf(format string, args ...any) {
 	if !Enabled(ErrorLevel) {
 		return
 	}
-	msg := withTrace(fmt.Sprintf(format, args...))
+	msg := withHead(fmt.Sprintf(format, args...))
 	defaultLogger.errLogger.Error(msg)
 }
 
@@ -140,7 +140,7 @@ func ErrorWith(msg string, fields Fields) {
 	if !Enabled(ErrorLevel) {
 		return
 	}
-	msg = withTrace(msg)
+	msg = withHead(msg)
 	if len(fields) > 0 {
 		defaultLogger.errLogger.Error(msg, toZapFields(fields)...)
 	} else {
@@ -173,7 +173,7 @@ func WithTracing(requestId string) Entry {
 	return defaultLogger.WithTracing(requestId)
 }
 
-func withTrace(msg string) string {
+func withHead(msg string) string {
 	if defaultLogger == nil {
 		return strings.Join(append([]string{
 			defaultLogEmpty,
@@ -186,6 +186,7 @@ func withTrace(msg string) string {
 			msg,
 		}), defaultSeparator)
 	}
+
 	return strings.Join(append([]string{
 		defaultLogger.requestId,
 		msg,
@@ -202,60 +203,7 @@ func ConfigureWithOpts(opts ...ConfigOption) {
 
 // Configure sets up the defaultLogger
 func Configure(config Config) {
-	var (
-		errWriters   []zapcore.WriteSyncer
-		infoWriters  []zapcore.WriteSyncer
-		debugWriters []zapcore.WriteSyncer
-	)
-
-	if config.FileEnabled {
-		errLog := newRollingFile(config.Directory, getNameByLogLevel(config.Filename, ErrorLevel),
-			config.MaxSize, config.MaxAge, config.MaxBackups)
-		errWriters = append(errWriters, errLog)
-
-		infoLog := newRollingFile(config.Directory, getNameByLogLevel(config.Filename, InfoLevel),
-			config.MaxSize, config.MaxAge, config.MaxBackups)
-		infoWriters = append(infoWriters, infoLog)
-
-		debugLog := newRollingFile(config.Directory, getNameByLogLevel(config.Filename, DebugLevel),
-			config.MaxSize, config.MaxAge, config.MaxBackups)
-		debugWriters = append(debugWriters, debugLog)
-	} else {
-		config.ConsoleEnabled = true
-	}
-
-	if config.ConsoleEnabled {
-		if config.ConsoleErrorStream != nil {
-			errWriters = append(errWriters, config.ConsoleErrorStream)
-		} else {
-			errWriters = append(errWriters, os.Stderr)
-		}
-
-		if config.ConsoleInfoStream != nil {
-			infoWriters = append(infoWriters, config.ConsoleInfoStream)
-		} else {
-			infoWriters = append(infoWriters, os.Stdout)
-		}
-
-		if config.ConsoleDebugStream != nil {
-			debugWriters = append(debugWriters, config.ConsoleDebugStream)
-		} else {
-			debugWriters = append(debugWriters, os.Stdout)
-		}
-	}
-
-	defaultLogger = newEntry(
-		config,
-		zapcore.NewMultiWriteSyncer(infoWriters...),
-		zapcore.NewMultiWriteSyncer(errWriters...),
-		zapcore.NewMultiWriteSyncer(debugWriters...),
-		true,
-	)
-
-	declareLogger(config, InfoWith)
-	declareLogger(config, ErrorWith)
-	declareLogger(config, DebugWith)
-
+	defaultLogger = NewEntry(config).(*LogEntry)
 }
 
 // NewEntryWithOpts create a new LogEntry with options
@@ -288,10 +236,28 @@ func NewEntry(config Config) Entry {
 			config.MaxSize, config.MaxAge, config.MaxBackups)
 		debugWriters = append(debugWriters, debugLog)
 	} else {
+		// if file logging is disabled, enable console logging
 		config.ConsoleEnabled = true
-		errWriters = append(errWriters, os.Stderr)
-		infoWriters = append(infoWriters, os.Stdout)
-		debugWriters = append(debugWriters, os.Stdout)
+	}
+
+	if config.ConsoleEnabled {
+		if config.ConsoleErrorStream != nil {
+			errWriters = append(errWriters, config.ConsoleErrorStream)
+		} else {
+			errWriters = append(errWriters, os.Stderr)
+		}
+
+		if config.ConsoleInfoStream != nil {
+			infoWriters = append(infoWriters, config.ConsoleInfoStream)
+		} else {
+			infoWriters = append(infoWriters, os.Stdout)
+		}
+
+		if config.ConsoleDebugStream != nil {
+			debugWriters = append(debugWriters, config.ConsoleDebugStream)
+		} else {
+			debugWriters = append(debugWriters, os.Stdout)
+		}
 	}
 
 	logEntry := newEntry(
@@ -371,7 +337,7 @@ func newEntry(config Config, infoOutput, errOutput, debugOutput zapcore.WriteSyn
 		CallerKey:        "caller",
 		MessageKey:       "msg",
 		StacktraceKey:    "stacktrace",
-		ConsoleSeparator: defaultSeparator,
+		ConsoleSeparator: config.Separator,
 		EncodeDuration:   zapcore.NanosDurationEncoder,
 		EncodeCaller:     zapcore.ShortCallerEncoder,
 		EncodeLevel:      zapcore.CapitalLevelEncoder,

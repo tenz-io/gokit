@@ -9,6 +9,7 @@ var defaultConfig = Config{
 	LoggerLevel:   InfoLevel,
 	CallerEnabled: false,
 	CallerSkip:    1,
+	Separator:     defaultSeparator,
 	Directory:     "log",
 	Filename:      "",
 	MaxSize:       100,
@@ -25,6 +26,8 @@ type Config struct {
 	FileEnabled bool
 	// ConsoleEnabled makes the framework log to console
 	ConsoleEnabled bool
+	// Separator is the separator for log messages
+	Separator string
 	// CallerEnabled makes the caller log to a file
 	CallerEnabled bool
 	// CallerSkip increases the number of callers skipped by caller
@@ -53,6 +56,12 @@ type ConfigOption func(*Config)
 func WithLoggerLevel(level Level) ConfigOption {
 	return func(c *Config) {
 		c.LoggerLevel = level
+	}
+}
+
+func WithSeparator(separator string) ConfigOption {
+	return func(c *Config) {
+		c.Separator = separator
 	}
 }
 

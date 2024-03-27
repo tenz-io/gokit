@@ -77,7 +77,7 @@ func CopyTrafficToContext(srcCtx context.Context, dstCtx context.Context) contex
 	return dstCtx
 }
 
-// ConfigureTrafficWithOpts sets up traffic logging with options
+// ConfigureTrafficWithOpts sets up traffic logging with options globally
 func ConfigureTrafficWithOpts(opts ...TrafficConfigOption) {
 	config := defaultTrafficConfig
 	for _, opt := range opts {
@@ -86,28 +86,9 @@ func ConfigureTrafficWithOpts(opts ...TrafficConfigOption) {
 	ConfigureTraffic(config)
 }
 
-// ConfigureTraffic sets up traffic logging
+// ConfigureTraffic sets up traffic logging globally
 func ConfigureTraffic(config TrafficConfig) {
-	var (
-		writers []zapcore.WriteSyncer
-	)
-
-	if config.FileEnabled {
-		trafficLog := newRollingFile(config.Directory, config.Filename, config.MaxSize, config.MaxAge, config.MaxBackups)
-		writers = append(writers, trafficLog)
-	} else {
-		config.ConsoleEnabled = true
-	}
-
-	if config.ConsoleEnabled {
-		if config.ConsoleStream != nil {
-			writers = append(writers, config.ConsoleStream)
-		} else {
-			writers = append(writers, os.Stdout)
-		}
-	}
-
-	defaultTrafficLogger = newTrafficEntry(zapcore.NewMultiWriteSyncer(writers...))
+	defaultTrafficLogger = NewTrafficEntry(config)
 }
 
 // NewTrafficEntryWithOpts creates a new traffic entry with options

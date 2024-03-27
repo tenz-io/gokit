@@ -8,9 +8,13 @@ import (
 
 func main() {
 	// log
+	logger.Debugf("before set up log success with debug level")
+	logger.Infof("before set up log success with info level")
+
 	logger.ConfigureWithOpts(
 		logger.WithConsoleEnabled(true),
 		logger.WithLoggerLevel(logger.DebugLevel),
+		logger.WithCallerEnabled(true),
 	)
 
 	logger.Debugf("set up log success")
@@ -24,6 +28,17 @@ func main() {
 
 	/////////////////////////
 	// traffic log
+	logger.Data(
+		&logger.Traffic{
+			Typ:  logger.TrafficTypRecv,
+			Cmd:  "test_command",
+			Cost: 30 * time.Millisecond,
+			Code: "200",
+			Msg:  "before test message",
+			Req:  "test request",
+			Resp: "test response",
+		})
+
 	logger.ConfigureTrafficWithOpts(
 		logger.WithTrafficConsoleEnabled(true),
 	)

@@ -49,7 +49,7 @@ func (le *LogEntry) Debug(msg string) {
 		return
 	}
 
-	le.debugLogger.Debug(le.withTrace(msg))
+	le.debugLogger.Debug(le.withHead(msg))
 }
 
 // Debugf logs a message at DebugLevel.
@@ -58,7 +58,7 @@ func (le *LogEntry) Debugf(format string, args ...any) {
 		return
 	}
 
-	le.debugLogger.Debug(le.withTrace(fmt.Sprintf(format, args...)))
+	le.debugLogger.Debug(le.withHead(fmt.Sprintf(format, args...)))
 }
 
 // DebugWith logs a message with fields at DebugLevel.
@@ -66,7 +66,7 @@ func (le *LogEntry) DebugWith(msg string, fields Fields) {
 	if !le.Enabled(DebugLevel) {
 		return
 	}
-	le.debugLogger.Debug(le.withTrace(msg), toZapFields(fields)...)
+	le.debugLogger.Debug(le.withHead(msg), toZapFields(fields)...)
 }
 
 // Info logs a message at InfoLevel.
@@ -74,7 +74,7 @@ func (le *LogEntry) Info(msg string) {
 	if !le.Enabled(InfoLevel) {
 		return
 	}
-	le.infoLogger.Info(le.withTrace(msg))
+	le.infoLogger.Info(le.withHead(msg))
 }
 
 func (le *LogEntry) Infof(format string, args ...any) {
@@ -82,7 +82,7 @@ func (le *LogEntry) Infof(format string, args ...any) {
 		return
 	}
 
-	le.infoLogger.Info(le.withTrace(fmt.Sprintf(format, args...)))
+	le.infoLogger.Info(le.withHead(fmt.Sprintf(format, args...)))
 }
 
 // InfoWith logs a message with fields at InfoLevel.
@@ -90,7 +90,7 @@ func (le *LogEntry) InfoWith(msg string, fields Fields) {
 	if !le.Enabled(InfoLevel) {
 		return
 	}
-	le.infoLogger.Info(le.withTrace(msg), toZapFields(fields)...)
+	le.infoLogger.Info(le.withHead(msg), toZapFields(fields)...)
 }
 
 // Warn logs a message at WarnLevel.
@@ -98,7 +98,7 @@ func (le *LogEntry) Warn(msg string) {
 	if !le.Enabled(WarnLevel) {
 		return
 	}
-	le.errLogger.Warn(le.withTrace(msg))
+	le.errLogger.Warn(le.withHead(msg))
 }
 
 func (le *LogEntry) Warnf(format string, args ...any) {
@@ -106,7 +106,7 @@ func (le *LogEntry) Warnf(format string, args ...any) {
 		return
 	}
 
-	le.errLogger.Warn(le.withTrace(fmt.Sprintf(format, args...)))
+	le.errLogger.Warn(le.withHead(fmt.Sprintf(format, args...)))
 }
 
 // WarnWith logs a message with fields at WarnLevel.
@@ -114,7 +114,7 @@ func (le *LogEntry) WarnWith(msg string, fields Fields) {
 	if !le.Enabled(WarnLevel) {
 		return
 	}
-	le.errLogger.Warn(le.withTrace(msg), toZapFields(fields)...)
+	le.errLogger.Warn(le.withHead(msg), toZapFields(fields)...)
 }
 
 // Error logs a message at ErrorLevel.
@@ -122,7 +122,7 @@ func (le *LogEntry) Error(msg string) {
 	if !le.Enabled(ErrorLevel) {
 		return
 	}
-	le.errLogger.Error(le.withTrace(msg))
+	le.errLogger.Error(le.withHead(msg))
 }
 
 func (le *LogEntry) Errorf(format string, args ...any) {
@@ -130,7 +130,7 @@ func (le *LogEntry) Errorf(format string, args ...any) {
 		return
 	}
 
-	le.errLogger.Error(le.withTrace(fmt.Sprintf(format, args...)))
+	le.errLogger.Error(le.withHead(fmt.Sprintf(format, args...)))
 }
 
 // ErrorWith logs a message with fields at ErrorLevel.
@@ -138,7 +138,7 @@ func (le *LogEntry) ErrorWith(msg string, fields Fields) {
 	if !le.Enabled(ErrorLevel) {
 		return
 	}
-	le.errLogger.Error(le.withTrace(msg), toZapFields(fields)...)
+	le.errLogger.Error(le.withHead(msg), toZapFields(fields)...)
 }
 
 // With binds a default field to a log message
@@ -192,7 +192,7 @@ func (le *LogEntry) Enabled(level Level) bool {
 	}
 }
 
-func (le *LogEntry) withTrace(msg string) string {
+func (le *LogEntry) withHead(msg string) string {
 	if le == nil {
 		return strings.Join(append([]string{
 			defaultLogEmpty,
