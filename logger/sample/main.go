@@ -14,6 +14,7 @@ func main() {
 	logger.ConfigureWithOpts(
 		logger.WithConsoleEnabled(true),
 		logger.WithLoggerLevel(logger.DebugLevel),
+		logger.WithSetAsDefaultLvl(true),
 		logger.WithCallerEnabled(true),
 	)
 

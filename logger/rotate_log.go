@@ -25,7 +25,7 @@ var (
 
 var (
 	// defaultLogger is the default logger
-	defaultLogger = newEntry(defaultConfig, os.Stdout, os.Stderr, os.Stdout, true)
+	defaultLogger = newEntry(defaultConfig, os.Stdout, os.Stderr, os.Stdout)
 )
 
 // Debug Log a message at the debug defaultLevel
@@ -262,7 +262,7 @@ func NewEntry(config Config) Entry {
 		zapcore.NewMultiWriteSyncer(infoWriters...),
 		zapcore.NewMultiWriteSyncer(errWriters...),
 		zapcore.NewMultiWriteSyncer(debugWriters...),
-		true)
+	)
 
 	declareLogger(config, logEntry.InfoWith)
 	declareLogger(config, logEntry.ErrorWith)
@@ -326,7 +326,10 @@ func getNameByLogLevel(filename string, level Level) string {
 	return name
 }
 
-func newEntry(config Config, infoOutput, errOutput, debugOutput zapcore.WriteSyncer, isDefaultLogger bool) *LogEntry {
+func newEntry(
+	config Config,
+	infoOutput, errOutput, debugOutput zapcore.WriteSyncer,
+) *LogEntry {
 	encCfg := zapcore.EncoderConfig{
 		TimeKey:          "@t",
 		LevelKey:         "lvl",
@@ -345,7 +348,7 @@ func newEntry(config Config, infoOutput, errOutput, debugOutput zapcore.WriteSyn
 
 	// level setting
 	localLoglv := zap.NewAtomicLevelAt(zapcore.Level(config.LoggerLevel))
-	if isDefaultLogger {
+	if config.SetAsDefaultLvl {
 		loglv = localLoglv
 		defaultLevel = config.LoggerLevel
 	}

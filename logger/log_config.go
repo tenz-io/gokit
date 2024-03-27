@@ -21,6 +21,8 @@ var defaultConfig = Config{
 type Config struct {
 	// LoggerLevel set log defaultLevel
 	LoggerLevel Level
+	// SetAsDefaultLvl set the default level
+	SetAsDefaultLvl bool
 	// FileEnabled makes the framework log to a file
 	// the fields below can be skipped if this value is false!
 	FileEnabled bool
@@ -56,6 +58,12 @@ type ConfigOption func(*Config)
 func WithLoggerLevel(level Level) ConfigOption {
 	return func(c *Config) {
 		c.LoggerLevel = level
+	}
+}
+
+func WithSetAsDefaultLvl(set bool) ConfigOption {
+	return func(c *Config) {
+		c.SetAsDefaultLvl = set
 	}
 }
 
