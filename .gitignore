@@ -19,3 +19,13 @@
 
 # Go workspace file
 go.work
+
+
+# log
+*.log
+
+
+# IDE
+.idea/
+.vscode/
+*.iml
