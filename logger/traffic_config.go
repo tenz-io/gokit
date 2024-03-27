@@ -7,7 +7,7 @@ var (
 	defaultTrafficConfig = TrafficConfig{
 		FileEnabled: false,
 		Directory:   "log",
-		Filename:    "",
+		Filename:    "data.log",
 		MaxSize:     100,
 		MaxBackups:  10,
 		MaxAge:      7,
