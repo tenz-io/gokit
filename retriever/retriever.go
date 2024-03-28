@@ -23,21 +23,6 @@ type DoFunc func(context.Context) (resp any, retry bool, err error)
 // - err return parameter is nil
 type DoFuncAlwaysRetry func(context.Context) (resp any, err error)
 
-// Config for retriever, all fields are optional
-type Config struct {
-	// MaxAttempt Maximum number of attempt before failing (default: 3)
-	MaxAttempt int
-	// MaxTotalAttemptTime Maximum total duration to wait for result (default: unlimited/until context expired)
-	MaxTotalAttemptTime time.Duration
-	// Backoff An implementation of Backoff to calculate the time duration to wait for the next operation.
-	// Will default to ExponentialBackoff with 100ms base and 2.0 factor
-	Backoff Backoff
-	// UseGoroutine is a flag to determine whether DoFunc will be executed using goroutine or not.
-	// If true, DoFunc will be executed using goroutine.
-	// This allows for long function without context support (default: false)
-	UseGoroutine bool
-}
-
 type Retriever interface {
 	// DoAlwaysRetry will call doFunc until it returns nil or context deadline
 	// If doFunc returns error, it will retry until maxAttempt is reached
@@ -52,6 +37,15 @@ type retriever struct {
 	maxTotalAttemptTime time.Duration
 	backoff             Backoff
 	useGoroutine        bool
+}
+
+func NewRetrieverWithConfig(configOpts ...ConfigOpt) Retriever {
+	config := defaultConfig
+	for _, configOpt := range configOpts {
+		configOpt(&config)
+	}
+
+	return NewRetriever(config)
 }
 
 func NewRetriever(config Config) Retriever {
