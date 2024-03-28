@@ -1,8 +1,8 @@
 GO = go
 
-PKG_LIST=logger metrics
+PKG_LIST=logger metrics retriever
 
-LIB_LIST=logger metrics
+LIB_LIST=logger metrics retriever
 
 .PHONY: dep
 dep:
