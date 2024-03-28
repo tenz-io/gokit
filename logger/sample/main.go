@@ -2,8 +2,9 @@ package main
 
 import (
 	"context"
-	"github.com/tenz-io/trackingo/logger"
 	"time"
+
+	"github.com/tenz-io/gokit/logger"
 )
 
 func main() {

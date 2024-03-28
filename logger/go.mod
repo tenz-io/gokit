@@ -1,4 +1,4 @@
-module github.com/tenz-io/trackingo/logger
+module github.com/tenz-io/gokit/logger
 
 go 1.20
 
