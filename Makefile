@@ -1,8 +1,8 @@
 GO = go
 
-PKG_LIST=logger monitor retriever
+PKG_LIST=logger monitor retriever app
 
-LIB_LIST=logger monitor retriever
+LIB_LIST=logger monitor retriever app
 
 .PHONY: dep
 dep:

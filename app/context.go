@@ -23,17 +23,22 @@ func NewContext(ctx context.Context) *Context {
 // LoadFlags loads the flags into the context
 func (c *Context) LoadFlags(name string, flags []Flag) error {
 	fs := flag.NewFlagSet(name, flag.ExitOnError)
+
 	for _, f := range flags {
 		f.Apply(fs)
 	}
+
 	err := fs.Parse(os.Args[1:])
 	if err != nil {
 		return fmt.Errorf("failed to parse flags: %w", err)
 	}
 
+	fmt.Println("args: ==================")
 	for _, f := range flags {
 		c.Set(f.GetName(), f)
+		fmt.Println(f.GetName(), ":", f.GetValue())
 	}
+	fmt.Println("==================")
 
 	return nil
 

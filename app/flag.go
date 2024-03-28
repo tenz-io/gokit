@@ -2,11 +2,9 @@ package app
 
 import (
 	"flag"
-	"fmt"
 )
 
 type Flag interface {
-	fmt.Stringer
 	GetName() string
 	GetValue() any
 	Apply(*flag.FlagSet)
@@ -34,10 +32,6 @@ func (f *StringFlag) Apply(fs *flag.FlagSet) {
 	fs.StringVar(&f.Value, f.Name, f.Value, f.Usage)
 }
 
-func (f *StringFlag) String() string {
-	return fmt.Sprintf("%s=%s", f.Name, f.Value)
-}
-
 func (f *StringFlag) GetName() string {
 	return f.Name
 }
@@ -50,10 +44,6 @@ func (f *IntFlag) Apply(fs *flag.FlagSet) {
 	fs.IntVar(&f.Value, f.Name, f.Value, f.Usage)
 }
 
-func (f *IntFlag) String() string {
-	return fmt.Sprintf("%s=%d", f.Name, f.Value)
-}
-
 func (f *IntFlag) GetName() string {
 	return f.Name
 }
@@ -64,10 +54,6 @@ func (f *IntFlag) GetValue() any {
 
 func (f *BoolFlag) Apply(fs *flag.FlagSet) {
 	fs.BoolVar(&f.Value, f.Name, f.Value, f.Usage)
-}
-
-func (f *BoolFlag) String() string {
-	return fmt.Sprintf("%s=%t", f.Name, f.Value)
 }
 
 func (f *BoolFlag) GetName() string {

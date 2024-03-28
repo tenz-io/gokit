@@ -70,7 +70,9 @@ func InitAdminHTTPServer(_ *Context) (func(), error) {
 	}
 
 	go func() {
-		if err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil); err != nil {
+		listenOn := fmt.Sprintf(":%d", port)
+		syslog.Printf("Starting admin HTTP server at %s\n", listenOn)
+		if err := http.ListenAndServe(listenOn, nil); err != nil {
 			syslog.Fatalf("Admin HTTP server error, err: %+v", err)
 		}
 	}()
