@@ -11,7 +11,7 @@ import (
 type singleFlightCtxKeyType string
 
 const (
-	defaultNamespace = "trackingo"
+	defaultNamespace = "gokit"
 	defaultSubsystem = "flight"
 	activeKey        = "actives"
 )
