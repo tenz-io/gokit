@@ -1,4 +1,4 @@
-module github.com/tenz-io/gokit/metrics
+module github.com/tenz-io/gokit/monitor
 
 go 1.20
 
