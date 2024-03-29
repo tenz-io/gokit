@@ -2,6 +2,8 @@ package app
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	syslog "log"
 	"os"
 	"os/signal"
@@ -34,4 +36,17 @@ func If[T any](cond bool, a, b T) T {
 		return a
 	}
 	return b
+}
+
+// PrettyString prints the value in a pretty format.
+func PrettyString(v any) string {
+	if v == nil {
+		return "nil"
+	}
+
+	if j, err := json.Marshal(v); err == nil {
+		return string(j)
+	}
+
+	return fmt.Sprintf("%+v", v)
 }

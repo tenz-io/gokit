@@ -12,42 +12,61 @@ import (
 	"github.com/tenz-io/gokit/logger"
 )
 
-func InitYamlLogger(c *Context, confPtr any) (CleanFunc, error) {
+func InitYamlConfig(c *Context, confPtr any) (CleanFunc, error) {
 	var (
 		cleanFn = func() {}
 	)
-	if !c.GetFlags().IsSet("config") {
-		return cleanFn, fmt.Errorf("config file is not set")
+	bs, err := readConfigFile(c)
+	if err != nil {
+		return cleanFn, err
 	}
 
-	configPath, err := c.GetFlags().String("config")
-	if err != nil {
-		return cleanFn, fmt.Errorf("get config file error, err: %w", err)
-	}
-	if configPath == "" {
-		return cleanFn, fmt.Errorf("config file is empty")
-	}
-
-	yamlFile, err := os.ReadFile(configPath)
-	if err != nil {
-		return cleanFn, fmt.Errorf("read config file fail, err: %w", err)
-	}
-
-	err = yaml.Unmarshal(yamlFile, confPtr)
-	if err != nil {
-		return cleanFn, fmt.Errorf("unmarshal config file fail, err: %w", err)
+	if err = yaml.Unmarshal(bs, confPtr); err != nil {
+		return cleanFn, fmt.Errorf("yaml unmarshal config file fail, err: %w", err)
 	}
 
 	if v, err := c.GetFlags().Bool("verbose"); v && err == nil {
-		bs, err := json.Marshal(confPtr)
-		if err != nil {
-			syslog.Println("failed to json marshal config")
-			return cleanFn, err
-		}
-		syslog.Println(string(bs))
+		syslog.Println("config: ", PrettyString(confPtr))
 	}
 
 	return cleanFn, nil
+}
+
+func InitJsonConfig(c *Context, confPtr any) (CleanFunc, error) {
+	var (
+		cleanFn = func() {}
+	)
+	bs, err := readConfigFile(c)
+	if err != nil {
+		return cleanFn, err
+	}
+
+	if err = json.Unmarshal(bs, confPtr); err != nil {
+		return cleanFn, fmt.Errorf("json unmarshal config file fail, err: %w", err)
+	}
+
+	if v, err := c.GetFlags().Bool("verbose"); v && err == nil {
+		syslog.Println("config: ", PrettyString(confPtr))
+	}
+
+	return cleanFn, nil
+}
+
+func readConfigFile(c *Context) ([]byte, error) {
+	configPath, err := c.GetFlags().String("config")
+	if err != nil {
+		return nil, fmt.Errorf("get config file error, err: %w", err)
+	}
+	if configPath == "" {
+		return nil, fmt.Errorf("config file is empty")
+	}
+
+	bs, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("read config file fail, err: %w", err)
+	}
+
+	return bs, nil
 }
 
 func InitLogger(c *Context, _ any) (CleanFunc, error) {

@@ -20,8 +20,8 @@ func main() {
 		Usage: "Sample Server",
 		Conf:  &MyConfig{},
 		Inits: []app.InitFunc{
+			app.InitYamlConfig,
 			app.InitLogger,
-			app.InitYamlLogger,
 			app.InitDefaultHandler,
 			app.InitAdminHTTPServer,
 		},
