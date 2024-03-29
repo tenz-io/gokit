@@ -6,31 +6,15 @@ import (
 )
 
 func (a *application) run(c *Context, confPtr any, cancelAppContext context.CancelFunc) error {
-	for _, prepare := range a.preparations {
-		// Run the prepare function
-		if err := prepare(c, confPtr); err != nil {
-			return fmt.Errorf("prepare error, err: %w", err)
-		}
-	}
-
-	errC := make(chan error)
-	go WaitSignal(errC, cancelAppContext)
-
-	waitFunc := func(userErrC ...<-chan error) {
-		for _, uErrC := range userErrC {
-			go func(ch <-chan error) {
-				errC <- <-ch
-			}(uErrC)
-		}
-
-		<-c.Context.Done()
-	}
+	var (
+		errC = make(chan error)
+	)
 
 	// Run init functions
-	cleanFns := make([]func(), 0)
-	for _, initFn := range a.initFunctions {
+	cleanFns := make([]func(), 0, len(a.initFs))
+	for _, initFn := range a.initFs {
 		// Run the init function
-		cleanFn, err := initFn(c)
+		cleanFn, err := initFn(c, confPtr)
 		if err != nil {
 			return fmt.Errorf("init function error, err: %w", err)
 		}
@@ -41,15 +25,14 @@ func (a *application) run(c *Context, confPtr any, cancelAppContext context.Canc
 	}
 
 	// Run the main logic
-	targetRunFn := a.runFunction
+	go a.runF(c, confPtr, errC)
 
-	if err := targetRunFn(c, confPtr, waitFunc); err != nil {
-		return fmt.Errorf("main function error, err: %w", err)
-	}
-
-	for _, cleanupFunction := range cleanFns {
-		cleanupFunction()
-	}
+	WaitSignal(c, errC, func() {
+		cancelAppContext()
+		for _, cleanFn := range cleanFns {
+			cleanFn()
+		}
+	})
 
 	return nil
 }

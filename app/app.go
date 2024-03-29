@@ -6,16 +6,13 @@ import (
 	syslog "log"
 )
 
-// WaitFunc is a function that will block until it's time to quit
-type WaitFunc func(...<-chan error)
-
-// RunFunc is the run function
-type RunFunc func(c *Context, confPtr any, waitFunc WaitFunc) error
+type CleanFunc func()
 
 // InitFunc is the init function to call
-type InitFunc func(c *Context) (func(), error)
+type InitFunc func(c *Context, confPtr any) (CleanFunc, error)
 
-type Prepare func(c *Context, confPtr any) error
+// RunFunc is the run function
+type RunFunc func(c *Context, confPtr any, errC chan<- error)
 
 // Config is a config for an app
 type Config struct {
@@ -25,38 +22,32 @@ type Config struct {
 	// Usage is the app usage that will be shown in help
 	Usage string
 
-	// Config is the basic YAML config which will be parsed passed to Run.
+	// Conf is the config that will be passed to Run and Inits
 	// It should be a pointer type
-	Config any
-
-	// Run is the main function that will be called
-	Run RunFunc
-
-	// Preparations is the function that will be called before Run
-	Preparations []Prepare
+	Conf any
 
 	// Inits is a list of initializer function that will be called sequentially before Run
 	Inits []InitFunc
+
+	// Run is the main function that will be called
+	Run RunFunc
 }
 
 type application struct {
-	name          string
-	preparations  []Prepare
-	initFunctions []InitFunc
-	runFunction   RunFunc
+	name   string
+	initFs []InitFunc
+	runF   RunFunc
 }
 
 func newApplication(
 	name string,
-	preparations []Prepare,
-	initFunctions []InitFunc,
-	runFunction RunFunc,
+	initFs []InitFunc,
+	runF RunFunc,
 ) *application {
 	return &application{
-		name:          name,
-		preparations:  preparations,
-		initFunctions: initFunctions,
-		runFunction:   runFunction,
+		name:   name,
+		initFs: initFs,
+		runF:   runF,
 	}
 }
 
@@ -70,8 +61,8 @@ func Run(cfg Config, flags []Flag) {
 	appCtx, cancel := context.WithCancel(context.Background())
 	c := NewContext(appCtx, fs)
 
-	app := newApplication(cfg.Name, cfg.Preparations, cfg.Inits, cfg.Run)
-	err = app.run(c, cfg.Config, cancel)
+	app := newApplication(cfg.Name, cfg.Inits, cfg.Run)
+	err = app.run(c, cfg.Conf, cancel)
 	if err != nil {
 		syslog.Fatalf("run error, err: %+v", err)
 	}

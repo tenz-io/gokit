@@ -1,13 +1,14 @@
 package app
 
 import (
+	"context"
 	syslog "log"
 	"os"
 	"os/signal"
 )
 
 // WaitSignal waits for a signal to exit the program.
-func WaitSignal(errC <-chan error, hook func()) {
+func WaitSignal(ctx context.Context, errC <-chan error, hook func()) {
 	signC := make(chan os.Signal, 1)
 	signal.Notify(signC, os.Interrupt, os.Kill)
 	select {
@@ -15,10 +16,15 @@ func WaitSignal(errC <-chan error, hook func()) {
 		syslog.Println("received interrupt signal")
 		hook()
 		os.Exit(0)
+	case <-ctx.Done():
+		syslog.Println("context done")
+		hook()
+		os.Exit(0)
 	case err := <-errC:
 		syslog.Printf("run error: %+v", err)
 		hook()
 		os.Exit(1)
+
 	}
 }
 

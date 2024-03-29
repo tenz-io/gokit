@@ -11,7 +11,7 @@ var (
 		&StringFlag{
 			Name:  "config",
 			Value: "app.yaml",
-			Usage: "Config file",
+			Usage: "Conf file",
 		},
 		&StringFlag{
 			Name:  "log",

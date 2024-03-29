@@ -12,46 +12,50 @@ import (
 	"github.com/tenz-io/gokit/logger"
 )
 
-func PrepareConfig(c *Context, confPtr any) error {
+func InitYamlLogger(c *Context, confPtr any) (CleanFunc, error) {
+	var (
+		cleanFn = func() {}
+	)
 	if !c.GetFlags().IsSet("config") {
-		return fmt.Errorf("config file is not set")
+		return cleanFn, fmt.Errorf("config file is not set")
 	}
 
 	configPath, err := c.GetFlags().String("config")
 	if err != nil {
-		return fmt.Errorf("get config file error, err: %w", err)
+		return cleanFn, fmt.Errorf("get config file error, err: %w", err)
 	}
 	if configPath == "" {
-		return fmt.Errorf("config file is empty")
+		return cleanFn, fmt.Errorf("config file is empty")
 	}
 
 	yamlFile, err := os.ReadFile(configPath)
 	if err != nil {
-		return fmt.Errorf("read config file fail, err: %w", err)
+		return cleanFn, fmt.Errorf("read config file fail, err: %w", err)
 	}
 
 	err = yaml.Unmarshal(yamlFile, confPtr)
 	if err != nil {
-		return fmt.Errorf("unmarshal config file fail, err: %w", err)
+		return cleanFn, fmt.Errorf("unmarshal config file fail, err: %w", err)
 	}
 
 	if v, err := c.GetFlags().Bool("verbose"); v && err == nil {
 		bs, err := json.Marshal(confPtr)
 		if err != nil {
 			syslog.Println("failed to json marshal config")
-			return err
+			return cleanFn, err
 		}
 		syslog.Println(string(bs))
 	}
 
-	return nil
+	return cleanFn, nil
 }
 
-func PrepareLogger(c *Context, _ any) error {
+func InitLogger(c *Context, _ any) (CleanFunc, error) {
 	var (
 		logDir  = "log"
 		verbose = false
 		lvl     = logger.InfoLevel
+		cleanFn = func() {}
 	)
 
 	if lp, err := c.GetFlags().String("log"); err == nil && lp != "" {
@@ -77,13 +81,13 @@ func PrepareLogger(c *Context, _ any) error {
 		logger.WithTrafficFileEnabled(true),
 	)
 
-	return nil
+	return cleanFn, nil
 }
 
 // InitDefaultHandler will register profiling, ping, and prometheus metric
 // handler to http.DefaultServeMux. Don't forget to run http.ListenAndServe on
 // the main run function or use InitAdminHTTPServer
-func InitDefaultHandler(_ *Context) (func(), error) {
+func InitDefaultHandler(_ *Context, _ any) (CleanFunc, error) {
 	AddProfilingHandler(http.DefaultServeMux)
 	AddPingHandler(http.DefaultServeMux)
 	AddPrometheusHandler(http.DefaultServeMux)
@@ -96,7 +100,7 @@ func InitDefaultHandler(_ *Context) (func(), error) {
 // InitAdminHTTPServer will run the default http.DefaultServeMux with port from
 // env. If PORT environment variable is not set, the HTTP server will not be run.
 // Use this if your service don't server any other HTTP traffic
-func InitAdminHTTPServer(c *Context) (func(), error) {
+func InitAdminHTTPServer(c *Context, _ any) (CleanFunc, error) {
 	var (
 		rawPort = "8081"
 		portSrc = ""

@@ -16,14 +16,12 @@ var flags = []app.Flag{
 
 func main() {
 	cfg := app.Config{
-		Name:   "sample",
-		Usage:  "Sample Server",
-		Config: &MyConfig{},
-		Preparations: []app.Prepare{
-			app.PrepareConfig,
-			app.PrepareLogger,
-		},
+		Name:  "sample",
+		Usage: "Sample Server",
+		Conf:  &MyConfig{},
 		Inits: []app.InitFunc{
+			app.InitLogger,
+			app.InitYamlLogger,
 			app.InitDefaultHandler,
 			app.InitAdminHTTPServer,
 		},
@@ -32,12 +30,7 @@ func main() {
 	app.Run(cfg, flags)
 }
 
-func run(c *app.Context, confPtr any, waitFunc app.WaitFunc) error {
-	var errC = make(chan error)
-	defer func() {
-		waitFunc(errC)
-	}()
-
+func run(c *app.Context, confPtr any, errC chan<- error) {
 	logger.Infof("run application")
 
 	env, err := c.GetFlags().String("env")
@@ -51,14 +44,12 @@ func run(c *app.Context, confPtr any, waitFunc app.WaitFunc) error {
 
 	mycnf, ok := confPtr.(*MyConfig)
 	if !ok {
-		return fmt.Errorf("invalid config type: %T", confPtr)
+		errC <- fmt.Errorf("invalid config type: %T", confPtr)
 	}
 
 	logger.WithFields(logger.Fields{
 		"config": mycnf,
 	}).Debug("debug config")
-
-	return nil
 }
 
 type MyConfig struct {
