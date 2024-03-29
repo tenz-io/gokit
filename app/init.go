@@ -135,7 +135,7 @@ func InitAdminHTTPServer(c *Context, _ any) (CleanFunc, error) {
 		portSrc = "admin-port command line argument"
 	}
 
-	syslog.Printf("port source: %s, port: %s\n", portSrc, rawPort)
+	syslog.Printf("source: (%s), admin-port: %s\n", portSrc, rawPort)
 	port, err := strconv.ParseInt(rawPort, 10, 32)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse %s (%s) as number, err: %w", portSrc, rawPort, err)
