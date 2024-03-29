@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/prometheus/client_golang v1.19.0
-	github.com/tenz-io/gokit/logger v0.0.0
+	github.com/tenz-io/gokit/logger v1.1.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -21,5 +21,3 @@ require (
 	google.golang.org/protobuf v1.32.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
-
-replace github.com/tenz-io/gokit/logger => ../logger

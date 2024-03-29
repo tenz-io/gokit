@@ -6,9 +6,9 @@ LIB_LIST=logger monitor retriever app
 
 .PHONY: dep
 dep:
-	@echo "go mod download"
+	@echo "go mod tidy"
 	@for pkg in ${PKG_LIST} ; do \
-		cd $$pkg && $(GO) mod download && cd ..; \
+		cd $$pkg && $(GO) mod tidy -v && cd ..; \
 	done
 
 
