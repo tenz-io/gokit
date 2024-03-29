@@ -32,8 +32,8 @@ type Config struct {
 	// Run is the main function that will be called
 	Run RunFunc
 
-	// Prepare is the function that will be called before Run
-	Prepare Prepare
+	// Preparations is the function that will be called before Run
+	Preparations []Prepare
 
 	// Inits is a list of initializer function that will be called sequentially before Run
 	Inits []InitFunc
@@ -41,51 +41,60 @@ type Config struct {
 
 type application struct {
 	name          string
-	prepare       Prepare
-	runFunction   RunFunc
+	preparations  []Prepare
 	initFunctions []InitFunc
+	runFunction   RunFunc
 }
 
 func newApplication(
 	name string,
-	prepare Prepare,
+	preparations []Prepare,
 	initFunctions []InitFunc,
 	runFunction RunFunc,
 ) *application {
 	return &application{
 		name:          name,
-		prepare:       prepare,
+		preparations:  preparations,
 		initFunctions: initFunctions,
 		runFunction:   runFunction,
 	}
 }
 
-func (a *application) setupLog(c *Context) error {
-	if !c.IsSet("log") {
-		return fmt.Errorf("log directory is not set")
-	}
-
-	logDir := c.StringValue("log")
-	if logDir == "" {
-		logDir = "log"
-	}
-
-	return nil
-}
-
 // Run creates a new app and run
 func Run(cfg Config, flags []Flag) {
-	appCtx, cancel := context.WithCancel(context.Background())
-	c := NewContext(appCtx)
-	err := c.LoadFlags(cfg.Name, flags)
+	fs, err := parseArgs(cfg, flags)
 	if err != nil {
-		syslog.Fatalf("load flags error, err: %v", err)
+		syslog.Fatalf("parse args error, err: %v", err)
 	}
 
-	app := newApplication(cfg.Name, cfg.Prepare, cfg.Inits, cfg.Run)
+	appCtx, cancel := context.WithCancel(context.Background())
+	c := NewContext(appCtx, fs)
+
+	app := newApplication(cfg.Name, cfg.Preparations, cfg.Inits, cfg.Run)
 	err = app.run(c, cfg.Config, cancel)
 	if err != nil {
-		syslog.Fatalf("run error, err: %v", err)
+		syslog.Fatalf("run error, err: %+v", err)
 	}
 
+}
+
+func parseArgs(cfg Config, flags []Flag) (*Flags, error) {
+	if flags == nil {
+		flags = defaultFlags
+	} else {
+		flags = append(flags, defaultFlags...)
+	}
+
+	fs, err := NewFlags(flags)
+	if err != nil {
+		return nil, fmt.Errorf("new flags error, err: %w", err)
+	}
+	// parse args into flags
+	err = Parse(cfg.Name, fs)
+	if err != nil {
+		return nil, fmt.Errorf("parse args error, err: %w", err)
+	}
+	fs.Print()
+
+	return fs, nil
 }

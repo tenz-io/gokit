@@ -1,40 +1,27 @@
 package main
 
 import (
-	"encoding/json"
 	"github.com/tenz-io/gokit/app"
-	syslog "log"
+	"github.com/tenz-io/gokit/logger"
 )
 
 var flags = []app.Flag{
 	&app.StringFlag{
-		Name:  "log",
-		Value: "log",
-		Usage: "Log output directory",
-	},
-	&app.StringFlag{
-		Name:  "config",
-		Value: "test.yaml",
-		Usage: "Config file",
-	},
-	&app.BoolFlag{
-		Name:  "verbose",
-		Value: false,
-		Usage: "Verbose mode",
-	},
-	&app.IntFlag{
-		Name:  "port",
-		Value: 8080,
-		Usage: "Admin HTTP port",
+		Name:  "env",
+		Value: "test",
+		Usage: "Environment",
 	},
 }
 
 func main() {
 	cfg := app.Config{
-		Name:    "sample",
-		Usage:   "Sample Server",
-		Config:  &MyConfig{},
-		Prepare: app.PrepareConfig,
+		Name:   "sample",
+		Usage:  "Sample Server",
+		Config: &MyConfig{},
+		Preparations: []app.Prepare{
+			app.PrepareConfig,
+			app.PrepareLogger,
+		},
 		Inits: []app.InitFunc{
 			app.InitDefaultHandler,
 			app.InitAdminHTTPServer,
@@ -48,18 +35,21 @@ func run(c *app.Context, confPtr any, waitFunc app.WaitFunc) error {
 	errC := make(chan error)
 	waitFunc(errC)
 
-	verbose := c.StringValue("verbose")
-	syslog.Printf("verbose: %s\n", verbose)
-
-	bs, err := json.Marshal(confPtr)
+	env, err := c.GetFlags().String("env")
 	if err != nil {
-		syslog.Println("failed to marshal config")
-		return err
+		logger.Warnf("failed to get env: %v", err)
 	}
-	syslog.Println(string(bs))
+	logger.WithFields(logger.Fields{
+		"env": env,
+	}).Info("get env")
+
+	logger.WithFields(logger.Fields{
+		"config": confPtr,
+	}).Debug("debug config")
+
 	return nil
 }
 
 type MyConfig struct {
-	Foo string `yaml:"foo"`
+	Foo string `yaml:"foo" json:"foo"`
 }

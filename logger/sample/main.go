@@ -13,7 +13,7 @@ func main() {
 	logger.Infof("before set up log success with info level")
 
 	logger.ConfigureWithOpts(
-		logger.WithConsoleEnabled(true),
+		logger.WithFileEnabled(true),
 		logger.WithLoggerLevel(logger.DebugLevel),
 		logger.WithSetAsDefaultLvl(true),
 		logger.WithCallerEnabled(true),
@@ -42,7 +42,7 @@ func main() {
 		})
 
 	logger.ConfigureTrafficWithOpts(
-		logger.WithTrafficConsoleEnabled(true),
+		logger.WithTrafficFileEnabled(true),
 	)
 
 	logger.DataWith(&logger.Traffic{

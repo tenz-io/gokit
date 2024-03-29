@@ -271,7 +271,7 @@ func NewEntry(config Config) Entry {
 }
 
 func declareLogger(config Config, logv func(msg string, fields Fields)) {
-	logv("logging configured", Fields{"config": config})
+	logv("logger configured", Fields{"config": config})
 }
 
 func SetLevel(l Level) {

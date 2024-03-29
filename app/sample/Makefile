@@ -5,4 +5,4 @@ build:
 
 .PHONY: run
 run: build
-	./sample -config=test.yaml -log=log
+	./sample -config=test.yaml -verbose
