@@ -10,7 +10,7 @@ var (
 	defaultFlags = []Flag{
 		&StringFlag{
 			Name:  "config",
-			Value: "app.yaml",
+			Value: "config/app.yaml",
 			Usage: "Conf file",
 		},
 		&StringFlag{
