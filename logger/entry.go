@@ -88,7 +88,7 @@ func toZapFields(fields Fields, ignores ...string) []zapcore.Field {
 		f := zap.Any(k, v)
 		switch typ := f.Type; typ {
 		//case zapcore.StringType, zapcore.StringerType:
-		//	zapFields = append(zapFields, zap.String(k, utils.StringLimit(fmt.Sprintf("%s", v), maxStringFieldSize)))
+		//	zapFields = append(zapFields, zap.String(k, utils.stringLimit(fmt.Sprintf("%s", v), maxStringFieldSize)))
 		case zapcore.StringType:
 			zapFields = append(zapFields, f)
 		case zapcore.StringerType,
@@ -96,7 +96,7 @@ func toZapFields(fields Fields, ignores ...string) []zapcore.Field {
 			zapcore.ArrayMarshalerType,
 			zapcore.ObjectMarshalerType,
 			zapcore.ReflectType:
-			zapFields = append(zapFields, zap.Any(k, TrimObjectWithOpts(v, WithIgnores(ignores...))))
+			zapFields = append(zapFields, zap.Any(k, JsonObjectWithOpts(v, WithIgnores(ignores...))))
 		default:
 			zapFields = append(zapFields, f)
 		}

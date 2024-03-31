@@ -1,11 +1,10 @@
 package logger
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	syslog "log"
 	"reflect"
-	"runtime/debug"
 	"strings"
 	"time"
 )
@@ -17,121 +16,110 @@ const (
 	defaultWholeLimit = 4096
 )
 
-type ObjectTrimmer struct {
-	ArrLimit   int
-	StrLimit   int
-	DeepLimit  int
-	WholeLimit int
-	Ignores    []string
+const (
+	arrFieldPrefix = "_size__"
+)
+
+var (
+	defaultOutputTrimmer = OutputTrimmer{
+		arrLimit:   defaultArrLimit,
+		strLimit:   defaultStrLimit,
+		deepLimit:  defaultDeepLimit,
+		wholeLimit: defaultWholeLimit,
+		ignores:    make(map[string]bool),
+	}
+)
+
+type OutputTrimmer struct {
+	arrLimit   int
+	strLimit   int
+	deepLimit  int
+	wholeLimit int
+	ignores    map[string]bool
 }
 
-type TrimOption func(*ObjectTrimmer)
+type TrimOption func(*OutputTrimmer)
 
 func WithArrLimit(limit int) TrimOption {
-	return func(t *ObjectTrimmer) {
-		t.ArrLimit = limit
+	return func(t *OutputTrimmer) {
+		t.arrLimit = limit
 	}
 }
 
 func WithStrLimit(limit int) TrimOption {
-	return func(t *ObjectTrimmer) {
-		t.StrLimit = limit
+	return func(t *OutputTrimmer) {
+		t.strLimit = limit
 	}
 }
 
 func WithDeepLimit(limit int) TrimOption {
-	return func(t *ObjectTrimmer) {
-		t.DeepLimit = limit
+	return func(t *OutputTrimmer) {
+		t.deepLimit = limit
 	}
 }
 
 func WithWholeLimit(limit int) TrimOption {
-	return func(t *ObjectTrimmer) {
-		t.WholeLimit = limit
+	return func(t *OutputTrimmer) {
+		t.wholeLimit = limit
 	}
 }
 
 func WithIgnores(ignores ...string) TrimOption {
-	return func(t *ObjectTrimmer) {
-		t.Ignores = ignores
+	return func(t *OutputTrimmer) {
+		t.ignores = make(map[string]bool)
+		for _, ignore := range ignores {
+			t.ignores[ignore] = true
+		}
 	}
 }
 
+func NewOutputTrimmer(opts ...TrimOption) *OutputTrimmer {
+	ot := defaultOutputTrimmer
+	for _, opt := range opts {
+		opt(&ot)
+	}
+	return &ot
+}
+
 func JsonObjectWithOpts(obj any, opts ...TrimOption) string {
-	j, err := json.Marshal(TrimObjectWithOpts(obj, opts...))
+	return NewOutputTrimmer(opts...).Json(obj)
+}
+
+func (ot *OutputTrimmer) Json(obj any) string {
+	j, err := json.Marshal(ot.TrimObject(obj))
 	if err != nil {
-		return ""
+		return fmt.Sprintf("json.Marshal error: %v", err)
 	}
 	return string(j)
 }
 
-func TrimObject(obj any) any {
-	return TrimObjectWithOpts(obj)
+func (ot *OutputTrimmer) TrimObject(obj any) (ret any) {
+	return ot.trimObject(obj, ot.deepLimit)
 }
 
-func TrimObjectWithOpts(obj any, opts ...TrimOption) (ret any) {
-	// panic recover
-	defer func() {
-		if r := recover(); r != nil {
-			syslog.Printf("panic recovery: %s, stacktrace: %s\n", r, string(debug.Stack()))
-			ret = fmt.Sprintf("panic recovery: %s", r)
-		}
-	}()
-
-	trimmer := &ObjectTrimmer{
-		ArrLimit:   defaultArrLimit,
-		StrLimit:   defaultStrLimit,
-		DeepLimit:  defaultDeepLimit,
-		WholeLimit: defaultWholeLimit,
-		Ignores:    []string{},
-	}
-
-	for _, opt := range opts {
-		opt(trimmer)
-	}
-
-	return trimObjectWithIgnores(obj, trimmer.ArrLimit, trimmer.StrLimit, trimmer.DeepLimit, trimmer.Ignores...)
-}
-
-func trimObjectWithIgnores(obj any, arrLmt, strLmt, deepLmt int, ignores ...string) any {
-	ignoreMap := make(map[string]bool)
-	if len(ignores) > 0 {
-		for _, ignore := range ignores {
-			ignoreMap[ignore] = true
-		}
-	}
-
-	return trimObject(obj, arrLmt, strLmt, deepLmt, ignoreMap)
-}
-
-func trimObject(obj any, arrLmt, strLmt, deepLmt int, ignores map[string]bool) any {
+func (ot *OutputTrimmer) trimObject(obj any, deepLmt int) any {
 	if obj == nil {
 		return nil
 	}
 
 	v := reflect.ValueOf(obj)
-
-	if isNonValuableType(v) {
-		return nil
-	}
-
-	if val, ok := valOfSupportType(v, arrLmt, strLmt); ok {
+	if val, ok := ot.valOfSupportType(v); ok {
 		return val
 	}
 
-	for v.Kind() == reflect.Ptr {
-		v = v.Elem()
+	for ; v.Kind() == reflect.Ptr; v = v.Elem() {
+		if v.IsNil() {
+			return nil
+		}
 	}
 
 	switch v.Kind() {
-	case reflect.Ptr:
-		// should not happen
 	case reflect.Struct:
-		return trimStruct(v, arrLmt, strLmt, deepLmt-1, ignores)
+		return ot.trimStruct(v, deepLmt-1)
 	case reflect.Map:
-		return trimMap(v, arrLmt, strLmt, deepLmt-1, ignores)
+		return ot.trimMap(v, deepLmt-1)
 	case reflect.Array, reflect.Slice:
-		return trimSlice(v, arrLmt, strLmt, deepLmt, ignores)
+		return ot.trimSlice(v, deepLmt)
 	default:
 		//ignore
 	}
@@ -139,14 +127,20 @@ func trimObject(obj any, arrLmt, strLmt, deepLmt int, ignores map[string]bool) a
 	return nil
 }
 
-func trimStruct(v reflect.Value, arrLmt, strLmt, deepLmt int, ignores map[string]bool) map[string]any {
-	m := make(map[string]any)
+func (ot *OutputTrimmer) trimStruct(v reflect.Value, deepLmt int) map[string]any {
+	var (
+		m = map[string]any{}
+	)
+
 	if deepLmt <= 0 {
 		return m
 	}
 
-	t := v.Type()
+	if v.Kind() != reflect.Struct {
+		return m
+	}
 
+	t := v.Type()
 	for i := 0; i < t.NumField(); i++ {
 		fieldName := t.Field(i).Name
 
@@ -163,44 +157,43 @@ func trimStruct(v reflect.Value, arrLmt, strLmt, deepLmt int, ignores map[string
 			}
 		}
 
-		if !visibleName(fieldName, ignores) {
+		if !ot.visibleName(fieldName) {
 			continue
 		}
 
 		fv := v.Field(i)
-
-		if isNonValuableType(fv) {
-			continue
-		}
-
-		if val, ok := valOfSupportType(fv, arrLmt, strLmt); ok {
+		if val, ok := ot.valOfSupportType(fv); ok {
 			m[fieldName] = val
 			continue
 		}
 
-		if fv.Kind() == reflect.Ptr {
-			fv = fv.Elem()
+		for ; fv.Kind() == reflect.Ptr; fv = fv.Elem() {
+			if fv.IsNil() {
+				break
+			}
 		}
 
 		switch fv.Kind() {
 		case reflect.Ptr:
-			// should never happen
+			if fv.IsNil() {
+				continue
+			}
 		case reflect.Struct:
-			if sv := trimStruct(fv, arrLmt, strLmt, deepLmt-1, ignores); len(sv) > 0 {
-				m[fieldName] = sv
+			if ret := ot.trimStruct(fv, deepLmt-1); len(ret) > 0 {
+				m[fieldName] = ret
 			}
 		case reflect.Map:
-			if mv := trimMap(fv, arrLmt, strLmt, deepLmt-1, ignores); len(mv) > 0 {
-				m[fieldName] = trimMap(fv, arrLmt, strLmt, deepLmt-1, ignores)
+			if ret := ot.trimMap(fv, deepLmt-1); len(ret) > 0 {
+				m[fieldName] = ret
 			}
 		case reflect.Array, reflect.Slice:
-			if sv := trimSlice(fv, arrLmt, strLmt, deepLmt, ignores); len(sv) > 0 {
-				m[fieldName] = trimSlice(fv, arrLmt, strLmt, deepLmt, ignores)
-				m["_size__"+fieldName] = fv.Len()
+			if ret := ot.trimSlice(fv, deepLmt); len(ret) > 0 {
+				m[fieldName] = ret
+				m[arrFieldPrefix+fieldName] = fv.Len()
 			}
 		case reflect.Interface:
-			if iv := trimObject(fv.Interface(), arrLmt, strLmt, deepLmt-1, ignores); iv != nil {
-				m[fieldName] = iv
+			if ret := ot.trimObject(fv.Interface(), deepLmt-1); ret != nil {
+				m[fieldName] = ret
 			}
 		default:
 			// ignore
@@ -210,7 +203,7 @@ func trimStruct(v reflect.Value, arrLmt, strLmt, deepLmt int, ignores map[string
 	return m
 }
 
-func trimMap(v reflect.Value, arrLmt, strLmt, deepLmt int, ignores map[string]bool) map[string]any {
+func (ot *OutputTrimmer) trimMap(v reflect.Value, deepLmt int) map[string]any {
 	m := make(map[string]any)
 	if deepLmt <= 0 {
 		return m
@@ -219,37 +212,45 @@ func trimMap(v reflect.Value, arrLmt, strLmt, deepLmt int, ignores map[string]bo
 	if v.Kind() != reflect.Map {
 		return m
 	}
+
 	for _, k := range v.MapKeys() {
-		if !visibleName(k.String(), ignores) {
+		if !ot.visibleName(k.String()) {
 			continue
 		}
 
 		fv := v.MapIndex(k)
-
-		if isNonValuableType(fv) {
-			continue
-		}
-
-		if val, ok := valOfSupportType(fv, arrLmt, strLmt); ok {
+		if val, ok := ot.valOfSupportType(fv); ok {
 			m[k.String()] = val
 			continue
 		}
 
-		if fv.Kind() == reflect.Ptr {
-			fv = fv.Elem()
+		for ; fv.Kind() == reflect.Ptr; fv = fv.Elem() {
+			if fv.IsNil() {
+				break
+			}
 		}
 
 		switch fv.Kind() {
 		case reflect.Ptr:
-		// should never happen
+			if fv.IsNil() {
+				continue
+			}
 		case reflect.Map:
-			m[k.String()] = trimMap(fv, arrLmt, strLmt, deepLmt-1, ignores)
+			if ret := ot.trimMap(fv, deepLmt-1); len(ret) > 0 {
+				m[k.String()] = ret
+			}
 		case reflect.Struct:
-			m[k.String()] = trimStruct(fv, arrLmt, strLmt, deepLmt-1, ignores)
+			if ret := ot.trimStruct(fv, deepLmt-1); len(ret) > 0 {
+				m[k.String()] = ret
+			}
 		case reflect.Array, reflect.Slice:
-			m[k.String()] = trimSlice(fv, arrLmt, strLmt, deepLmt, ignores)
+			if ret := ot.trimSlice(fv, deepLmt); len(ret) > 0 {
+				m[k.String()] = ret
+			}
 		case reflect.Interface:
-			m[k.String()] = trimObject(fv.Interface(), arrLmt, strLmt, deepLmt-1, ignores)
+			if ret := ot.trimObject(fv.Interface(), deepLmt-1); ret != nil {
+				m[k.String()] = ret
+			}
 		default:
 			//ignore
 		}
@@ -258,47 +259,47 @@ func trimMap(v reflect.Value, arrLmt, strLmt, deepLmt int, ignores map[string]bo
 	return m
 }
 
-func trimSlice(v reflect.Value, arrLmt, strLmt, deepLmt int, ignores map[string]bool) []any {
-	var arr []any
-	l := v.Len()
+func (ot *OutputTrimmer) trimSlice(v reflect.Value, deepLmt int) []any {
+	var (
+		arr []any
+		l   = v.Len()
+	)
 
 	if l == 0 {
 		return arr
 	}
 
-	if l > arrLmt {
-		l = arrLmt
+	if l > ot.arrLimit {
+		l = ot.arrLimit
 	}
 
 	for i := 0; i < l; i++ {
 		fv := v.Index(i)
 
-		if isNonValuableType(fv) {
-			continue
-		}
-
-		if val, ok := valOfSupportType(fv, arrLmt, strLmt); ok {
+		if val, ok := ot.valOfSupportType(fv); ok {
 			arr = append(arr, val)
 			continue
 		}
 
-		if fv.Kind() == reflect.Ptr {
-			fv = fv.Elem()
+		for ; fv.Kind() == reflect.Ptr; fv = fv.Elem() {
+			if fv.IsNil() {
+				break
+			}
 		}
 
 		switch fv.Kind() {
 		case reflect.Ptr:
-		// should never happen
+			if fv.IsNil() {
+				arr = append(arr, nil)
+			}
 		case reflect.Struct:
-			arr = append(arr, trimStruct(fv, arrLmt, strLmt, deepLmt-1, ignores))
+			arr = append(arr, ot.trimStruct(fv, deepLmt-1))
 		case reflect.Map:
-			arr = append(arr, trimMap(fv, arrLmt, strLmt, deepLmt-1, ignores))
+			arr = append(arr, ot.trimMap(fv, deepLmt-1))
 		case reflect.Array, reflect.Slice:
-		// seems like a arr of arr
-		// ignore the inner arr
-		//arr = append(arr, trimSlice(fv, arrLmt))
+			arr = append(arr, ot.trimSlice(fv, deepLmt-1))
 		case reflect.Interface:
-			arr = append(arr, trimObject(fv.Interface(), arrLmt, strLmt, deepLmt-1, ignores))
+			arr = append(arr, ot.trimObject(fv.Interface(), deepLmt-1))
 		default:
 			//ignore
 		}
@@ -312,45 +313,97 @@ var (
 	timeType     = reflect.TypeOf(time.Now())
 	durationType = reflect.TypeOf(time.Second)
 	bytesType    = reflect.TypeOf([]byte{})
-	stringType   = reflect.TypeOf("")
-	timeFormat   = "2006-01-02T15:04:05.000"
+	byteArrType  = reflect.TypeOf([0]byte{})
+	strType      = reflect.TypeOf("")
+
+	timeFormat = "2006-01-02T15:04:05.000"
 )
 
 // valOfSpecialType returns the value of a special type
-func valOfSpecialType(v reflect.Value, arrLmt, strLmt int) (val any, ok bool) {
-	if isNonValuableType(v) {
-		return nil, false
-	}
-
-	// if v is kind of error, return the error message
-	switch v.Type() {
-	case stringType:
-		s := v.String()
-		return StringLimit(s, strLmt), true
-	case errType:
-		return v.Interface().(error).Error(), true
-	case timeType:
-		return v.Interface().(time.Time).Format(timeFormat), true
-	case durationType:
-		return v.Interface().(time.Duration).String(), true
+func (ot *OutputTrimmer) valOfSpecialType(v reflect.Value) (val any, ok bool) {
+	switch v.Kind() {
+	case reflect.Ptr:
+		if v.IsNil() {
+			return nil, false
+		}
+		return ot.valOfSpecialType(v.Elem())
 	default:
-		//ignore
+		switch v.Type() {
+		case errType:
+			return v.Interface().(error).Error(), true
+		case timeType:
+			return v.Interface().(time.Time).Format(timeFormat), true
+		case durationType:
+			return v.Interface().(time.Duration).String(), true
+		case strType:
+			return ot.stringLimit(v.String()), true
+		default:
+			if isBytes(v) {
+				if val, ok := ot.bytesString(v); ok {
+					return val, true
+				}
+			}
+		}
 	}
 
 	return nil, false
+
+}
+
+func isBytes(v reflect.Value) bool {
+	if v.Kind() != reflect.Slice && v.Kind() != reflect.Array {
+		return false
+	}
+
+	vlen := v.Len()
+	if vlen == 0 {
+		if v.Type() == byteArrType || v.Type() == bytesType {
+			return true
+		}
+		return false
+	}
+	// check the first element and check type
+	if ev := v.Index(0); ev.Kind() != reflect.Uint8 {
+		return false
+	}
+
+	return true
+}
+
+func (ot *OutputTrimmer) bytesString(v reflect.Value) (string, bool) {
+	vlen := v.Len()
+	if vlen == 0 {
+		return "[]", true
+	}
+
+	maxLen := ifThen(ot.arrLimit > ot.strLimit, ot.arrLimit, ot.strLimit)
+	if vlen <= maxLen {
+		// if v is a byte slice
+		if v.Type() == bytesType {
+			return base64.StdEncoding.EncodeToString(v.Bytes()), true
+		}
+
+		// if v is a byte array
+		bs := make([]byte, vlen)
+		reflect.Copy(reflect.ValueOf(bs), v)
+		return base64.StdEncoding.EncodeToString(bs), true
+	}
+
+	return "", false
+
 }
 
 // valOfSupportType returns the value of a support type
-func valOfSupportType(v reflect.Value, arrLmt, strLmt int) (val any, ok bool) {
-	if isNonValuableType(v) {
+func (ot *OutputTrimmer) valOfSupportType(v reflect.Value) (val any, ok bool) {
+	if !valuableType(v) {
 		return nil, false
 	}
 
-	if val, ok = valOfSpecialType(v, arrLmt, strLmt); ok {
+	if val, ok = ot.valOfSpecialType(v); ok {
 		return val, true
 	}
 
-	if val, ok = valOfPrimaryType(v, arrLmt, strLmt); ok {
+	if val, ok = ot.valOfPrimaryType(v); ok {
 		return val, true
 	}
 
@@ -358,13 +411,13 @@ func valOfSupportType(v reflect.Value, arrLmt, strLmt int) (val any, ok bool) {
 }
 
 // valOfPrimaryType returns the value of a primary type or pointer to a primary type
-func valOfPrimaryType(v reflect.Value, arrLmt, strLmt int) (val any, ok bool) {
-	if isNonValuableType(v) {
+func (ot *OutputTrimmer) valOfPrimaryType(v reflect.Value) (val any, ok bool) {
+	if !valuableType(v) {
 		return nil, false
 	}
 
 	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
+		return ot.valOfPrimaryType(v.Elem())
 	}
 
 	switch v.Kind() {
@@ -379,7 +432,7 @@ func valOfPrimaryType(v reflect.Value, arrLmt, strLmt int) (val any, ok bool) {
 	case reflect.Complex64, reflect.Complex128:
 		return v.Complex(), true
 	case reflect.String:
-		return StringLimit(v.String(), strLmt), true
+		return ot.stringLimit(v.String()), true
 	default:
 		//ignore
 	}
@@ -387,43 +440,49 @@ func valOfPrimaryType(v reflect.Value, arrLmt, strLmt int) (val any, ok bool) {
 	return nil, false
 }
 
-// isNonValuableType returns true if the value is not valuable
-func isNonValuableType(v reflect.Value) bool {
-	if v == reflect.ValueOf(nil) {
+// valuableType return ture if the value is valuable
+func valuableType(v reflect.Value) bool {
+	switch v.Kind() {
+	case reflect.Struct:
 		return true
-	}
-	if !v.CanInterface() {
+	case reflect.Ptr:
+		if v.IsNil() {
+			return false
+		}
+		return valuableType(v.Elem())
+	case reflect.Bool,
+		reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int,
+		reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint:
 		return true
-	}
-
-	if v.Kind() == reflect.Ptr && v.IsNil() {
+	case reflect.Float32, reflect.Float64:
 		return true
-	}
-	if v.Kind() == reflect.Interface && v.IsNil() {
+	case reflect.String:
 		return true
-	}
-
-	if v.Kind() == reflect.Invalid {
+	case reflect.Complex64, reflect.Complex128:
 		return true
+	case reflect.Map:
+		return true
+	case reflect.Slice, reflect.Array:
+		return true
+	default:
+		return false
 	}
-
-	return false
 }
 
-// StringLimit returns a string with limited length at most
-func StringLimit(s string, limit int) string {
-	if limit <= 0 {
+// stringLimit returns a string with limited length at most
+func (ot *OutputTrimmer) stringLimit(s string) string {
+	if ot.strLimit <= 0 {
 		return s
 	}
-	if len(s) > limit {
-		return s[:limit] + "..."
+	if len(s) > ot.strLimit {
+		return s[:ot.strLimit] + "..."
 	}
 	return s
 }
 
-func visibleName(filedName string, ignores map[string]bool) bool {
-	if len(ignores) > 0 {
-		if _, ok := ignores[filedName]; ok {
+func (ot *OutputTrimmer) visibleName(filedName string) bool {
+	if len(ot.ignores) > 0 {
+		if _, ok := ot.ignores[filedName]; ok {
 			return false
 		}
 	}
@@ -433,49 +492,4 @@ func visibleName(filedName string, ignores map[string]bool) bool {
 		return false
 	}
 	return true
-}
-
-func visibleVal(val reflect.Value) bool {
-	displayable := true
-	switch val.Kind() {
-	case reflect.Bool:
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-	case reflect.Float32, reflect.Float64:
-	case reflect.Complex64, reflect.Complex128:
-	case reflect.String:
-	case reflect.Struct:
-	case reflect.Array, reflect.Slice, reflect.Map:
-		if val.IsNil() || val.Len() == 0 {
-			displayable = false
-		}
-	case reflect.Pointer, reflect.Interface:
-		if val.IsNil() {
-			displayable = false
-		} else {
-			displayable = visibleVal(val.Elem())
-		}
-
-	case reflect.Invalid:
-		displayable = false
-	default:
-		displayable = false
-	}
-	return displayable
-}
-
-// ifThen returns a if cond is true, otherwise returns b
-func ifThen[T any](cond bool, a, b T) T {
-	if cond {
-		return a
-	}
-	return b
-}
-
-// ifThenFunc executes afn if cond is true, otherwise executes bfn
-func ifThenFunc[T any](cond bool, afn func() T, bfn func() T) T {
-	if cond {
-		return afn()
-	}
-	return bfn()
 }
