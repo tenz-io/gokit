@@ -6,25 +6,44 @@ import (
 	"os"
 )
 
+const (
+	flagNameConfig         = "config"
+	flagNameLog            = "log"
+	flagNameAdmin          = "admin-port"
+	flagNameLoggingFile    = "logging-file"
+	flagNameLoggingConsole = "logging-console"
+	flagNameVerbose        = "verbose"
+)
+
 var (
 	defaultFlags = []Flag{
 		&StringFlag{
-			Name:  "config",
+			Name:  flagNameConfig,
 			Value: "config/app.yaml",
 			Usage: "Conf file",
 		},
 		&StringFlag{
-			Name:  "log",
+			Name:  flagNameLog,
 			Value: "log",
 			Usage: "Log output directory",
 		},
 		&IntFlag{
-			Name:  "admin-port",
+			Name:  flagNameAdmin,
 			Value: 8085,
 			Usage: "Admin HTTP port",
 		},
 		&BoolFlag{
-			Name:  "verbose",
+			Name:  flagNameLoggingFile,
+			Value: true,
+			Usage: "Log to file(true/false)",
+		},
+		&BoolFlag{
+			Name:  flagNameLoggingConsole,
+			Value: false,
+			Usage: "Log to console(true/false)",
+		},
+		&BoolFlag{
+			Name:  flagNameVerbose,
 			Value: false,
 			Usage: "Verbose mode(true/false)",
 		},

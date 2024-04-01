@@ -71,18 +71,28 @@ func readConfigFile(c *Context) ([]byte, error) {
 
 func InitLogger(c *Context, _ any) (CleanFunc, error) {
 	var (
-		logDir  = "log"
-		verbose = false
-		lvl     = logger.InfoLevel
-		cleanFn = func() {}
+		logDir         = "log"
+		verbose        = false
+		lvl            = logger.InfoLevel
+		loggingFile    = true
+		loggingConsole = false
+		cleanFn        = func() {}
 	)
 
-	if lp, err := c.GetFlags().String("log"); err == nil && lp != "" {
+	if lp, err := c.GetFlags().String(flagNameLog); err == nil && lp != "" {
 		logDir = lp
 	}
 
-	if v, err := c.GetFlags().Bool("verbose"); err == nil {
+	if v, err := c.GetFlags().Bool(flagNameVerbose); err == nil {
 		verbose = v
+	}
+
+	if v, err := c.GetFlags().Bool(flagNameLoggingFile); err == nil {
+		loggingFile = v
+	}
+
+	if v, err := c.GetFlags().Bool(flagNameLoggingConsole); err == nil {
+		loggingConsole = v
 	}
 
 	lvl = If(verbose, logger.DebugLevel, logger.InfoLevel)
@@ -97,7 +107,8 @@ func InitLogger(c *Context, _ any) (CleanFunc, error) {
 
 	logger.ConfigureTrafficWithOpts(
 		logger.WithTrafficDirectory(logDir),
-		logger.WithTrafficFileEnabled(true),
+		logger.WithTrafficFileEnabled(loggingFile),
+		logger.WithTrafficConsoleEnabled(loggingConsole),
 	)
 
 	return cleanFn, nil
@@ -118,7 +129,7 @@ func InitDefaultHandler(_ *Context, _ any) (CleanFunc, error) {
 
 // InitAdminHTTPServer will run the default http.DefaultServeMux with port from
 // env. If PORT environment variable is not set, the HTTP server will not be run.
-// Use this if your service don't server any other HTTP traffic
+// Use this if the service don't server any other HTTP traffic
 func InitAdminHTTPServer(c *Context, _ any) (CleanFunc, error) {
 	var (
 		rawPort = "8081"
