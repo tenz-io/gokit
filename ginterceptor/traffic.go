@@ -25,15 +25,17 @@ func (i *interceptor) ApplyTraffic() gin.HandlerFunc {
 			reqCopy = captureRequest(c)
 		)
 
-		trafficRec := logger.StartTrafficRec(ctx, &logger.ReqEntity{
+		rec := logger.StartTrafficRec(ctx, &logger.ReqEntity{
+			Typ: logger.TrafficTypRecv,
 			Cmd: c.Request.URL.Path,
 			Req: reqCopy,
-		}, logger.Fields{
-			"method":        c.Request.Method,
-			"client":        c.ClientIP(),
-			"query":         c.Request.URL.Query(),
-			"req_header":    c.Request.Header,
-			"req_body_size": c.Request.ContentLength,
+			Fields: logger.Fields{
+				"method":        c.Request.Method,
+				"client":        c.ClientIP(),
+				"query":         c.Request.URL.Query(),
+				"req_header":    c.Request.Header,
+				"req_body_size": c.Request.ContentLength,
+			},
 		})
 
 		// hijack response writer
@@ -43,8 +45,9 @@ func (i *interceptor) ApplyTraffic() gin.HandlerFunc {
 		defer func() {
 			c.Writer = rw.ResponseWriter
 
-			trafficRec.End(&logger.RespEntity{
+			rec.End(&logger.RespEntity{
 				Code: fmt.Sprintf("%d", c.Writer.Status()),
+				Msg:  "Success",
 				Resp: captureResponse(c, rw.buffer.Bytes()),
 			}, logger.Fields{
 				"resp_header":    c.Writer.Header(),
