@@ -14,31 +14,22 @@ type LogTrafficEntry struct {
 	allow      bool // for policy use, init true
 }
 
-func (le *LogTrafficEntry) Start(req *ReqEntity, fields Fields) *TrafficRec {
-	if !le.validate() || req == nil {
+func (te *LogTrafficEntry) Start(req *ReqEntity) *TrafficRec {
+	if !te.validate() || req == nil {
 		return nil
 	}
 
-	if fields == nil {
-		fields = make(Fields)
-	}
-
-	le.DataWith(&Traffic{
-		Typ: TrafficTypRecv,
-		Cmd: req.Cmd,
-		Req: req.Req,
-	}, fields)
-	return newTrafficRec(le, req.Cmd)
+	return newTrafficRec(te, req)
 }
 
 // Data Log a request
-func (le *LogTrafficEntry) Data(tc *Traffic) {
-	le.DataWith(tc, nil)
+func (te *LogTrafficEntry) Data(tc *Traffic) {
+	te.DataWith(tc, nil)
 }
 
 // DataWith Log a request with fields
-func (le *LogTrafficEntry) DataWith(tc *Traffic, fields Fields) {
-	if tc == nil || !le.validate() {
+func (te *LogTrafficEntry) DataWith(tc *Traffic, fields Fields) {
+	if tc == nil || !te.validate() {
 		return
 	}
 
@@ -60,100 +51,100 @@ func (le *LogTrafficEntry) DataWith(tc *Traffic, fields Fields) {
 
 	// async log
 	go func() {
-		le.dataLogger.Info(
-			le.withHead(tc.headString(le.sep)),
-			toZapFields(newFields, le.ignores...)...,
+		te.dataLogger.Info(
+			te.withHead(tc.headString(te.sep)),
+			toZapFields(newFields, te.ignores...)...,
 		)
 	}()
 }
 
 // WithFields modifies an existing dataLogger with new fields (cannot be removed)
-func (le *LogTrafficEntry) WithFields(fields Fields) TrafficEntry {
-	if !le.validate() {
-		return le
+func (te *LogTrafficEntry) WithFields(fields Fields) TrafficEntry {
+	if !te.validate() {
+		return te
 	}
 	args := toZapFields(fields)
 	return &LogTrafficEntry{
-		dataLogger: le.dataLogger.With(args...),
-		sep:        le.sep,
-		requestId:  le.requestId,
-		ignores:    le.ignores,
-		allow:      le.allow,
+		dataLogger: te.dataLogger.With(args...),
+		sep:        te.sep,
+		requestId:  te.requestId,
+		ignores:    te.ignores,
+		allow:      te.allow,
 	}
 }
 
 // WithTracing create copy of LogEntry with tracing.Span
-func (le *LogTrafficEntry) WithTracing(requestId string) TrafficEntry {
-	if !le.validate() {
-		return le
+func (te *LogTrafficEntry) WithTracing(requestId string) TrafficEntry {
+	if !te.validate() {
+		return te
 	}
 	return &LogTrafficEntry{
-		dataLogger: le.dataLogger,
-		sep:        le.sep,
-		ignores:    le.ignores,
+		dataLogger: te.dataLogger,
+		sep:        te.sep,
+		ignores:    te.ignores,
 		requestId:  requestId,
-		allow:      le.allow,
+		allow:      te.allow,
 	}
 }
 
-func (le *LogTrafficEntry) WithIgnores(ignores ...string) TrafficEntry {
-	if !le.validate() {
-		return le
+func (te *LogTrafficEntry) WithIgnores(ignores ...string) TrafficEntry {
+	if !te.validate() {
+		return te
 	}
 	return &LogTrafficEntry{
-		dataLogger: le.dataLogger,
-		sep:        le.sep,
-		requestId:  le.requestId,
+		dataLogger: te.dataLogger,
+		sep:        te.sep,
+		requestId:  te.requestId,
 		ignores:    ignores,
-		allow:      le.allow,
+		allow:      te.allow,
 	}
 }
 
 // WithPolicy create copy of LogEntry with policy
 // disable: true: disable policy, false: enable policy
-func (le *LogTrafficEntry) WithPolicy(policy Policy) TrafficEntry {
-	if !le.validate() || policy == nil {
-		return le
+func (te *LogTrafficEntry) WithPolicy(policy Policy) TrafficEntry {
+	if !te.validate() || policy == nil {
+		return te
 	}
 
 	return &LogTrafficEntry{
-		dataLogger: le.dataLogger,
-		sep:        le.sep,
-		requestId:  le.requestId,
-		ignores:    le.ignores,
+		dataLogger: te.dataLogger,
+		sep:        te.sep,
+		requestId:  te.requestId,
+		ignores:    te.ignores,
 		allow:      policy.Allow(),
 	}
 }
 
-func (le *LogTrafficEntry) withHead(msg string) string {
-	if !le.validate() {
+func (te *LogTrafficEntry) withHead(msg string) string {
+	if !te.validate() {
 		return msg
 	}
 
 	infos := append([]string{defaultDataLevelName})
-	if le.requestId == "" {
+	if te.requestId == "" {
 		infos = append(infos, defaultLogEmpty)
 	} else {
-		infos = append(infos, le.requestId)
+		infos = append(infos, te.requestId)
 	}
-	return strings.Join(append(infos, msg), le.sep)
+	return strings.Join(append(infos, msg), te.sep)
 }
 
 // clone a log entry
-func (le *LogTrafficEntry) clone() *LogTrafficEntry {
-	if !le.validate() {
+func (te *LogTrafficEntry) clone() *LogTrafficEntry {
+	if !te.validate() {
 		return nil
 	}
 	return &LogTrafficEntry{
-		dataLogger: le.dataLogger,
-		sep:        le.sep,
-		requestId:  le.requestId,
-		allow:      le.allow,
+		dataLogger: te.dataLogger,
+		sep:        te.sep,
+		requestId:  te.requestId,
+		allow:      te.allow,
 	}
 }
 
-func (le *LogTrafficEntry) validate() bool {
-	if le == nil || le.dataLogger == nil || !le.allow {
+func (te *LogTrafficEntry) validate() bool {
+	if te == nil || te.dataLogger == nil || !te.allow {
 		return false
 	}
 	return true

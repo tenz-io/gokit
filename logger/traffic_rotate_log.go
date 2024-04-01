@@ -65,8 +65,8 @@ func WithTrafficEntry(ctx context.Context, te TrafficEntry) context.Context {
 }
 
 // StartTrafficRec starts a new traffic log entry
-func StartTrafficRec(ctx context.Context, req *ReqEntity, fields Fields) *TrafficRec {
-	return TrafficEntryFromContext(ctx).Start(req, fields)
+func StartTrafficRec(ctx context.Context, req *ReqEntity) *TrafficRec {
+	return TrafficEntryFromContext(ctx).Start(req)
 }
 
 // CopyTrafficToContext copies the traffic logger from the current context to the new context

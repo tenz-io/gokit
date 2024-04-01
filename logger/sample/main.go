@@ -71,6 +71,29 @@ func main() {
 		"tag": "test with context",
 	})
 
-	time.Sleep(100 * time.Millisecond)
+	///////
+	ctx = context.Background()
+	te = logger.TrafficEntryFromContext(ctx).WithTracing("xyz:123:456")
+	ctx = logger.WithTrafficEntry(ctx, te)
+	rec := logger.StartTrafficRec(ctx, &logger.ReqEntity{
+		Typ: logger.TrafficTypRecv,
+		Cmd: "say_hello",
+		Req: []string{"test data"},
+		Fields: logger.Fields{
+			"req_header": "some header",
+		},
+	})
+	time.Sleep(20 * time.Millisecond)
+
+	defer func() {
+		rec.End(&logger.RespEntity{
+			Code: "200",
+			Msg:  "success",
+			Resp: []string{"hello"},
+		}, logger.Fields{
+			"resp_header": "some header",
+		})
+		time.Sleep(100 * time.Millisecond)
+	}()
 
 }

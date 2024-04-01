@@ -26,8 +26,10 @@ type Traffic struct {
 
 // ReqEntity is provided by user when logging
 type ReqEntity struct {
-	Cmd string // Cmd: command
-	Req any
+	Typ    TrafficTyp // Typ: type of traffic, receive request or send request
+	Cmd    string     // Cmd: command
+	Req    any
+	Fields Fields // Fields: request additional fields
 }
 
 type RespEntity struct {
@@ -39,14 +41,14 @@ type RespEntity struct {
 type TrafficRec struct {
 	te        TrafficEntry
 	startTime time.Time
-	cmd       string
+	req       *ReqEntity
 }
 
-func newTrafficRec(te TrafficEntry, cmd string) *TrafficRec {
+func newTrafficRec(te TrafficEntry, req *ReqEntity) *TrafficRec {
 	return &TrafficRec{
 		te:        te,
 		startTime: time.Now(),
-		cmd:       cmd,
+		req:       req,
 	}
 }
 
@@ -73,18 +75,20 @@ func (t *TrafficRec) End(resp *RespEntity, fields Fields) {
 		return
 	}
 
-	if fields == nil {
-		fields = make(Fields)
+	newFields := copyFields(t.req.Fields)
+	for k, v := range fields {
+		newFields[k] = v
 	}
 
 	t.te.DataWith(&Traffic{
-		Typ:  TrafficTypSend,
-		Cmd:  t.cmd,
+		Typ:  t.req.Typ,
+		Cmd:  t.req.Cmd,
 		Code: resp.Code,
 		Msg:  resp.Msg,
 		Cost: time.Since(t.startTime),
+		Req:  t.req.Req,
 		Resp: resp.Resp,
-	}, fields)
+	}, newFields)
 
 }
 
@@ -103,7 +107,7 @@ type TrafficEntry interface {
 	// disable: true: disable policy, false: enable policy
 	WithPolicy(policy Policy) TrafficEntry
 
-	Start(req *ReqEntity, fields Fields) *TrafficRec
+	Start(req *ReqEntity) *TrafficRec
 }
 
 func copyFields(fields Fields) Fields {
@@ -141,6 +145,6 @@ func (et *emptyTrafficEntry) WithPolicy(policy Policy) TrafficEntry {
 	return et
 }
 
-func (et *emptyTrafficEntry) Start(req *ReqEntity, fields Fields) *TrafficRec {
+func (et *emptyTrafficEntry) Start(req *ReqEntity) *TrafficRec {
 	return nil
 }
