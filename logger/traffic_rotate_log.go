@@ -89,6 +89,12 @@ func ConfigureTrafficWithOpts(opts ...TrafficConfigOption) {
 
 // ConfigureTraffic sets up traffic logging globally
 func ConfigureTraffic(config TrafficConfig) {
+	SetupDefaultTrimmer(
+		WithArrLimit(config.ArrLimit),
+		WithStrLimit(config.StrLimit),
+		WithDeepLimit(config.DeepLimit),
+		WithIgnores(config.Ignores...),
+	)
 	defaultTrafficLogger = NewTrafficEntry(config)
 }
 

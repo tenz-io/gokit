@@ -2,18 +2,15 @@ package logger
 
 import (
 	"encoding/base64"
-	"encoding/json"
-	"fmt"
 	"reflect"
 	"strings"
 	"time"
 )
 
 const (
-	defaultArrLimit   = 3
-	defaultStrLimit   = 128
-	defaultDeepLimit  = 10
-	defaultWholeLimit = 4096
+	defaultArrLimit  = 3
+	defaultStrLimit  = 128
+	defaultDeepLimit = 10
 )
 
 const (
@@ -22,23 +19,26 @@ const (
 
 var (
 	defaultOutputTrimmer = OutputTrimmer{
-		arrLimit:   defaultArrLimit,
-		strLimit:   defaultStrLimit,
-		deepLimit:  defaultDeepLimit,
-		wholeLimit: defaultWholeLimit,
-		ignores:    make(map[string]bool),
+		arrLimit:  defaultArrLimit,
+		strLimit:  defaultStrLimit,
+		deepLimit: defaultDeepLimit,
+		ignores:   make(map[string]bool),
 	}
 )
 
 type OutputTrimmer struct {
-	arrLimit   int
-	strLimit   int
-	deepLimit  int
-	wholeLimit int
-	ignores    map[string]bool
+	arrLimit  int
+	strLimit  int
+	deepLimit int
+	ignores   map[string]bool
 }
 
 type TrimOption func(*OutputTrimmer)
+
+func SetupDefaultTrimmer(opts ...TrimOption) {
+	trimmer := NewOutputTrimmer(opts...)
+	defaultOutputTrimmer = *trimmer
+}
 
 func WithArrLimit(limit int) TrimOption {
 	return func(t *OutputTrimmer) {
@@ -58,15 +58,11 @@ func WithDeepLimit(limit int) TrimOption {
 	}
 }
 
-func WithWholeLimit(limit int) TrimOption {
-	return func(t *OutputTrimmer) {
-		t.wholeLimit = limit
-	}
-}
-
 func WithIgnores(ignores ...string) TrimOption {
 	return func(t *OutputTrimmer) {
-		t.ignores = make(map[string]bool)
+		if t.ignores == nil {
+			t.ignores = make(map[string]bool)
+		}
 		for _, ignore := range ignores {
 			t.ignores[ignore] = true
 		}
@@ -81,20 +77,8 @@ func NewOutputTrimmer(opts ...TrimOption) *OutputTrimmer {
 	return &ot
 }
 
-func JsonMarshalWithOpts(obj any, opts ...TrimOption) string {
-	return NewOutputTrimmer(opts...).Json(obj)
-}
-
 func ObjectTrimWithOpts(obj any, opts ...TrimOption) any {
 	return NewOutputTrimmer(opts...).TrimObject(obj)
-}
-
-func (ot *OutputTrimmer) Json(obj any) string {
-	j, err := json.Marshal(ot.TrimObject(obj))
-	if err != nil {
-		return fmt.Sprintf("json.Marshal error: %v", err)
-	}
-	return string(j)
 }
 
 func (ot *OutputTrimmer) TrimObject(obj any) (ret any) {

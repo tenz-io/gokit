@@ -9,174 +9,6 @@ import (
 	"time"
 )
 
-func TestOutputTrimmer_Json(t *testing.T) {
-	type fields struct {
-		arrLimit   int
-		strLimit   int
-		deepLimit  int
-		wholeLimit int
-		ignores    map[string]bool
-	}
-	type args struct {
-		obj any
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   string
-	}{
-		{
-			name: "when obj is nil then return empty string",
-			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
-			},
-			args: args{
-				obj: nil,
-			},
-			want: `null`,
-		},
-		{
-			name: "when obj is empty string then return empty string",
-			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
-			},
-			args: args{
-				obj: "",
-			},
-			want: `""`,
-		},
-		{
-			name: "when obj is string then return string",
-			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
-			},
-			args: args{
-				obj: "abc",
-			},
-			want: `"abc"`,
-		},
-		{
-			name: "when obj is int then return int string",
-			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
-			},
-			args: args{
-				obj: 123,
-			},
-			want: `123`,
-		},
-		{
-			name: "when obj is struct then return json string",
-			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
-			},
-			args: args{
-				obj: func() any {
-					type user struct {
-						Name string `json:"name"`
-						Age  int    `json:"age"`
-					}
-					return user{
-						Name: "Alice",
-						Age:  18,
-					}
-				}(),
-			},
-			want: `{"age":18,"name":"Alice"}`,
-		},
-		{
-			name: "when obj is struct ptr then return json string",
-			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
-			},
-			args: args{
-				obj: func() any {
-					type user struct {
-						Name string `json:"name"`
-						Age  int    `json:"age"`
-					}
-					return &user{
-						Name: "Alice",
-						Age:  18,
-					}
-				}(),
-			},
-			want: `{"age":18,"name":"Alice"}`,
-		},
-		{
-			name: "when obj is unsupported type then return error string",
-			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
-			},
-			args: args{
-				obj: func() any {
-					return func() {}
-				}(),
-			},
-			want: `null`,
-		},
-		{
-			name: "when obj is interface type then return string",
-			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
-			},
-			args: args{
-				obj: func() myinterface {
-					return &mystruct{}
-				}(),
-			},
-			want: `{"v":0}`,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ot := &OutputTrimmer{
-				arrLimit:   tt.fields.arrLimit,
-				strLimit:   tt.fields.strLimit,
-				deepLimit:  tt.fields.deepLimit,
-				wholeLimit: tt.fields.wholeLimit,
-				ignores:    tt.fields.ignores,
-			}
-			if got := ot.Json(tt.args.obj); got != tt.want {
-				t.Errorf("Json() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func Test_valuableType(t *testing.T) {
 	type args struct {
 		v []reflect.Value
@@ -401,11 +233,11 @@ func Test_valuableType(t *testing.T) {
 
 func TestOutputTrimmer_valOfPrimaryType(t *testing.T) {
 	type fields struct {
-		arrLimit   int
-		strLimit   int
-		deepLimit  int
-		wholeLimit int
-		ignores    map[string]bool
+		arrLimit  int
+		strLimit  int
+		deepLimit int
+
+		ignores map[string]bool
 	}
 	type args struct {
 		v []reflect.Value
@@ -420,11 +252,9 @@ func TestOutputTrimmer_valOfPrimaryType(t *testing.T) {
 		{
 			name: "when nil then not ok",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v: []reflect.Value{
@@ -439,11 +269,9 @@ func TestOutputTrimmer_valOfPrimaryType(t *testing.T) {
 		{
 			name: "when bool values then ok",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v: []reflect.Value{
@@ -460,11 +288,9 @@ func TestOutputTrimmer_valOfPrimaryType(t *testing.T) {
 		{
 			name: "when int values then ok",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v: []reflect.Value{
@@ -487,11 +313,9 @@ func TestOutputTrimmer_valOfPrimaryType(t *testing.T) {
 		{
 			name: "when uint values then ok",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v: []reflect.Value{
@@ -514,11 +338,9 @@ func TestOutputTrimmer_valOfPrimaryType(t *testing.T) {
 		{
 			name: "when float values then ok",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v: []reflect.Value{
@@ -535,11 +357,9 @@ func TestOutputTrimmer_valOfPrimaryType(t *testing.T) {
 		{
 			name: "when string values then ok",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   3,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  3,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v: []reflect.Value{
@@ -556,11 +376,9 @@ func TestOutputTrimmer_valOfPrimaryType(t *testing.T) {
 		{
 			name: "when ptr values then ok",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v: []reflect.Value{
@@ -583,11 +401,9 @@ func TestOutputTrimmer_valOfPrimaryType(t *testing.T) {
 		{
 			name: "when struct values then not ok",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v: []reflect.Value{
@@ -615,11 +431,11 @@ func TestOutputTrimmer_valOfPrimaryType(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ot := &OutputTrimmer{
-				arrLimit:   tt.fields.arrLimit,
-				strLimit:   tt.fields.strLimit,
-				deepLimit:  tt.fields.deepLimit,
-				wholeLimit: tt.fields.wholeLimit,
-				ignores:    tt.fields.ignores,
+				arrLimit:  tt.fields.arrLimit,
+				strLimit:  tt.fields.strLimit,
+				deepLimit: tt.fields.deepLimit,
+
+				ignores: tt.fields.ignores,
 			}
 
 			if len(tt.args.v) != len(tt.wantVal) {
@@ -718,11 +534,11 @@ func Test_isBytes(t *testing.T) {
 
 func TestOutputTrimmer_valOfSpecialType(t *testing.T) {
 	type fields struct {
-		arrLimit   int
-		strLimit   int
-		deepLimit  int
-		wholeLimit int
-		ignores    map[string]bool
+		arrLimit  int
+		strLimit  int
+		deepLimit int
+
+		ignores map[string]bool
 	}
 	type args struct {
 		v reflect.Value
@@ -737,11 +553,9 @@ func TestOutputTrimmer_valOfSpecialType(t *testing.T) {
 		{
 			name: "when v is time type then return time string",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v: reflect.ValueOf(time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)),
@@ -752,11 +566,9 @@ func TestOutputTrimmer_valOfSpecialType(t *testing.T) {
 		{
 			name: "when v is time ptr type then return time string",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v: reflect.ValueOf(func() *time.Time {
@@ -770,11 +582,9 @@ func TestOutputTrimmer_valOfSpecialType(t *testing.T) {
 		{
 			name: "when v is error type then return error string",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v: reflect.ValueOf(fmt.Errorf("oops")),
@@ -785,11 +595,9 @@ func TestOutputTrimmer_valOfSpecialType(t *testing.T) {
 		{
 			name: "when v is string type then return time string",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v: reflect.ValueOf(func() string {
@@ -802,11 +610,9 @@ func TestOutputTrimmer_valOfSpecialType(t *testing.T) {
 		{
 			name: "when v is string type and larger than limit then return time string",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   3,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  3,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v: reflect.ValueOf(func() string {
@@ -819,11 +625,9 @@ func TestOutputTrimmer_valOfSpecialType(t *testing.T) {
 		{
 			name: "when v is bytes type then return bytes string",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v: reflect.ValueOf([]byte{1, 2, 3, 4}),
@@ -834,11 +638,9 @@ func TestOutputTrimmer_valOfSpecialType(t *testing.T) {
 		{
 			name: "when v is byte array type then return bytes string",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v: reflect.ValueOf([4]byte{1, 2, 3, 4}),
@@ -849,11 +651,9 @@ func TestOutputTrimmer_valOfSpecialType(t *testing.T) {
 		{
 			name: "when v is byte array type len larger than limit then return nil",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   3,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  3,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v: reflect.ValueOf([4]byte{1, 2, 3, 4}),
@@ -864,11 +664,9 @@ func TestOutputTrimmer_valOfSpecialType(t *testing.T) {
 		{
 			name: "when v is byte array ptr type then return bytes string",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v: reflect.ValueOf(func() *[4]byte {
@@ -882,11 +680,9 @@ func TestOutputTrimmer_valOfSpecialType(t *testing.T) {
 		{
 			name: "when v is byte slice ptr type then return bytes string",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v: reflect.ValueOf(func() *[]byte {
@@ -900,11 +696,9 @@ func TestOutputTrimmer_valOfSpecialType(t *testing.T) {
 		{
 			name: "when v is func type then return bytes string",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v: reflect.ValueOf(func() {}),
@@ -916,11 +710,11 @@ func TestOutputTrimmer_valOfSpecialType(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ot := &OutputTrimmer{
-				arrLimit:   tt.fields.arrLimit,
-				strLimit:   tt.fields.strLimit,
-				deepLimit:  tt.fields.deepLimit,
-				wholeLimit: tt.fields.wholeLimit,
-				ignores:    tt.fields.ignores,
+				arrLimit:  tt.fields.arrLimit,
+				strLimit:  tt.fields.strLimit,
+				deepLimit: tt.fields.deepLimit,
+
+				ignores: tt.fields.ignores,
 			}
 			gotVal, gotOk := ot.valOfSpecialType(tt.args.v)
 			if !reflect.DeepEqual(gotVal, tt.wantVal) {
@@ -935,11 +729,11 @@ func TestOutputTrimmer_valOfSpecialType(t *testing.T) {
 
 func TestOutputTrimmer_bytesString(t *testing.T) {
 	type fields struct {
-		arrLimit   int
-		strLimit   int
-		deepLimit  int
-		wholeLimit int
-		ignores    map[string]bool
+		arrLimit  int
+		strLimit  int
+		deepLimit int
+
+		ignores map[string]bool
 	}
 	type args struct {
 		v reflect.Value
@@ -954,11 +748,9 @@ func TestOutputTrimmer_bytesString(t *testing.T) {
 		{
 			name: "when v is byte slice then return string",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v: reflect.ValueOf([]byte{1, 2, 3}),
@@ -969,11 +761,9 @@ func TestOutputTrimmer_bytesString(t *testing.T) {
 		{
 			name: "when v is byte array then return string",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v: reflect.ValueOf([3]byte{1, 2, 3}),
@@ -985,11 +775,11 @@ func TestOutputTrimmer_bytesString(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ot := &OutputTrimmer{
-				arrLimit:   tt.fields.arrLimit,
-				strLimit:   tt.fields.strLimit,
-				deepLimit:  tt.fields.deepLimit,
-				wholeLimit: tt.fields.wholeLimit,
-				ignores:    tt.fields.ignores,
+				arrLimit:  tt.fields.arrLimit,
+				strLimit:  tt.fields.strLimit,
+				deepLimit: tt.fields.deepLimit,
+
+				ignores: tt.fields.ignores,
 			}
 			got, got1 := ot.bytesString(tt.args.v)
 			if got != tt.want {
@@ -1004,11 +794,11 @@ func TestOutputTrimmer_bytesString(t *testing.T) {
 
 func TestOutputTrimmer_trimStruct(t *testing.T) {
 	type fields struct {
-		arrLimit   int
-		strLimit   int
-		deepLimit  int
-		wholeLimit int
-		ignores    map[string]bool
+		arrLimit  int
+		strLimit  int
+		deepLimit int
+
+		ignores map[string]bool
 	}
 	type args struct {
 		v       reflect.Value
@@ -1023,11 +813,9 @@ func TestOutputTrimmer_trimStruct(t *testing.T) {
 		{
 			name: "when v is nil with deep 0 then return nil",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v:       reflect.ValueOf(nil),
@@ -1038,11 +826,9 @@ func TestOutputTrimmer_trimStruct(t *testing.T) {
 		{
 			name: "when v is nil with deep 10 then return nil",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v:       reflect.ValueOf(nil),
@@ -1053,11 +839,9 @@ func TestOutputTrimmer_trimStruct(t *testing.T) {
 		{
 			name: "when v is struct then return map[string]any",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v: reflect.ValueOf(func() any {
@@ -1080,11 +864,9 @@ func TestOutputTrimmer_trimStruct(t *testing.T) {
 		{
 			name: "when v is struct with slice then return map[string]any",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v: reflect.ValueOf(func() any {
@@ -1143,11 +925,11 @@ func TestOutputTrimmer_trimStruct(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ot := &OutputTrimmer{
-				arrLimit:   tt.fields.arrLimit,
-				strLimit:   tt.fields.strLimit,
-				deepLimit:  tt.fields.deepLimit,
-				wholeLimit: tt.fields.wholeLimit,
-				ignores:    tt.fields.ignores,
+				arrLimit:  tt.fields.arrLimit,
+				strLimit:  tt.fields.strLimit,
+				deepLimit: tt.fields.deepLimit,
+
+				ignores: tt.fields.ignores,
 			}
 			if got := ot.trimStruct(tt.args.v, tt.args.deepLmt); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("trimStruct() = %v, want %v", got, tt.want)
@@ -1158,11 +940,11 @@ func TestOutputTrimmer_trimStruct(t *testing.T) {
 
 func TestOutputTrimmer_trimSlice(t *testing.T) {
 	type fields struct {
-		arrLimit   int
-		strLimit   int
-		deepLimit  int
-		wholeLimit int
-		ignores    map[string]bool
+		arrLimit  int
+		strLimit  int
+		deepLimit int
+
+		ignores map[string]bool
 	}
 	type args struct {
 		v       reflect.Value
@@ -1177,11 +959,9 @@ func TestOutputTrimmer_trimSlice(t *testing.T) {
 		{
 			name: "when v is int slice with deep 10 then return trimmed slice",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v:       reflect.ValueOf([]int{1, 2, 3, 4}),
@@ -1196,11 +976,9 @@ func TestOutputTrimmer_trimSlice(t *testing.T) {
 		{
 			name: "when v is int ptr slice with deep 10 then return trimmed slice",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v: reflect.ValueOf(func() []*int {
@@ -1222,11 +1000,9 @@ func TestOutputTrimmer_trimSlice(t *testing.T) {
 		{
 			name: "when v is struct slice with deep 10 then return trimmed slice",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v: reflect.ValueOf(func() []any {
@@ -1262,11 +1038,9 @@ func TestOutputTrimmer_trimSlice(t *testing.T) {
 		{
 			name: "when v is slice slice with deep 10 then return trimmed slice",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				v: reflect.ValueOf(func() []any {
@@ -1299,11 +1073,11 @@ func TestOutputTrimmer_trimSlice(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ot := &OutputTrimmer{
-				arrLimit:   tt.fields.arrLimit,
-				strLimit:   tt.fields.strLimit,
-				deepLimit:  tt.fields.deepLimit,
-				wholeLimit: tt.fields.wholeLimit,
-				ignores:    tt.fields.ignores,
+				arrLimit:  tt.fields.arrLimit,
+				strLimit:  tt.fields.strLimit,
+				deepLimit: tt.fields.deepLimit,
+
+				ignores: tt.fields.ignores,
 			}
 			if got := ot.trimSlice(tt.args.v, tt.args.deepLmt); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("trimSlice() = %v, want %v", got, tt.want)
@@ -1330,11 +1104,11 @@ func (m *mystruct) SomeMethod() {
 
 func TestOutputTrimmer_TrimObject(t *testing.T) {
 	type fields struct {
-		arrLimit   int
-		strLimit   int
-		deepLimit  int
-		wholeLimit int
-		ignores    map[string]bool
+		arrLimit  int
+		strLimit  int
+		deepLimit int
+
+		ignores map[string]bool
 	}
 	type args struct {
 		obj any
@@ -1348,11 +1122,9 @@ func TestOutputTrimmer_TrimObject(t *testing.T) {
 		{
 			name: "when obj is nil then return nil",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				obj: nil,
@@ -1362,11 +1134,9 @@ func TestOutputTrimmer_TrimObject(t *testing.T) {
 		{
 			name: "when obj is int then return int64",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				obj: 123,
@@ -1376,11 +1146,9 @@ func TestOutputTrimmer_TrimObject(t *testing.T) {
 		{
 			name: "when obj is int ptr then return int64",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				obj: intPtr(123),
@@ -1390,11 +1158,9 @@ func TestOutputTrimmer_TrimObject(t *testing.T) {
 		{
 			name: "when obj is string then return string",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				obj: "abc",
@@ -1404,11 +1170,9 @@ func TestOutputTrimmer_TrimObject(t *testing.T) {
 		{
 			name: "when obj is string ptr then return string",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				obj: func() *string {
@@ -1421,11 +1185,9 @@ func TestOutputTrimmer_TrimObject(t *testing.T) {
 		{
 			name: "when obj is string larger than limit then return trimmed string",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   3,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  3,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				obj: "abcdef",
@@ -1435,11 +1197,9 @@ func TestOutputTrimmer_TrimObject(t *testing.T) {
 		{
 			name: "when obj is string ptr larger than limit then return trimmed string",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   3,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  3,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				obj: func() *string {
@@ -1452,11 +1212,9 @@ func TestOutputTrimmer_TrimObject(t *testing.T) {
 		{
 			name: "when obj is struct then return map[string]any",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				obj: func() any {
@@ -1484,11 +1242,11 @@ func TestOutputTrimmer_TrimObject(t *testing.T) {
 		{
 			name: "when obj is struct larger than deep limit then return trimmed map[string]any",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  3,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 3,
+
+				ignores: make(map[string]bool),
 			},
 			args: args{
 				obj: func() any {
@@ -1527,11 +1285,9 @@ func TestOutputTrimmer_TrimObject(t *testing.T) {
 		{
 			name: "when obj is struct ptr then return map[string]any",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				obj: func() any {
@@ -1553,11 +1309,9 @@ func TestOutputTrimmer_TrimObject(t *testing.T) {
 		{
 			name: "when obj is slice then return []any",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				obj: func() any {
@@ -1577,11 +1331,9 @@ func TestOutputTrimmer_TrimObject(t *testing.T) {
 		{
 			name: "when obj is bytes then return base64 bytes string",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				obj: func() any {
@@ -1593,11 +1345,9 @@ func TestOutputTrimmer_TrimObject(t *testing.T) {
 		{
 			name: "when obj is bytes less than limit then return base64 bytes string",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				obj: func() any {
@@ -1609,11 +1359,9 @@ func TestOutputTrimmer_TrimObject(t *testing.T) {
 		{
 			name: "when obj is bytes larger than limit then return trimmed bytes",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				obj: func() any {
@@ -1629,11 +1377,9 @@ func TestOutputTrimmer_TrimObject(t *testing.T) {
 		{
 			name: "when obj is array then return []any",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				obj: func() any {
@@ -1653,11 +1399,9 @@ func TestOutputTrimmer_TrimObject(t *testing.T) {
 		{
 			name: "when obj is slice ptr then return []any",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				obj: func() any {
@@ -1677,11 +1421,9 @@ func TestOutputTrimmer_TrimObject(t *testing.T) {
 		{
 			name: "when obj is slice larger than limit then return trimmed []any",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				obj: func() any {
@@ -1702,11 +1444,9 @@ func TestOutputTrimmer_TrimObject(t *testing.T) {
 		{
 			name: "when obj is map then return map[string]any",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				obj: func() any {
@@ -1724,11 +1464,9 @@ func TestOutputTrimmer_TrimObject(t *testing.T) {
 		{
 			name: "when obj is error then return error string",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				obj: func() any {
@@ -1740,11 +1478,9 @@ func TestOutputTrimmer_TrimObject(t *testing.T) {
 		{
 			name: "when obj is chan then return nil",
 			fields: fields{
-				arrLimit:   3,
-				strLimit:   128,
-				deepLimit:  10,
-				wholeLimit: 1000,
-				ignores:    make(map[string]bool),
+				arrLimit:  3,
+				strLimit:  128,
+				deepLimit: 10, ignores: make(map[string]bool),
 			},
 			args: args{
 				obj: func() any {
@@ -1757,11 +1493,11 @@ func TestOutputTrimmer_TrimObject(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ot := &OutputTrimmer{
-				arrLimit:   tt.fields.arrLimit,
-				strLimit:   tt.fields.strLimit,
-				deepLimit:  tt.fields.deepLimit,
-				wholeLimit: tt.fields.wholeLimit,
-				ignores:    tt.fields.ignores,
+				arrLimit:  tt.fields.arrLimit,
+				strLimit:  tt.fields.strLimit,
+				deepLimit: tt.fields.deepLimit,
+
+				ignores: tt.fields.ignores,
 			}
 			if gotRet := ot.TrimObject(tt.args.obj); !reflect.DeepEqual(gotRet, tt.wantRet) {
 				t.Errorf("TrimObject() = %v, want %v", gotRet, tt.wantRet)
