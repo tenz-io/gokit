@@ -1461,18 +1461,67 @@ func TestOutputTrimmer_TrimObject(t *testing.T) {
 			args: args{
 				obj: func() any {
 					type user struct {
+						Name       string        `json:"name"`
+						Age        int           `json:"age"`
+						GoSchoolAt time.Time     `json:"go_school_at"`
+						DailyView  time.Duration `json:"daily_view"`
+					}
+					return user{
+						Name:       "Alice",
+						Age:        18,
+						GoSchoolAt: time.Date(2001, 1, 1, 0, 0, 0, 0, time.UTC),
+						DailyView:  40 * time.Minute,
+					}
+				}(),
+			},
+			wantRet: map[string]any{
+				"name":         "Alice",
+				"age":          int64(18),
+				"go_school_at": "2001-01-01T00:00:00.000",
+				"daily_view":   "40m0s",
+			},
+		},
+		{
+			name: "when obj is struct larger than deep limit then return trimmed map[string]any",
+			fields: fields{
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  3,
+				wholeLimit: 1000,
+				ignores:    make(map[string]bool),
+			},
+			args: args{
+				obj: func() any {
+					type deep struct {
+						Flag string `json:"flag"`
+					}
+					type ext struct {
+						Status string `json:"status"`
+						Deep   deep   `json:"deep"`
+					}
+					type user struct {
 						Name string `json:"name"`
 						Age  int    `json:"age"`
+						Ext  ext    `json:"ext"`
 					}
 					return user{
 						Name: "Alice",
 						Age:  18,
+						Ext: ext{
+							Status: "OK",
+							Deep: deep{
+								Flag: "flag",
+							},
+						},
 					}
 				}(),
 			},
 			wantRet: map[string]any{
 				"name": "Alice",
 				"age":  int64(18),
+				"ext": map[string]any{
+					"status": "OK",
+				},
 			},
 		},
 		{
@@ -1523,6 +1572,58 @@ func TestOutputTrimmer_TrimObject(t *testing.T) {
 				"Alice",
 				"Bob",
 				"Charlie",
+			},
+		},
+		{
+			name: "when obj is bytes then return base64 bytes string",
+			fields: fields{
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  10,
+				wholeLimit: 1000,
+				ignores:    make(map[string]bool),
+			},
+			args: args{
+				obj: func() any {
+					return []byte{1, 2, 3, 4}
+				}(),
+			},
+			wantRet: "AQIDBA==",
+		},
+		{
+			name: "when obj is bytes less than limit then return base64 bytes string",
+			fields: fields{
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  10,
+				wholeLimit: 1000,
+				ignores:    make(map[string]bool),
+			},
+			args: args{
+				obj: func() any {
+					return bytes.Repeat([]byte{1, 2, 3, 4}, 20)
+				}(),
+			},
+			wantRet: `AQIDBAECAwQBAgMEAQIDBAECAwQBAgMEAQIDBAECAwQBAgMEAQIDBAECAwQBAgMEAQIDBAECAwQBAgMEAQIDBAECAwQBAgMEAQIDBAECAwQ=`,
+		},
+		{
+			name: "when obj is bytes larger than limit then return trimmed bytes",
+			fields: fields{
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  10,
+				wholeLimit: 1000,
+				ignores:    make(map[string]bool),
+			},
+			args: args{
+				obj: func() any {
+					return bytes.Repeat([]byte{1, 2, 3, 4}, 100)
+				}(),
+			},
+			wantRet: []any{
+				uint64(1),
+				uint64(2),
+				uint64(3),
 			},
 		},
 		{
@@ -1635,6 +1736,22 @@ func TestOutputTrimmer_TrimObject(t *testing.T) {
 				}(),
 			},
 			wantRet: "oops",
+		},
+		{
+			name: "when obj is chan then return nil",
+			fields: fields{
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  10,
+				wholeLimit: 1000,
+				ignores:    make(map[string]bool),
+			},
+			args: args{
+				obj: func() any {
+					return make(chan int)
+				}(),
+			},
+			wantRet: nil,
 		},
 	}
 	for _, tt := range tests {
