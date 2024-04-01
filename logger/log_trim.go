@@ -85,6 +85,10 @@ func JsonMarshalWithOpts(obj any, opts ...TrimOption) string {
 	return NewOutputTrimmer(opts...).Json(obj)
 }
 
+func ObjectTrimWithOpts(obj any, opts ...TrimOption) any {
+	return NewOutputTrimmer(opts...).TrimObject(obj)
+}
+
 func (ot *OutputTrimmer) Json(obj any) string {
 	j, err := json.Marshal(ot.TrimObject(obj))
 	if err != nil {
@@ -98,7 +102,7 @@ func (ot *OutputTrimmer) TrimObject(obj any) (ret any) {
 }
 
 func (ot *OutputTrimmer) trimObject(obj any, deepLmt int) any {
-	if obj == nil {
+	if obj == nil || deepLmt <= 0 {
 		return nil
 	}
 
@@ -107,7 +111,7 @@ func (ot *OutputTrimmer) trimObject(obj any, deepLmt int) any {
 		return val
 	}
 
-	for ; v.Kind() == reflect.Ptr; v = v.Elem() {
+	for ; v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface; v = v.Elem() {
 		if v.IsNil() {
 			return nil
 		}
@@ -167,14 +171,14 @@ func (ot *OutputTrimmer) trimStruct(v reflect.Value, deepLmt int) map[string]any
 			continue
 		}
 
-		for ; fv.Kind() == reflect.Ptr; fv = fv.Elem() {
+		for ; fv.Kind() == reflect.Ptr || fv.Kind() == reflect.Interface; fv = fv.Elem() {
 			if fv.IsNil() {
 				break
 			}
 		}
 
 		switch fv.Kind() {
-		case reflect.Ptr:
+		case reflect.Ptr, reflect.Interface:
 			if fv.IsNil() {
 				continue
 			}
@@ -190,10 +194,6 @@ func (ot *OutputTrimmer) trimStruct(v reflect.Value, deepLmt int) map[string]any
 			if ret := ot.trimSlice(fv, deepLmt); len(ret) > 0 {
 				m[fieldName] = ret
 				m[arrFieldPrefix+fieldName] = fv.Len()
-			}
-		case reflect.Interface:
-			if ret := ot.trimObject(fv.Interface(), deepLmt-1); ret != nil {
-				m[fieldName] = ret
 			}
 		default:
 			// ignore
@@ -224,14 +224,14 @@ func (ot *OutputTrimmer) trimMap(v reflect.Value, deepLmt int) map[string]any {
 			continue
 		}
 
-		for ; fv.Kind() == reflect.Ptr; fv = fv.Elem() {
+		for ; fv.Kind() == reflect.Ptr || fv.Kind() == reflect.Interface; fv = fv.Elem() {
 			if fv.IsNil() {
 				break
 			}
 		}
 
 		switch fv.Kind() {
-		case reflect.Ptr:
+		case reflect.Ptr, reflect.Interface:
 			if fv.IsNil() {
 				continue
 			}
@@ -245,10 +245,6 @@ func (ot *OutputTrimmer) trimMap(v reflect.Value, deepLmt int) map[string]any {
 			}
 		case reflect.Array, reflect.Slice:
 			if ret := ot.trimSlice(fv, deepLmt); len(ret) > 0 {
-				m[k.String()] = ret
-			}
-		case reflect.Interface:
-			if ret := ot.trimObject(fv.Interface(), deepLmt-1); ret != nil {
 				m[k.String()] = ret
 			}
 		default:
@@ -281,14 +277,14 @@ func (ot *OutputTrimmer) trimSlice(v reflect.Value, deepLmt int) []any {
 			continue
 		}
 
-		for ; fv.Kind() == reflect.Ptr; fv = fv.Elem() {
+		for ; fv.Kind() == reflect.Ptr || fv.Kind() == reflect.Interface; fv = fv.Elem() {
 			if fv.IsNil() {
 				break
 			}
 		}
 
 		switch fv.Kind() {
-		case reflect.Ptr:
+		case reflect.Ptr, reflect.Interface:
 			if fv.IsNil() {
 				arr = append(arr, nil)
 			}
@@ -298,8 +294,6 @@ func (ot *OutputTrimmer) trimSlice(v reflect.Value, deepLmt int) []any {
 			arr = append(arr, ot.trimMap(fv, deepLmt-1))
 		case reflect.Array, reflect.Slice:
 			arr = append(arr, ot.trimSlice(fv, deepLmt-1))
-		case reflect.Interface:
-			arr = append(arr, ot.trimObject(fv.Interface(), deepLmt-1))
 		default:
 			//ignore
 		}
@@ -309,11 +303,10 @@ func (ot *OutputTrimmer) trimSlice(v reflect.Value, deepLmt int) []any {
 }
 
 var (
-	errType      = reflect.TypeOf(fmt.Errorf(""))
+	errType      = reflect.TypeOf((*error)(nil)).Elem()
 	timeType     = reflect.TypeOf(time.Now())
 	durationType = reflect.TypeOf(time.Second)
 	bytesType    = reflect.TypeOf([]byte{})
-	byteArrType  = reflect.TypeOf([0]byte{})
 	strType      = reflect.TypeOf("")
 
 	timeFormat = "2006-01-02T15:04:05.000"
@@ -321,30 +314,32 @@ var (
 
 // valOfSpecialType returns the value of a special type
 func (ot *OutputTrimmer) valOfSpecialType(v reflect.Value) (val any, ok bool) {
-	if v.CanInterface() {
-		// if v is error type
-		if v.Type() == errType {
-			err := v.Interface().(error)
-			return err.Error(), true
-		}
-	}
-
-	switch v.Kind() {
-	case reflect.Interface:
-		// if v is interface type
-	case reflect.Ptr:
+	for v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
 		if v.IsNil() {
 			return nil, false
 		}
-		return ot.valOfSpecialType(v.Elem())
-	default:
-		switch v.Type() {
-		case errType:
+
+		// if v is type of error
+		if v.CanInterface() && v.Type().Implements(errType) {
 			return v.Interface().(error).Error(), true
+		}
+
+		v = v.Elem()
+	}
+
+	if v.CanInterface() {
+		interfacedValue := v.Interface()
+
+		// Check if the value implements the error interface
+		if err, isError := interfacedValue.(error); isError {
+			return err.Error(), true
+		}
+
+		switch v.Type() {
 		case timeType:
-			return v.Interface().(time.Time).Format(timeFormat), true
+			return interfacedValue.(time.Time).Format(timeFormat), true
 		case durationType:
-			return v.Interface().(time.Duration).String(), true
+			return interfacedValue.(time.Duration).String(), true
 		case strType:
 			return ot.stringLimit(v.String()), true
 		default:
@@ -354,29 +349,14 @@ func (ot *OutputTrimmer) valOfSpecialType(v reflect.Value) (val any, ok bool) {
 				}
 			}
 		}
+
 	}
 
 	return nil, false
 }
 
 func isBytes(v reflect.Value) bool {
-	if v.Kind() != reflect.Slice && v.Kind() != reflect.Array {
-		return false
-	}
-
-	vlen := v.Len()
-	if vlen == 0 {
-		if v.Type() == byteArrType || v.Type() == bytesType {
-			return true
-		}
-		return false
-	}
-	// check the first element and check type
-	if ev := v.Index(0); ev.Kind() != reflect.Uint8 {
-		return false
-	}
-
-	return true
+	return (v.Kind() == reflect.Slice || v.Kind() == reflect.Array) && v.Type().Elem().Kind() == reflect.Uint8
 }
 
 func (ot *OutputTrimmer) bytesString(v reflect.Value) (string, bool) {
@@ -388,7 +368,7 @@ func (ot *OutputTrimmer) bytesString(v reflect.Value) (string, bool) {
 	maxLen := ifThen(ot.arrLimit > ot.strLimit, ot.arrLimit, ot.strLimit)
 	if vlen <= maxLen {
 		// if v is a byte slice
-		if v.Type() == bytesType {
+		if v.Type().AssignableTo(bytesType) {
 			return base64.StdEncoding.EncodeToString(v.Bytes()), true
 		}
 
@@ -399,7 +379,6 @@ func (ot *OutputTrimmer) bytesString(v reflect.Value) (string, bool) {
 	}
 
 	return "", false
-
 }
 
 // valOfSupportType returns the value of a support type
@@ -425,8 +404,10 @@ func (ot *OutputTrimmer) valOfPrimaryType(v reflect.Value) (val any, ok bool) {
 		return nil, false
 	}
 
-	if v.Kind() == reflect.Ptr {
-		return ot.valOfPrimaryType(v.Elem())
+	for ; v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface; v = v.Elem() {
+		if v.IsNil() {
+			return nil, false
+		}
 	}
 
 	switch v.Kind() {
@@ -451,28 +432,23 @@ func (ot *OutputTrimmer) valOfPrimaryType(v reflect.Value) (val any, ok bool) {
 
 // valuableType return ture if the value is valuable
 func valuableType(v reflect.Value) bool {
-	switch v.Kind() {
-	case reflect.Struct:
-		return true
-	case reflect.Ptr:
+	for ; v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface; v = v.Elem() {
 		if v.IsNil() {
 			return false
 		}
-		return valuableType(v.Elem())
+	}
+
+	switch v.Kind() {
 	case reflect.Bool,
 		reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int,
-		reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint:
+		reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint,
+		reflect.Float32, reflect.Float64,
+		reflect.String,
+		reflect.Complex64, reflect.Complex128,
+		reflect.Struct:
 		return true
-	case reflect.Float32, reflect.Float64:
-		return true
-	case reflect.String:
-		return true
-	case reflect.Complex64, reflect.Complex128:
-		return true
-	case reflect.Map:
-		return true
-	case reflect.Slice, reflect.Array:
-		return true
+	case reflect.Map, reflect.Slice, reflect.Array:
+		return v.Len() > 0
 	default:
 		return false
 	}

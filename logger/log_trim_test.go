@@ -2,6 +2,7 @@ package logger
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"reflect"
 	"testing"
@@ -28,10 +29,10 @@ func TestOutputTrimmer_Json(t *testing.T) {
 		{
 			name: "when obj is nil then return empty string",
 			fields: fields{
-				arrLimit:   0,
-				strLimit:   0,
-				deepLimit:  0,
-				wholeLimit: 0,
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  10,
+				wholeLimit: 1000,
 				ignores:    make(map[string]bool),
 			},
 			args: args{
@@ -42,10 +43,10 @@ func TestOutputTrimmer_Json(t *testing.T) {
 		{
 			name: "when obj is empty string then return empty string",
 			fields: fields{
-				arrLimit:   0,
-				strLimit:   0,
-				deepLimit:  0,
-				wholeLimit: 0,
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  10,
+				wholeLimit: 1000,
 				ignores:    make(map[string]bool),
 			},
 			args: args{
@@ -56,10 +57,10 @@ func TestOutputTrimmer_Json(t *testing.T) {
 		{
 			name: "when obj is string then return string",
 			fields: fields{
-				arrLimit:   0,
-				strLimit:   0,
-				deepLimit:  0,
-				wholeLimit: 0,
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  10,
+				wholeLimit: 1000,
 				ignores:    make(map[string]bool),
 			},
 			args: args{
@@ -70,10 +71,10 @@ func TestOutputTrimmer_Json(t *testing.T) {
 		{
 			name: "when obj is int then return int string",
 			fields: fields{
-				arrLimit:   0,
-				strLimit:   0,
-				deepLimit:  0,
-				wholeLimit: 0,
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  10,
+				wholeLimit: 1000,
 				ignores:    make(map[string]bool),
 			},
 			args: args{
@@ -142,6 +143,22 @@ func TestOutputTrimmer_Json(t *testing.T) {
 				}(),
 			},
 			want: `null`,
+		},
+		{
+			name: "when obj is interface type then return string",
+			fields: fields{
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  10,
+				wholeLimit: 1000,
+				ignores:    make(map[string]bool),
+			},
+			args: args{
+				obj: func() myinterface {
+					return &mystruct{}
+				}(),
+			},
+			want: `{"v":0}`,
 		},
 	}
 	for _, tt := range tests {
@@ -281,7 +298,9 @@ func Test_valuableType(t *testing.T) {
 			name: "when v is map type then return true",
 			args: args{
 				v: []reflect.Value{
-					reflect.ValueOf(make(map[string]any)),
+					reflect.ValueOf(map[string]any{
+						"a": 1,
+					}),
 				},
 			},
 			want: true,
@@ -290,9 +309,7 @@ func Test_valuableType(t *testing.T) {
 			name: "when v is slice or array type then return true",
 			args: args{
 				v: []reflect.Value{
-					reflect.ValueOf(make([]int, 0)),
 					reflect.ValueOf([3]int{1, 2, 3}),
-					reflect.ValueOf(make([]byte, 0)),
 					reflect.ValueOf([3]byte{1, 2, 3}),
 				},
 			},
@@ -350,6 +367,15 @@ func Test_valuableType(t *testing.T) {
 				},
 			},
 			want: false,
+		},
+		{
+			name: "when v is error type then return true",
+			args: args{
+				v: []reflect.Value{
+					reflect.ValueOf(errors.New("oops")),
+				},
+			},
+			want: true,
 		},
 		{
 			name: "when v is unsupported type then return false",
@@ -1288,4 +1314,341 @@ func TestOutputTrimmer_trimSlice(t *testing.T) {
 
 func intPtr(i int) *int {
 	return &i
+}
+
+type myinterface interface {
+	SomeMethod()
+}
+
+type mystruct struct {
+	v int
+}
+
+func (m *mystruct) SomeMethod() {
+	fmt.Println("some method")
+}
+
+func TestOutputTrimmer_TrimObject(t *testing.T) {
+	type fields struct {
+		arrLimit   int
+		strLimit   int
+		deepLimit  int
+		wholeLimit int
+		ignores    map[string]bool
+	}
+	type args struct {
+		obj any
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantRet any
+	}{
+		{
+			name: "when obj is nil then return nil",
+			fields: fields{
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  10,
+				wholeLimit: 1000,
+				ignores:    make(map[string]bool),
+			},
+			args: args{
+				obj: nil,
+			},
+			wantRet: nil,
+		},
+		{
+			name: "when obj is int then return int64",
+			fields: fields{
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  10,
+				wholeLimit: 1000,
+				ignores:    make(map[string]bool),
+			},
+			args: args{
+				obj: 123,
+			},
+			wantRet: int64(123),
+		},
+		{
+			name: "when obj is int ptr then return int64",
+			fields: fields{
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  10,
+				wholeLimit: 1000,
+				ignores:    make(map[string]bool),
+			},
+			args: args{
+				obj: intPtr(123),
+			},
+			wantRet: int64(123),
+		},
+		{
+			name: "when obj is string then return string",
+			fields: fields{
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  10,
+				wholeLimit: 1000,
+				ignores:    make(map[string]bool),
+			},
+			args: args{
+				obj: "abc",
+			},
+			wantRet: "abc",
+		},
+		{
+			name: "when obj is string ptr then return string",
+			fields: fields{
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  10,
+				wholeLimit: 1000,
+				ignores:    make(map[string]bool),
+			},
+			args: args{
+				obj: func() *string {
+					s := "abc"
+					return &s
+				}(),
+			},
+			wantRet: "abc",
+		},
+		{
+			name: "when obj is string larger than limit then return trimmed string",
+			fields: fields{
+				arrLimit:   3,
+				strLimit:   3,
+				deepLimit:  10,
+				wholeLimit: 1000,
+				ignores:    make(map[string]bool),
+			},
+			args: args{
+				obj: "abcdef",
+			},
+			wantRet: "abc...",
+		},
+		{
+			name: "when obj is string ptr larger than limit then return trimmed string",
+			fields: fields{
+				arrLimit:   3,
+				strLimit:   3,
+				deepLimit:  10,
+				wholeLimit: 1000,
+				ignores:    make(map[string]bool),
+			},
+			args: args{
+				obj: func() *string {
+					s := "abcdef"
+					return &s
+				}(),
+			},
+			wantRet: "abc...",
+		},
+		{
+			name: "when obj is struct then return map[string]any",
+			fields: fields{
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  10,
+				wholeLimit: 1000,
+				ignores:    make(map[string]bool),
+			},
+			args: args{
+				obj: func() any {
+					type user struct {
+						Name string `json:"name"`
+						Age  int    `json:"age"`
+					}
+					return user{
+						Name: "Alice",
+						Age:  18,
+					}
+				}(),
+			},
+			wantRet: map[string]any{
+				"name": "Alice",
+				"age":  int64(18),
+			},
+		},
+		{
+			name: "when obj is struct ptr then return map[string]any",
+			fields: fields{
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  10,
+				wholeLimit: 1000,
+				ignores:    make(map[string]bool),
+			},
+			args: args{
+				obj: func() any {
+					type user struct {
+						Name string `json:"name"`
+						Age  int    `json:"age"`
+					}
+					return &user{
+						Name: "Alice",
+						Age:  18,
+					}
+				}(),
+			},
+			wantRet: map[string]any{
+				"name": "Alice",
+				"age":  int64(18),
+			},
+		},
+		{
+			name: "when obj is slice then return []any",
+			fields: fields{
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  10,
+				wholeLimit: 1000,
+				ignores:    make(map[string]bool),
+			},
+			args: args{
+				obj: func() any {
+					return []string{
+						"Alice",
+						"Bob",
+						"Charlie",
+					}
+				}(),
+			},
+			wantRet: []any{
+				"Alice",
+				"Bob",
+				"Charlie",
+			},
+		},
+		{
+			name: "when obj is array then return []any",
+			fields: fields{
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  10,
+				wholeLimit: 1000,
+				ignores:    make(map[string]bool),
+			},
+			args: args{
+				obj: func() any {
+					return [3]string{
+						"Alice",
+						"Bob",
+						"Charlie",
+					}
+				}(),
+			},
+			wantRet: []any{
+				"Alice",
+				"Bob",
+				"Charlie",
+			},
+		},
+		{
+			name: "when obj is slice ptr then return []any",
+			fields: fields{
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  10,
+				wholeLimit: 1000,
+				ignores:    make(map[string]bool),
+			},
+			args: args{
+				obj: func() any {
+					return &[]string{
+						"Alice",
+						"Bob",
+						"Charlie",
+					}
+				}(),
+			},
+			wantRet: []any{
+				"Alice",
+				"Bob",
+				"Charlie",
+			},
+		},
+		{
+			name: "when obj is slice larger than limit then return trimmed []any",
+			fields: fields{
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  10,
+				wholeLimit: 1000,
+				ignores:    make(map[string]bool),
+			},
+			args: args{
+				obj: func() any {
+					return []string{
+						"Alice",
+						"Bob",
+						"Charlie",
+						"Danny",
+					}
+				}(),
+			},
+			wantRet: []any{
+				"Alice",
+				"Bob",
+				"Charlie",
+			},
+		},
+		{
+			name: "when obj is map then return map[string]any",
+			fields: fields{
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  10,
+				wholeLimit: 1000,
+				ignores:    make(map[string]bool),
+			},
+			args: args{
+				obj: func() any {
+					return map[string]string{
+						"name": "Alice",
+						"age":  "18",
+					}
+				}(),
+			},
+			wantRet: map[string]any{
+				"name": "Alice",
+				"age":  "18",
+			},
+		},
+		{
+			name: "when obj is error then return error string",
+			fields: fields{
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  10,
+				wholeLimit: 1000,
+				ignores:    make(map[string]bool),
+			},
+			args: args{
+				obj: func() any {
+					return fmt.Errorf("oops")
+				}(),
+			},
+			wantRet: "oops",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ot := &OutputTrimmer{
+				arrLimit:   tt.fields.arrLimit,
+				strLimit:   tt.fields.strLimit,
+				deepLimit:  tt.fields.deepLimit,
+				wholeLimit: tt.fields.wholeLimit,
+				ignores:    tt.fields.ignores,
+			}
+			if gotRet := ot.TrimObject(tt.args.obj); !reflect.DeepEqual(gotRet, tt.wantRet) {
+				t.Errorf("TrimObject() = %v, want %v", gotRet, tt.wantRet)
+			}
+		})
+	}
 }

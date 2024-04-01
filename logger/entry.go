@@ -97,7 +97,7 @@ func toZapFields(fields Fields, ignores ...string) []zapcore.Field {
 			zapcore.ArrayMarshalerType,
 			zapcore.ObjectMarshalerType,
 			zapcore.ReflectType:
-			zapFields = append(zapFields, zap.Any(k, JsonMarshalWithOpts(v, WithIgnores(ignores...))))
+			zapFields = append(zapFields, zap.Any(k, ObjectTrimWithOpts(v, WithIgnores(ignores...))))
 		default:
 			zapFields = append(zapFields, f)
 		}
