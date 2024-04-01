@@ -321,7 +321,17 @@ var (
 
 // valOfSpecialType returns the value of a special type
 func (ot *OutputTrimmer) valOfSpecialType(v reflect.Value) (val any, ok bool) {
+	if v.CanInterface() {
+		// if v is error type
+		if v.Type() == errType {
+			err := v.Interface().(error)
+			return err.Error(), true
+		}
+	}
+
 	switch v.Kind() {
+	case reflect.Interface:
+		// if v is interface type
 	case reflect.Ptr:
 		if v.IsNil() {
 			return nil, false
@@ -347,7 +357,6 @@ func (ot *OutputTrimmer) valOfSpecialType(v reflect.Value) (val any, ok bool) {
 	}
 
 	return nil, false
-
 }
 
 func isBytes(v reflect.Value) bool {

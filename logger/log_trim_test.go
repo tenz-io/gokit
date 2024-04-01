@@ -2,8 +2,7 @@ package logger
 
 import (
 	"bytes"
-	"errors"
-	"github.com/stretchr/testify/assert"
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -743,7 +742,7 @@ func TestOutputTrimmer_valOfSpecialType(t *testing.T) {
 			wantOk:  true,
 		},
 		{
-			name: "when v is error type then return time string",
+			name: "when v is error type then return error string",
 			fields: fields{
 				arrLimit:   3,
 				strLimit:   128,
@@ -752,7 +751,7 @@ func TestOutputTrimmer_valOfSpecialType(t *testing.T) {
 				ignores:    make(map[string]bool),
 			},
 			args: args{
-				v: reflect.ValueOf(errors.New("oops")),
+				v: reflect.ValueOf(fmt.Errorf("oops")),
 			},
 			wantVal: "oops",
 			wantOk:  true,
@@ -1070,7 +1069,7 @@ func TestOutputTrimmer_trimStruct(t *testing.T) {
 						Ext            []byte                   `json:"ext"`
 						TraveledCities map[string]time.Duration `json:"traveled_cities"`
 						Profile        *string                  `json:"profile"`
-						Error          error                    `json:"error"`
+						Err            error                    `json:"err"`
 					}
 					return user{
 						Name: "Alice",
@@ -1090,7 +1089,7 @@ func TestOutputTrimmer_trimStruct(t *testing.T) {
 							var s = "abc123"
 							return &s
 						}(),
-						Error: assert.AnError,
+						Err: fmt.Errorf("oops"),
 					}
 				}()),
 				deepLmt: 10,
@@ -1109,6 +1108,7 @@ func TestOutputTrimmer_trimStruct(t *testing.T) {
 					"Shanghai": "480h0m0s",
 				},
 				"profile":           "abc123",
+				"err":               "oops",
 				"_size__nick_names": 4,
 				"_size__ext":        300,
 			},
