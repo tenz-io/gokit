@@ -65,8 +65,8 @@ func main() {
 		Cost: 40 * time.Millisecond,
 		Code: "200",
 		Msg:  "test message",
-		Req:  "test request",
-		Resp: "test response",
+		Req:  []string{"test request"},
+		Resp: []any{"test response"},
 	}, logger.Fields{
 		"tag": "test with context",
 	})

@@ -1129,3 +1129,163 @@ func TestOutputTrimmer_trimStruct(t *testing.T) {
 		})
 	}
 }
+
+func TestOutputTrimmer_trimSlice(t *testing.T) {
+	type fields struct {
+		arrLimit   int
+		strLimit   int
+		deepLimit  int
+		wholeLimit int
+		ignores    map[string]bool
+	}
+	type args struct {
+		v       reflect.Value
+		deepLmt int
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   []any
+	}{
+		{
+			name: "when v is int slice with deep 10 then return trimmed slice",
+			fields: fields{
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  10,
+				wholeLimit: 1000,
+				ignores:    make(map[string]bool),
+			},
+			args: args{
+				v:       reflect.ValueOf([]int{1, 2, 3, 4}),
+				deepLmt: 10,
+			},
+			want: []any{
+				int64(1),
+				int64(2),
+				int64(3),
+			},
+		},
+		{
+			name: "when v is int ptr slice with deep 10 then return trimmed slice",
+			fields: fields{
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  10,
+				wholeLimit: 1000,
+				ignores:    make(map[string]bool),
+			},
+			args: args{
+				v: reflect.ValueOf(func() []*int {
+					return []*int{
+						intPtr(1),
+						nil,
+						intPtr(3),
+						intPtr(4),
+					}
+				}()),
+				deepLmt: 10,
+			},
+			want: []any{
+				int64(1),
+				nil,
+				int64(3),
+			},
+		},
+		{
+			name: "when v is struct slice with deep 10 then return trimmed slice",
+			fields: fields{
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  10,
+				wholeLimit: 1000,
+				ignores:    make(map[string]bool),
+			},
+			args: args{
+				v: reflect.ValueOf(func() []any {
+					type user struct {
+						Name string `json:"name"`
+						Age  int    `json:"age"`
+					}
+					return []any{
+						user{
+							Name: "Alice",
+							Age:  18,
+						},
+						user{
+							Name: "Bob",
+							Age:  20,
+						},
+					}
+
+				}()),
+				deepLmt: 10,
+			},
+			want: []any{
+				map[string]any{
+					"name": "Alice",
+					"age":  int64(18),
+				},
+				map[string]any{
+					"name": "Bob",
+					"age":  int64(20),
+				},
+			},
+		},
+		{
+			name: "when v is slice slice with deep 10 then return trimmed slice",
+			fields: fields{
+				arrLimit:   3,
+				strLimit:   128,
+				deepLimit:  10,
+				wholeLimit: 1000,
+				ignores:    make(map[string]bool),
+			},
+			args: args{
+				v: reflect.ValueOf(func() []any {
+					return []any{
+						[]string{
+							"Alice",
+							"Ali",
+						},
+						[]string{
+							"Bob",
+							"Bo",
+						},
+					}
+
+				}()),
+				deepLmt: 10,
+			},
+			want: []any{
+				[]any{
+					"Alice",
+					"Ali",
+				},
+				[]any{
+					"Bob",
+					"Bo",
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ot := &OutputTrimmer{
+				arrLimit:   tt.fields.arrLimit,
+				strLimit:   tt.fields.strLimit,
+				deepLimit:  tt.fields.deepLimit,
+				wholeLimit: tt.fields.wholeLimit,
+				ignores:    tt.fields.ignores,
+			}
+			if got := ot.trimSlice(tt.args.v, tt.args.deepLmt); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("trimSlice() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func intPtr(i int) *int {
+	return &i
+}

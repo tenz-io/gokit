@@ -81,7 +81,7 @@ func NewOutputTrimmer(opts ...TrimOption) *OutputTrimmer {
 	return &ot
 }
 
-func JsonObjectWithOpts(obj any, opts ...TrimOption) string {
+func JsonMarshalWithOpts(obj any, opts ...TrimOption) string {
 	return NewOutputTrimmer(opts...).Json(obj)
 }
 

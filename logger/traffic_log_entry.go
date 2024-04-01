@@ -1,8 +1,9 @@
 package logger
 
 import (
-	"go.uber.org/zap"
 	"strings"
+
+	"go.uber.org/zap"
 )
 
 type LogTrafficEntry struct {
@@ -45,9 +46,16 @@ func (le *LogTrafficEntry) DataWith(tc *Traffic, fields Fields) {
 
 	if tc.Req != nil {
 		newFields[defaultReqFieldName] = tc.Req
+		if reqLen, ok := lenIfArrayType(tc.Req); ok {
+			newFields[arrFieldPrefix+defaultReqFieldName] = reqLen
+		}
+
 	}
 	if tc.Resp != nil {
 		newFields[defaultRespFieldName] = tc.Resp
+		if respLen, ok := lenIfArrayType(tc.Resp); ok {
+			newFields[arrFieldPrefix+defaultRespFieldName] = respLen
+		}
 	}
 
 	// async log
