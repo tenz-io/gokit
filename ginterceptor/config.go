@@ -30,15 +30,15 @@ func NewConfig(opts ...ConfigOption) *Config {
 	return &cfg
 }
 
-func WithTraffic() ConfigOption {
+func WithTraffic(enable bool) ConfigOption {
 	return func(c *Config) {
-		c.EnableTraffic = true
+		c.EnableTraffic = enable
 	}
 }
 
-func WithMetrics() ConfigOption {
+func WithMetrics(enable bool) ConfigOption {
 	return func(c *Config) {
-		c.EnableMetrics = true
+		c.EnableMetrics = enable
 	}
 }
 
