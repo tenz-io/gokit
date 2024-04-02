@@ -16,13 +16,15 @@ import (
 func init() {
 	logger.ConfigureWithOpts(
 		logger.WithLoggerLevel(logger.DebugLevel),
-		logger.WithConsoleEnabled(true),
 		logger.WithFileEnabled(true),
+		logger.WithConsoleEnabled(true),
+		logger.WithCallerEnabled(true),
+		logger.WithCallerSkip(1),
 	)
 
 	logger.ConfigureTrafficWithOpts(
-		logger.WithTrafficConsoleEnabled(true),
 		logger.WithTrafficFileEnabled(true),
+		logger.WithTrafficConsoleEnabled(true),
 	)
 }
 
