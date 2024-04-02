@@ -6,7 +6,7 @@ var (
 	defaultConfig = Config{
 		EnableTraffic:  true,
 		EnableMetrics:  false,
-		EnableErrorLog: true,
+		EnableErrorLog: false,
 		SlowLogFloor:   5 * time.Second,
 	}
 )

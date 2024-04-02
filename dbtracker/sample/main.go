@@ -45,7 +45,7 @@ func main() {
 		dbtracker.WithSlowLogFloor(1*time.Millisecond),
 	)
 
-	if err = setupTracking(db, tracker); err != nil {
+	if err = tracker.Apply(db); err != nil {
 		syslog.Fatal("setup tracking error: ", err)
 		return
 	}
@@ -65,48 +65,6 @@ func main() {
 
 	time.Sleep(100 * time.Millisecond)
 
-}
-
-func setupTracking(db *gorm.DB, tracker dbtracker.Tracker) (err error) {
-	err = db.Callback().Query().Before("*").Register("start_query", tracker.Start("db_query"))
-	if err != nil {
-		return fmt.Errorf("register start_query error: %w", err)
-	}
-	err = db.Callback().Query().After("*").Register("end_query", tracker.End())
-	if err != nil {
-		syslog.Fatal("register end_query error: ", err)
-		return
-	}
-
-	err = db.Callback().Create().Before("*").Register("start_create", tracker.Start("db_create"))
-	if err != nil {
-		return fmt.Errorf("register start_create error: %w", err)
-	}
-	err = db.Callback().Create().After("*").Register("end_create", tracker.End())
-	if err != nil {
-		syslog.Fatal("register end_create error: ", err)
-		return
-	}
-
-	err = db.Callback().Update().Before("*").Register("start_update", tracker.Start("db_update"))
-	if err != nil {
-		return fmt.Errorf("register start_update error: %w", err)
-	}
-	err = db.Callback().Update().After("*").Register("end_update", tracker.End())
-	if err != nil {
-		return fmt.Errorf("register end_update error: %w", err)
-	}
-
-	err = db.Callback().Delete().Before("*").Register("start_delete", tracker.Start("db_delete"))
-	if err != nil {
-		return fmt.Errorf("register start_delete error: %w", err)
-	}
-	err = db.Callback().Delete().After("*").Register("end_delete", tracker.End())
-	if err != nil {
-		return fmt.Errorf("register end_delete error: %w", err)
-	}
-
-	return nil
 }
 
 func Find(ctx context.Context, db *gorm.DB, username string) (*User, error) {

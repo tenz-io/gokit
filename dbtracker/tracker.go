@@ -3,6 +3,7 @@ package dbtracker
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"gorm.io/gorm"
@@ -24,8 +25,7 @@ type meta struct {
 }
 
 type Tracker interface {
-	Start(cmd string) func(db *gorm.DB)
-	End() func(db *gorm.DB)
+	Apply(db *gorm.DB) error
 }
 
 // NewTrackerWithOpts creates a new tracker with the given options.
@@ -47,7 +47,7 @@ type tracker struct {
 	config Config
 }
 
-func (t *tracker) Start(cmd string) func(db *gorm.DB) {
+func (t *tracker) begin(cmd string) func(db *gorm.DB) {
 	return func(db *gorm.DB) {
 		var (
 			ctx = db.Statement.Context
@@ -71,7 +71,7 @@ func (t *tracker) Start(cmd string) func(db *gorm.DB) {
 	}
 }
 
-func (t *tracker) End() func(db *gorm.DB) {
+func (t *tracker) stop() func(db *gorm.DB) {
 	return func(db *gorm.DB) {
 		var (
 			ctx = db.Statement.Context
@@ -121,6 +121,53 @@ func (t *tracker) End() func(db *gorm.DB) {
 	}
 }
 
+func (t *tracker) Apply(db *gorm.DB) (err error) {
+	var (
+		callback = db.Callback()
+	)
+	if err = callback.Query().Before("*").Register("start_query", t.begin("db_query")); err != nil {
+		return fmt.Errorf("register start_query error: %w", err)
+	}
+
+	if err = callback.Query().After("*").Register("end_query", t.stop()); err != nil {
+		return fmt.Errorf("register end_query error: %w", err)
+	}
+
+	if err = callback.Create().Before("*").Register("start_create", t.begin("db_create")); err != nil {
+		return fmt.Errorf("register start_create error: %w", err)
+	}
+
+	if err = callback.Create().After("*").Register("end_create", t.stop()); err != nil {
+		return fmt.Errorf("register end_create error: %w", err)
+	}
+
+	if err = callback.Update().Before("*").Register("start_update", t.begin("db_update")); err != nil {
+		return fmt.Errorf("register start_update error: %w", err)
+	}
+
+	if err = callback.Update().After("*").Register("end_update", t.stop()); err != nil {
+		return fmt.Errorf("register end_update error: %w", err)
+	}
+
+	if err = callback.Delete().Before("*").Register("start_delete", t.begin("db_delete")); err != nil {
+		return fmt.Errorf("register start_delete error: %w", err)
+	}
+
+	if err = callback.Delete().After("*").Register("end_delete", t.stop()); err != nil {
+		return fmt.Errorf("register end_delete error: %w", err)
+	}
+
+	if err = callback.Row().Before("*").Register("start_row", t.begin("db_row")); err != nil {
+		return fmt.Errorf("register start_row error: %w", err)
+	}
+
+	if err = callback.Row().After("*").Register("end_row", t.stop()); err != nil {
+		return fmt.Errorf("register end_row error: %w", err)
+	}
+
+	return nil
+}
+
 func errorMsg(err error) string {
 	if err == nil {
 		return ""
@@ -132,5 +179,5 @@ func errorCode(err error) string {
 	if err == nil {
 		return "ok"
 	}
-	return "error"
+	return "err"
 }
