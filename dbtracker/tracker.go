@@ -77,7 +77,7 @@ func (t *tracker) End() func(db *gorm.DB) {
 		)
 
 		m, ok := ctx.Value(trackingMetaCtxKey).(*meta)
-		if !ok {
+		if !ok || m == nil {
 			return
 		}
 
