@@ -1,8 +1,9 @@
 package logger
 
 import (
-	"golang.org/x/time/rate"
 	"math/rand"
+
+	"golang.org/x/time/rate"
 )
 
 const (

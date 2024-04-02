@@ -2,13 +2,14 @@ package ginterceptor
 
 import (
 	"context"
-	"github.com/gin-gonic/gin"
-	"github.com/tenz-io/gokit/logger"
-	"github.com/tenz-io/gokit/monitor"
 	syslog "log"
 	"strings"
 
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+
+	"github.com/tenz-io/gokit/logger"
+	"github.com/tenz-io/gokit/monitor"
 )
 
 const (

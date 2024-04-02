@@ -1,10 +1,11 @@
 package logger
 
 import (
-	"github.com/smarty/assertions"
 	"math"
 	"testing"
 	"time"
+
+	"github.com/smarty/assertions"
 )
 
 func TestRateLimitPolicy_Allow(t *testing.T) {

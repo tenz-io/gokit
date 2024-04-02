@@ -16,3 +16,12 @@ test:
 	@for pkg in ${PKG_LIST} ; do \
 		echo "test $$pkg" && cd $$pkg && $(GO) test ./... -cover && cd ..; \
 	done
+
+
+
+gci:
+	@echo "gci format"
+	@for pkg in ${PKG_LIST} ; do \
+		cd $$pkg && gci write -s standard -s default -s "prefix(github.com)" -s "prefix(github.com/tenz-io/gokit)" --skip-generated --skip-vendor * && cd ..; \
+	done
+

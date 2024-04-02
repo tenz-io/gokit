@@ -3,10 +3,12 @@ package ginterceptor
 import (
 	"context"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/tenz-io/gokit/monitor"
 	syslog "log"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/tenz-io/gokit/monitor"
 )
 
 type Interceptor interface {

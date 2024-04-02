@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/tenz-io/gokit/logger"
 	"io"
 	syslog "log"
 	"strings"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/tenz-io/gokit/logger"
 )
 
 func (i *interceptor) ApplyTraffic() gin.HandlerFunc {

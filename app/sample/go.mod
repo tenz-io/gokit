@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/tenz-io/gokit/app v0.0.0
-	github.com/tenz-io/gokit/logger v1.1.0
+	github.com/tenz-io/gokit/logger v1.2.0
 )
 
 require (
@@ -23,4 +23,4 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
-replace github.com/tenz-io/gokit/app v0.0.0 => ./..
+replace github.com/tenz-io/gokit/app => ./..

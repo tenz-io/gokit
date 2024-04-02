@@ -3,11 +3,12 @@ package app
 import (
 	"encoding/json"
 	"fmt"
-	"gopkg.in/yaml.v2"
 	syslog "log"
 	"net/http"
 	"os"
 	"strconv"
+
+	"gopkg.in/yaml.v2"
 
 	"github.com/tenz-io/gokit/logger"
 )

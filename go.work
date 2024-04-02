@@ -1,0 +1,12 @@
+go 1.20
+
+use (
+	./app
+	./app/sample
+	./ginterceptor
+	./logger
+	./logger/sample
+	./monitor
+	./retriever
+	./retriever/sample
+)

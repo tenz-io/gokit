@@ -3,9 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/tenz-io/gokit/retriever"
 	"log"
 	"time"
+
+	"github.com/tenz-io/gokit/retriever"
 )
 
 func main() {
