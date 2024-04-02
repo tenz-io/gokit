@@ -52,7 +52,7 @@ func (i *interceptor) ApplyTraffic() gin.HandlerFunc {
 
 			rec.End(&logger.RespEntity{
 				Code: fmt.Sprintf("%d", c.Writer.Status()),
-				Msg:  "Success",
+				Msg:  "ok",
 				Resp: captureResponse(c, rw.buffer.Bytes()),
 			}, logger.Fields{
 				"resp_header":    c.Writer.Header(),

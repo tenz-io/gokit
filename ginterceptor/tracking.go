@@ -13,51 +13,75 @@ import (
 )
 
 const (
+	headerNameRequestId = "X-Request-Id"
+)
+
+const (
 	requestIdCtxKey = requestIdCtxKeyType("requestId_ctx_key")
 )
 
 type requestIdCtxKeyType string
 
 func (i *interceptor) ApplyTracking() gin.HandlerFunc {
-	syslog.Println("[httpgin] apply tracking")
+	syslog.Println("[gin-interceptor] apply tracking")
 
 	return func(c *gin.Context) {
 		var (
-			url = c.Request.URL.Path
-			ctx = c.Request.Context()
+			url       = c.Request.URL.Path
+			ctx       = c.Request.Context()
+			requestId = requestIdFromGinCtx(c)
 		)
+
+		ctx = WithRequestId(ctx, requestId)
 
 		// metrics tracking
 		if i.config.EnableMetrics {
 			ctx = monitor.InitSingleFlight(ctx, url)
 		}
 
-		requestId := RequestIdFromCtx(ctx)
-		ctx = WithRequestId(ctx, requestId)
+		// inject logger into context
+		ctx = logger.WithLogger(
+			ctx,
+			logger.WithTracing(requestId).
+				WithFields(logger.Fields{
+					"url": url,
+				}),
+		)
 
-		le := logger.WithFields(logger.Fields{
-			"url": url,
-		}).WithTracing(requestId)
-		ctx = logger.WithLogger(ctx, le)
-
-		te := logger.WithTrafficTracing(ctx, requestId).
-			WithFields(logger.Fields{
-				"url": url,
-			}).
-			WithIgnores(
+		// inject traffic logger into context
+		ctx = logger.WithTrafficEntry(
+			ctx,
+			logger.WithTrafficTracing(ctx, requestId).
+				WithFields(logger.Fields{
+					"url": url,
+				}).WithIgnores(
 				"password",
 				//"Authorization",
-			)
-		ctx = logger.WithTrafficEntry(ctx, te)
+			),
+		)
 
+		// update gin context
 		WithContext(c, ctx)
 
 		defer func() {
-			c.Writer.Header().Set("X-Request-Id", requestId)
+			c.Writer.Header().Set(headerNameRequestId, requestId)
 		}()
 
 		c.Next()
 	}
+}
+
+func requestIdFromGinCtx(c *gin.Context) string {
+	if c == nil {
+		return ""
+	}
+
+	if requestId := c.GetHeader(headerNameRequestId); requestId != "" {
+		return requestId
+	}
+
+	return RequestIdFromCtx(c.Request.Context())
+
 }
 
 // RequestIdFromCtx returns the value associated with this context for key, or nil
