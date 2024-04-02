@@ -16,6 +16,7 @@ import (
 func init() {
 	logger.ConfigureWithOpts(
 		logger.WithLoggerLevel(logger.DebugLevel),
+		logger.WithSetAsDefaultLvl(true),
 		logger.WithFileEnabled(true),
 		logger.WithConsoleEnabled(true),
 		logger.WithCallerEnabled(true),
@@ -40,6 +41,7 @@ func main() {
 		dbtracker.WithMetrics(false),
 		dbtracker.WithTraffic(true),
 		// test slow log, so set slow log floor to 1ms
+		dbtracker.WithErrorLog(true),
 		dbtracker.WithSlowLogFloor(1*time.Millisecond),
 	)
 
@@ -53,15 +55,13 @@ func main() {
 		Username: "admin",
 		Password: "admin",
 	})
-	if err != nil {
-		syslog.Println("save user error: ", err)
-	}
+	syslog.Printf("save user error: %+v\n", err)
 
 	user, err := Find(ctx, db, "admin")
-	if err != nil {
-		syslog.Printf("find user error: %+v\n", err)
-	}
-	syslog.Printf("find user: %+v\n", user)
+	syslog.Printf("find user error: %+v, user: %+v\n", err, user)
+
+	user, err = Find(ctx, db, "sky")
+	syslog.Printf("find user error: %+v, user: %+v\n", err, user)
 
 	time.Sleep(100 * time.Millisecond)
 

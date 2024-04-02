@@ -4,9 +4,10 @@ import "time"
 
 var (
 	defaultConfig = Config{
-		EnableTraffic: true,
-		EnableMetrics: false,
-		SlowLogFloor:  5 * time.Second,
+		EnableTraffic:  true,
+		EnableMetrics:  false,
+		EnableErrorLog: true,
+		SlowLogFloor:   5 * time.Second,
 	}
 )
 
@@ -15,6 +16,8 @@ type Config struct {
 	EnableTraffic bool `yaml:"enable_traffic" json:"enable_traffic"`
 	// EnableMetrics is a flag to enable metrics interceptor.
 	EnableMetrics bool `yaml:"enable_metrics" json:"enable_metrics"`
+	// EnableErrorLog is a flag to enable error log interceptor.
+	EnableErrorLog bool `yaml:"enable_error_log" json:"enable_error_log"`
 	// SlowLogFloor is the minimum duration to log slow query.
 	// when the query duration is larger than this value, it will be logged.
 	// if 0, it will not log slow query.
@@ -38,5 +41,11 @@ func WithMetrics(enable bool) ConfigOption {
 func WithSlowLogFloor(floor time.Duration) ConfigOption {
 	return func(c *Config) {
 		c.SlowLogFloor = floor
+	}
+}
+
+func WithErrorLog(enable bool) ConfigOption {
+	return func(c *Config) {
+		c.EnableErrorLog = enable
 	}
 }
