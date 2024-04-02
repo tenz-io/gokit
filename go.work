@@ -6,6 +6,7 @@ use (
 	./dbtracker
 	./dbtracker/sample
 	./ginterceptor
+	./httpcli
 	./logger
 	./logger/sample
 	./monitor
