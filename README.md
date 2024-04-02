@@ -7,5 +7,5 @@ golang common kits
 ### Requirement
 - `wire` for DI generation. Install from https://github.com/google/wire
 - `go-enum` for enum generation. Install from https://github.com/abice/go-enum
-- `gci` for go fmt. Install from https://pkg.go.dev/github.com/luw2007/gci
+- `gci` for go fmt. Install from https://github.com/luw2007/gci
 - `mockery` for mock generation. Install from https://github.com/vektra/mockery
