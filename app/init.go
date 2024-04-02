@@ -101,7 +101,8 @@ func InitLogger(c *Context, _ any) (CleanFunc, error) {
 	logger.ConfigureWithOpts(
 		logger.WithLoggerLevel(lvl),
 		logger.WithDirectory(logDir),
-		logger.WithFileEnabled(true),
+		logger.WithFileEnabled(loggingFile),
+		logger.WithConsoleEnabled(loggingConsole),
 		logger.WithSetAsDefaultLvl(true),
 		logger.WithCallerEnabled(true),
 	)

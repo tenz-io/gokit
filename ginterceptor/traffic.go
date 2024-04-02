@@ -43,7 +43,7 @@ func (i *interceptor) ApplyTraffic() gin.HandlerFunc {
 		// hijack response writer
 		rw := &responseWrapper{
 			ResponseWriter: c.Writer,
-			buffer:         bytes.NewBuffer(make([]byte, 0, c.Writer.Size())),
+			buffer:         bytes.NewBuffer([]byte{}),
 		}
 		c.Writer = rw
 
