@@ -27,12 +27,10 @@ func (i *interceptor) ApplyTracking() gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		var (
-			url       = c.Request.URL.Path
-			ctx       = c.Request.Context()
-			requestId = requestIdFromGinCtx(c)
+			url   = c.Request.URL.Path
+			reqID = requestIdFromGinCtx(c)
+			ctx   = WithRequestId(c.Request.Context(), reqID)
 		)
-
-		ctx = WithRequestId(ctx, requestId)
 
 		// metrics tracking
 		if i.config.EnableMetrics {
@@ -42,7 +40,7 @@ func (i *interceptor) ApplyTracking() gin.HandlerFunc {
 		// inject logger into context
 		ctx = logger.WithLogger(
 			ctx,
-			logger.WithTracing(requestId).
+			logger.WithTracing(reqID).
 				WithFields(logger.Fields{
 					"url": url,
 				}),
@@ -51,7 +49,7 @@ func (i *interceptor) ApplyTracking() gin.HandlerFunc {
 		// inject traffic logger into context
 		ctx = logger.WithTrafficEntry(
 			ctx,
-			logger.WithTrafficTracing(ctx, requestId).
+			logger.WithTrafficTracing(ctx, reqID).
 				WithFields(logger.Fields{
 					"url": url,
 				}).WithIgnores(
@@ -64,7 +62,7 @@ func (i *interceptor) ApplyTracking() gin.HandlerFunc {
 		WithContext(c, ctx)
 
 		defer func() {
-			c.Writer.Header().Set(headerNameRequestId, requestId)
+			c.Writer.Header().Set(headerNameRequestId, reqID)
 		}()
 
 		c.Next()
