@@ -41,7 +41,10 @@ func (i *interceptor) ApplyTraffic() gin.HandlerFunc {
 		})
 
 		// hijack response writer
-		rw := &responseWrapper{c.Writer, bytes.NewBuffer([]byte{})}
+		rw := &responseWrapper{
+			ResponseWriter: c.Writer,
+			buffer:         bytes.NewBuffer(make([]byte, 0, c.Writer.Size())),
+		}
 		c.Writer = rw
 
 		defer func() {
@@ -78,16 +81,16 @@ func captureRequest(c *gin.Context) (res any) {
 	le := logger.FromContext(ctx).WithFields(logger.Fields{
 		"Content-Type": contentType,
 	})
-	defer func() {
-		le.WithError(err).
-			Debug("capture request")
-	}()
+
+	if strings.HasPrefix(contentType, "application/x-www-form-urlencoded") {
+		return c.Request.PostForm
+	}
 
 	if strings.HasPrefix(contentType, "application/json") ||
-		strings.HasPrefix(contentType, "text/xml") ||
-		strings.HasPrefix(contentType, "application/x-www-form-urlencoded") {
+		strings.HasPrefix(contentType, "text/xml") {
 		body, err = io.ReadAll(c.Request.Body)
 		if err != nil {
+			le.WithError(err).Warn("error reading request body")
 			return nil
 		}
 
@@ -96,21 +99,27 @@ func captureRequest(c *gin.Context) (res any) {
 		defer func() {
 			c.Request.Body = io.NopCloser(bytes.NewBuffer(bs))
 		}()
+	} else {
+		le.Debug("unsupported dump content-type")
+		return "<unsupported content-type>"
 	}
 
 	if len(body) == 0 {
+		le.Debug("request body is empty")
 		return nil
 	}
 
 	if strings.HasPrefix(contentType, "application/json") {
 		var req map[string]any
 		if err = json.Unmarshal(body, &req); err != nil {
-			return nil
+			le.WithError(err).Warnf("json unmarshal request failed")
+			return "<json unmarshal failed>"
 		}
 
 		return req
 	}
 
+	// return string for other content-type
 	return string(body)
 }
 
@@ -126,26 +135,25 @@ func captureResponse(c *gin.Context, bs []byte) (res any) {
 		le          = logger.FromContext(ctx)
 	)
 
-	defer func() {
-		le.WithError(err).
-			WithFields(logger.Fields{
-				"Content-Type": contentType,
-			}).Debug("capture response")
-	}()
-
 	if len(bs) == 0 {
+		le.Debug("response body is empty")
 		return nil
 	}
 
 	if c.Writer == nil {
+		le.Debug("response writer is nil")
 		return "<nil writer>"
 	}
 
 	contentType = strings.ToLower(c.Writer.Header().Get("Content-Type"))
+	le = le.WithFields(logger.Fields{
+		"Content-Type": contentType,
+	})
 
 	if strings.HasPrefix(contentType, "application/json") {
 		var resp map[string]any
 		if err = json.Unmarshal(bs, &resp); err != nil {
+			le.WithError(err).Warn("json unmarshal response failed")
 			return nil
 		}
 		return resp
