@@ -57,7 +57,7 @@ func main() {
 
 	user, err := Find(ctx, db, "admin")
 	if err != nil {
-		syslog.Fatal("find user error: ", err)
+		syslog.Printf("find user error: %+v\n", err)
 	}
 	syslog.Printf("find user: %+v\n", user)
 
