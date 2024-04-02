@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/prometheus/client_golang v1.19.0
-	github.com/tenz-io/gokit/logger v1.2.0
+	github.com/tenz-io/gokit/logger v1.2.1
 	gopkg.in/yaml.v2 v2.4.0
 )
 
