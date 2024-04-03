@@ -24,7 +24,7 @@ func main() {
 		Conf:  &MyConfig{},
 		Inits: []app.InitFunc{
 			app.WithYamlConfig(),
-			app.WithLogger(),
+			app.WithLogger(true),
 			app.WithAdminHTTPServer(),
 		},
 		Run: run,

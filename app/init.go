@@ -56,7 +56,7 @@ func WithJsonConfig() InitFunc {
 	}
 }
 
-func WithLogger() InitFunc {
+func WithLogger(trafficEnabled bool) InitFunc {
 	return func(c *Context, _ any) (CleanFunc, error) {
 		var (
 			logDir         = "log"
@@ -95,6 +95,7 @@ func WithLogger() InitFunc {
 		)
 
 		logger.ConfigureTrafficWithOpts(
+			logger.WithTrafficEnabled(trafficEnabled),
 			logger.WithTrafficDirectory(logDir),
 		)
 

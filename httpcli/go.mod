@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/stretchr/testify v1.8.1
-	github.com/tenz-io/gokit/logger v1.2.2
+	github.com/tenz-io/gokit/logger v1.3.0
 	github.com/tenz-io/gokit/monitor v1.0.2
 )
 
