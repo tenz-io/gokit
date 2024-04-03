@@ -1,8 +1,8 @@
 GO = go
 
-PKG_LIST=logger monitor retriever app ginterceptor dbtracker
+PKG_LIST=logger monitor retriever app ginterceptor dbtracker httpcli
 
-LIB_LIST=logger monitor retriever app ginterceptor dbtracker
+LIB_LIST=logger monitor retriever app ginterceptor dbtracker httpcli
 
 .PHONY: dep
 dep:
