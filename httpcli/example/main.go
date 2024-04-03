@@ -19,8 +19,7 @@ func init() {
 	)
 
 	logger.ConfigureTrafficWithOpts(
-		logger.WithTrafficConsoleEnabled(true),
-		logger.WithTrafficFileEnabled(true),
+		logger.WithTrafficEnabled(true),
 	)
 
 }

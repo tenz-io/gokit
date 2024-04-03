@@ -2,7 +2,6 @@ package logger
 
 import (
 	"context"
-	"os"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -16,9 +15,8 @@ const (
 )
 
 var (
-	// defaultTrafficLogger is the default dataLogger instance that should be used to log
-	// It's assigned a default value here for tests (which do not call log.ConfigureTraffic())
-	defaultTrafficLogger = newTrafficEntry(os.Stdout)
+	// defaultTrafficLogger is the default dataLogger used by the package-level functions.
+	defaultTrafficLogger TrafficEntry = &emptyTrafficEntry{}
 )
 
 // Data Log a request
@@ -95,6 +93,7 @@ func ConfigureTraffic(config TrafficConfig) {
 		WithDeepLimit(config.DeepLimit),
 		WithIgnores(config.Ignores...),
 	)
+
 	defaultTrafficLogger = NewTrafficEntry(config)
 }
 
@@ -109,22 +108,21 @@ func NewTrafficEntryWithOpts(opts ...TrafficConfigOption) TrafficEntry {
 
 func NewTrafficEntry(config TrafficConfig) TrafficEntry {
 	var (
-		writers []zapcore.WriteSyncer
+		writers []WriterSyncer
 	)
 
-	if config.FileEnabled {
+	if config.Enabled {
 		trafficRolling := newRollingFile(config.Directory, config.Filename,
 			config.MaxSize, config.MaxAge, config.MaxBackups)
 		writers = append(writers, trafficRolling)
-	} else {
-		config.ConsoleEnabled = true
-		writers = append(writers, os.Stdout)
 	}
 
-	if config.ConsoleEnabled {
-		if config.ConsoleStream != nil {
-			writers = append(writers, config.ConsoleStream)
-		}
+	if config.Stream != nil {
+		writers = append(writers, config.Stream)
+	}
+
+	if len(writers) == 0 {
+		return &emptyTrafficEntry{}
 	}
 
 	return newTrafficEntry(zapcore.NewMultiWriteSyncer(writers...))

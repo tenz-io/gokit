@@ -22,8 +22,7 @@ func setup(_ *testing.T) func() {
 		logger.WithLoggerLevel(logger.DebugLevel),
 	)
 	logger.ConfigureTrafficWithOpts(
-		logger.WithTrafficConsoleEnabled(true),
-		logger.WithTrafficFileEnabled(false),
+		logger.WithTrafficEnabled(true),
 	)
 
 	return func() {

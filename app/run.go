@@ -16,7 +16,7 @@ func (a *application) run(c *Context, confPtr any, cancelAppContext context.Canc
 		// Run the init function
 		cleanFn, err := initFn(c, confPtr)
 		if err != nil {
-			return fmt.Errorf("init function error, err: %w", err)
+			return fmt.Errorf("init error, err: %w", err)
 		}
 
 		if cleanFn != nil {

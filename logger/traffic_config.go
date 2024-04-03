@@ -1,31 +1,27 @@
 package logger
 
-import "os"
-
 var (
 	// defaultTrafficConfig is used for defaultTrafficLogger below only
 	defaultTrafficConfig = TrafficConfig{
-		FileEnabled: false,
-		Directory:   "log",
-		Filename:    "data.log",
-		MaxSize:     100,
-		MaxBackups:  10,
-		MaxAge:      7,
-		StrLimit:    defaultStrLimit,
-		ArrLimit:    defaultArrLimit,
-		DeepLimit:   defaultDeepLimit,
-		Ignores:     []string{},
+		Enabled:    true,
+		Directory:  "log",
+		Filename:   "data.log",
+		MaxSize:    100,
+		MaxBackups: 10,
+		MaxAge:     7,
+		StrLimit:   defaultStrLimit,
+		ArrLimit:   defaultArrLimit,
+		DeepLimit:  defaultDeepLimit,
+		Ignores:    []string{},
+		Stream:     nil,
 	}
 )
 
 // TrafficConfig for traffic logging
 type TrafficConfig struct {
-	// FileEnabled makes the framework log to a file
-	// the fields below can be skipped if this value is false!
-	FileEnabled bool
-	// ConsoleEnabled makes the framework log to console
-	ConsoleEnabled bool
-	// Directory to log to when FileEnabled is enabled
+	// Enabled makes the framework log traffic
+	Enabled bool
+	// Directory to log to when Enabled is enabled
 	Directory string
 	// Filename is the name of the logfile which will be placed inside the directory
 	Filename string
@@ -43,23 +39,11 @@ type TrafficConfig struct {
 	DeepLimit int
 	// Ignores is a list of fields to ignore when logging
 	Ignores []string
-	// ConsoleStream
-	ConsoleStream *os.File
+	// Stream is the stream to log to
+	Stream WriterSyncer
 }
 
 type TrafficConfigOption func(*TrafficConfig)
-
-func WithTrafficFileEnabled(enabled bool) TrafficConfigOption {
-	return func(c *TrafficConfig) {
-		c.FileEnabled = enabled
-	}
-}
-
-func WithTrafficConsoleEnabled(enabled bool) TrafficConfigOption {
-	return func(c *TrafficConfig) {
-		c.ConsoleEnabled = enabled
-	}
-}
 
 func WithTrafficDirectory(directory string) TrafficConfigOption {
 	return func(c *TrafficConfig) {
@@ -91,9 +75,9 @@ func WithTrafficMaxAge(maxAge int) TrafficConfigOption {
 	}
 }
 
-func WithTrafficConsoleStream(stream *os.File) TrafficConfigOption {
+func WithTrafficStream(stream WriterSyncer) TrafficConfigOption {
 	return func(c *TrafficConfig) {
-		c.ConsoleStream = stream
+		c.Stream = stream
 	}
 }
 
@@ -118,5 +102,11 @@ func WithTrafficDeepLimit(deepLimit int) TrafficConfigOption {
 func WithTrafficIgnoresOpt(ignores ...string) TrafficConfigOption {
 	return func(c *TrafficConfig) {
 		c.Ignores = ignores
+	}
+}
+
+func WithTrafficEnabled(enabled bool) TrafficConfigOption {
+	return func(c *TrafficConfig) {
+		c.Enabled = enabled
 	}
 }

@@ -219,9 +219,9 @@ func NewEntryWithOpts(opts ...ConfigOption) Entry {
 // NewEntry create a new LogEntry instead of override defaultzaplogger
 func NewEntry(config Config) Entry {
 	var (
-		errWriters   []zapcore.WriteSyncer
-		infoWriters  []zapcore.WriteSyncer
-		debugWriters []zapcore.WriteSyncer
+		errWriters   []WriterSyncer
+		infoWriters  []WriterSyncer
+		debugWriters []WriterSyncer
 	)
 
 	if config.FileEnabled {
@@ -239,23 +239,18 @@ func NewEntry(config Config) Entry {
 	} else {
 		// if file logging is disabled, enable console logging
 		config.ConsoleEnabled = true
+	}
+
+	if config.ConsoleEnabled {
 		errWriters = append(errWriters, os.Stderr)
 		infoWriters = append(infoWriters, os.Stdout)
 		debugWriters = append(debugWriters, os.Stdout)
 	}
 
-	if config.ConsoleEnabled {
-		if config.ConsoleErrorStream != nil {
-			errWriters = append(errWriters, config.ConsoleErrorStream)
-		}
-
-		if config.ConsoleInfoStream != nil {
-			infoWriters = append(infoWriters, config.ConsoleInfoStream)
-		}
-
-		if config.ConsoleDebugStream != nil {
-			debugWriters = append(debugWriters, config.ConsoleDebugStream)
-		}
+	if config.Stream != nil {
+		errWriters = append(errWriters, config.Stream)
+		infoWriters = append(infoWriters, config.Stream)
+		debugWriters = append(debugWriters, config.Stream)
 	}
 
 	logEntry := newEntry(

@@ -24,8 +24,7 @@ func init() {
 	)
 
 	logger.ConfigureTrafficWithOpts(
-		logger.WithTrafficFileEnabled(true),
-		logger.WithTrafficConsoleEnabled(true),
+		logger.WithTrafficEnabled(true),
 	)
 }
 

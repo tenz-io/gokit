@@ -42,7 +42,9 @@ func main() {
 		})
 
 	logger.ConfigureTrafficWithOpts(
+		logger.WithTrafficEnabled(false),
 		logger.WithTrafficFileEnabled(true),
+		logger.WithTrafficConsoleEnabled(true),
 	)
 
 	logger.DataWith(&logger.Traffic{

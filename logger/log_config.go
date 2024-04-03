@@ -1,9 +1,5 @@
 package logger
 
-import (
-	"os"
-)
-
 // Configure configures the default logger
 var defaultConfig = Config{
 	LoggerLevel:   InfoLevel,
@@ -44,12 +40,8 @@ type Config struct {
 	MaxBackups int
 	// MaxAge the max age in days to keep a logfile
 	MaxAge int
-	// ConsoleInfoStream
-	ConsoleInfoStream *os.File
-	// ConsoleErrorStream
-	ConsoleErrorStream *os.File
-	// ConsoleDebugStream
-	ConsoleDebugStream *os.File
+	// Stream
+	Stream WriterSyncer
 }
 
 // ConfigOption is a function that configures the logger
@@ -127,20 +119,8 @@ func WithMaxAge(age int) ConfigOption {
 	}
 }
 
-func WithConsoleInfoStream(stream *os.File) ConfigOption {
+func WithStream(stream WriterSyncer) ConfigOption {
 	return func(c *Config) {
-		c.ConsoleInfoStream = stream
-	}
-}
-
-func WithConsoleErrorStream(stream *os.File) ConfigOption {
-	return func(c *Config) {
-		c.ConsoleErrorStream = stream
-	}
-}
-
-func WithConsoleDebugStream(stream *os.File) ConfigOption {
-	return func(c *Config) {
-		c.ConsoleDebugStream = stream
+		c.Stream = stream
 	}
 }

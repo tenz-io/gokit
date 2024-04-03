@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
-	syslog "log"
+	"log"
 )
 
 type CleanFunc func()
@@ -55,7 +55,7 @@ func newApplication(
 func Run(cfg Config, flags []Flag) {
 	fs, err := parseArgs(cfg, flags)
 	if err != nil {
-		syslog.Fatalf("parse args error, err: %v", err)
+		log.Fatalf("parse args error, err: %v", err)
 	}
 
 	appCtx, cancel := context.WithCancel(context.Background())
@@ -64,7 +64,7 @@ func Run(cfg Config, flags []Flag) {
 	app := newApplication(cfg.Name, cfg.Inits, cfg.Run)
 	err = app.run(c, cfg.Conf, cancel)
 	if err != nil {
-		syslog.Fatalf("run error, err: %+v", err)
+		log.Fatalf("run error, err: %+v", err)
 	}
 
 }

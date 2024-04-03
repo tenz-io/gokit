@@ -15,6 +15,15 @@ var (
 	start = time.Now()
 )
 
+// initDefaultHandler will register profiling, ping, and prometheus metric
+// handler to http.DefaultServeMux. Don't forget to run http.ListenAndServe on
+// the main run function or use InitAdminHTTPServer
+func initDefaultHandler(_ *Context, _ any) {
+	AddProfilingHandler(http.DefaultServeMux)
+	AddPingHandler(http.DefaultServeMux)
+	AddPrometheusHandler(http.DefaultServeMux)
+}
+
 // AddPrometheusHandler will add handler for `/metrics` request
 func AddPrometheusHandler(m *http.ServeMux) {
 	m.Handle("/metrics", promhttp.Handler())
