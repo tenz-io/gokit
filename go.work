@@ -2,14 +2,15 @@ go 1.20
 
 use (
 	./app
-	./app/sample
+	./app/example
 	./dbtracker
-	./dbtracker/sample
+	./dbtracker/example
 	./ginterceptor
 	./httpcli
+	./httpcli/example
 	./logger
-	./logger/sample
+	./logger/example
 	./monitor
 	./retriever
-	./retriever/sample
+	./retriever/example
 )

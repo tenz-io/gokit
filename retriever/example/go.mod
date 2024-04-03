@@ -1,4 +1,4 @@
-module retriever-sample
+module retriever-example
 
 go 1.20
 

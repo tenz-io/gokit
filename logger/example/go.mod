@@ -1,4 +1,4 @@
-module logger-sample
+module logger-example
 
 go 1.20
 
