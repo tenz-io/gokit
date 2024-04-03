@@ -3,6 +3,9 @@ package httpcli
 import "net/http"
 
 type Interceptor interface {
+	// Intercept returns a new http.RoundTripper that wraps the given tripper.
+	Intercept(tripper http.RoundTripper) http.RoundTripper
+	// Apply applies the interceptor to the given http.Client.
 	Apply(hc *http.Client)
 }
 
@@ -24,12 +27,8 @@ func NewInterceptor(config Config) Interceptor {
 	}
 }
 
-func (i *interceptor) Apply(hc *http.Client) {
-	if hc == nil {
-		return
-	}
-
-	transport := hc.Transport
+func (i *interceptor) Intercept(tripper http.RoundTripper) http.RoundTripper {
+	transport := tripper
 	if transport == nil {
 		transport = http.DefaultTransport
 	}
@@ -41,5 +40,13 @@ func (i *interceptor) Apply(hc *http.Client) {
 		}
 	}
 
-	hc.Transport = transport
+	return transport
+}
+
+func (i *interceptor) Apply(hc *http.Client) {
+	if hc == nil {
+		return
+	}
+
+	hc.Transport = i.Intercept(hc.Transport)
 }
