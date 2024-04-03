@@ -5,8 +5,8 @@ go 1.20
 require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/google/uuid v1.6.0
-	github.com/tenz-io/gokit/logger v1.3.0
-	github.com/tenz-io/gokit/monitor v1.0.2
+	github.com/tenz-io/gokit/logger v1.0.0-beta.1
+	github.com/tenz-io/gokit/monitor v1.0.0-beta.1
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 

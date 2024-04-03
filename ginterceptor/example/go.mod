@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/tenz-io/gokit/ginterceptor v0.0.0
-	github.com/tenz-io/gokit/logger v1.3.0
+	github.com/tenz-io/gokit/logger v1.0.0-beta.1
 )
 
 require (

@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/tenz-io/gokit/httpcli v0.0.0
-	github.com/tenz-io/gokit/logger v1.3.0
+	github.com/tenz-io/gokit/logger v1.0.0-beta.1
 )
 
 require (

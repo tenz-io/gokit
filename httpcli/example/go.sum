@@ -16,8 +16,8 @@ github.com/prometheus/procfs v0.12.0/go.mod h1:pcuDEFsWDnvcgNzo4EEweacyhjeA9Zk3c
 github.com/smarty/assertions v1.15.1 h1:812oFiXI+G55vxsFf+8bIZ1ux30qtkdqzKbEFwyX3Tk=
 github.com/stretchr/objx v0.5.0 h1:1zr/of2m5FGMsad5YfcqgdqdWrIhu+EBEJRhR1U7z/c=
 github.com/stretchr/testify v1.8.1 h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYKsk=
-github.com/tenz-io/gokit/logger v1.3.0 h1:lyWqUMnkfXmKfaL9Lu9tDFcqzy6xVVYjp0fJ/kAIoeI=
-github.com/tenz-io/gokit/logger v1.3.0/go.mod h1:wsO/AvpAgEsgYuLkeEQviO1ZFP68EHSy7yPtJx29sDU=
+github.com/tenz-io/gokit/logger v1.0.0-beta.1 h1:D28mfps//2ZVzWGBZ54BCJll6PoSD7E5IFCEcBJiq2Q=
+github.com/tenz-io/gokit/logger v1.0.0-beta.1/go.mod h1:wsO/AvpAgEsgYuLkeEQviO1ZFP68EHSy7yPtJx29sDU=
 github.com/tenz-io/gokit/monitor v1.0.2 h1:QJdYSiHS6VToopqtNabFwVuXrfs0ZtZkYzv7G/ifVao=
 github.com/tenz-io/gokit/monitor v1.0.2/go.mod h1:3DSZdgWnqOCKd/T5M4uvdZycdaz87g2uCwhi0x/wAlY=
 go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=
