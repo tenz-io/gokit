@@ -2,6 +2,7 @@ package httpcli
 
 import "net/http"
 
+// Interceptor is an interface that wraps the Intercept and Apply methods.
 type Interceptor interface {
 	// Intercept returns a new http.RoundTripper that wraps the given tripper.
 	Intercept(tripper http.RoundTripper) http.RoundTripper
