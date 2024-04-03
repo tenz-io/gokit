@@ -151,7 +151,7 @@ func captureRequest(c *gin.Context) (res any) {
 	}
 
 	// return string for other content-type
-	return string(body)
+	return limitString(string(body), 128)
 }
 
 // captureResponse capture response from gin context writer
@@ -190,7 +190,7 @@ func captureResponse(c *gin.Context, bs []byte) (res any) {
 		return resp
 	} else if strings.HasPrefix(contentType, "text/plain") ||
 		strings.HasPrefix(contentType, "text/xml") {
-		return string(bs)
+		return limitString(string(bs), 128)
 	} else {
 		return "<unsupported capture content-type>"
 	}
@@ -206,4 +206,12 @@ func (rw *responseWrapper) Write(data []byte) (int, error) {
 	written, err := rw.ResponseWriter.Write(data)
 	rw.buffer.Write(data)
 	return written, err
+}
+
+// limitString limit string length
+func limitString(s string, n int) string {
+	if n <= 0 || len(s) <= n {
+		return s
+	}
+	return s[:n] + "..."
 }

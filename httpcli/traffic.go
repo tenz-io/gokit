@@ -132,17 +132,17 @@ func captureRequest(req *http.Request) (res any) {
 	}
 
 	if strings.HasPrefix(contentType, "application/json") {
-		var req map[string]any
-		if err = json.Unmarshal(body, &req); err != nil {
+		var reqMap map[string]any
+		if err = json.Unmarshal(body, &reqMap); err != nil {
 			le.WithError(err).Warnf("json unmarshal request failed")
 			return "<json unmarshal failed>"
 		}
 
-		return req
+		return reqMap
 	}
 
 	// return string for other content-type
-	return string(body)
+	return limitString(string(body), 128)
 }
 
 // captureResponse capture response from http response
@@ -203,7 +203,7 @@ func captureResponse(resp *http.Response) any {
 	}
 
 	le.Debug("capture response")
-	return string(body)
+	return limitString(string(body), 128)
 }
 
 func ifThen[T any](cond bool, tf, ff func() T) T {
@@ -211,4 +211,12 @@ func ifThen[T any](cond bool, tf, ff func() T) T {
 		return tf()
 	}
 	return ff()
+}
+
+// limitString returns a string with a maximum length of n.
+func limitString(s string, n int) string {
+	if n <= 0 || len(s) <= n {
+		return s
+	}
+	return s[:n] + "..."
 }
