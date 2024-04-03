@@ -5,7 +5,7 @@ import (
 )
 
 var (
-	transporters = []newTransporterFunc{
+	newTransporters = []newTransporterFunc{
 		newMetricsTransport,
 		newTrafficTransport,
 	}

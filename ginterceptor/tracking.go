@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/tenz-io/gokit/logger"
-	"github.com/tenz-io/gokit/monitor"
 )
 
 const (
@@ -17,12 +16,33 @@ const (
 )
 
 const (
-	requestIdCtxKey = requestIdCtxKeyType("requestId_ctx_key")
+	requestIdCtxKey = requestIdCtxKeyType("_requestId_ctx_key")
 )
 
 type requestIdCtxKeyType string
 
-func (i *interceptor) ApplyTracking() gin.HandlerFunc {
+type trackingApplier struct {
+	enable bool
+}
+
+func newTrackingApplier(config Config) applier {
+	return &trackingApplier{
+		enable: config.EnableTracking,
+	}
+
+}
+
+func (t *trackingApplier) active() bool {
+	return t != nil && t.enable
+}
+
+func (t *trackingApplier) apply() gin.HandlerFunc {
+	if !t.active() {
+		return func(c *gin.Context) {
+			c.Next()
+		}
+	}
+
 	syslog.Println("[gin-interceptor] apply tracking")
 
 	return func(c *gin.Context) {
@@ -32,11 +52,6 @@ func (i *interceptor) ApplyTracking() gin.HandlerFunc {
 			ctx   = WithRequestId(c.Request.Context(), reqID)
 		)
 
-		// metrics tracking
-		if i.config.EnableMetrics {
-			ctx = monitor.InitSingleFlight(ctx, url)
-		}
-
 		// inject logger into context
 		ctx = logger.WithLogger(
 			ctx,
@@ -44,18 +59,6 @@ func (i *interceptor) ApplyTracking() gin.HandlerFunc {
 				WithFields(logger.Fields{
 					"url": url,
 				}),
-		)
-
-		// inject traffic logger into context
-		ctx = logger.WithTrafficEntry(
-			ctx,
-			logger.WithTrafficTracing(ctx, reqID).
-				WithFields(logger.Fields{
-					"url": url,
-				}).WithIgnores(
-				"password",
-				//"Authorization",
-			),
 		)
 
 		// update gin context

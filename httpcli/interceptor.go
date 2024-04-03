@@ -34,10 +34,10 @@ func (i *interceptor) Apply(hc *http.Client) {
 		transport = http.DefaultTransport
 	}
 
-	for _, transportF := range transporters {
-		newTransport, ok := transportF(i.config, transport).(transporter)
-		if ok && newTransport.active() {
-			transport = newTransport
+	for _, newTransporter := range newTransporters {
+		tempTransport, ok := newTransporter(i.config, transport).(transporter)
+		if ok && tempTransport.active() {
+			transport = tempTransport
 		}
 	}
 

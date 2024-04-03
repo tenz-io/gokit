@@ -40,7 +40,21 @@ func (t *trafficApplier) apply() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var (
 			ctx     = c.Request.Context()
+			url     = c.Request.URL.Path
+			reqID   = RequestIdFromCtx(ctx)
 			reqCopy = captureRequest(c)
+		)
+
+		// inject traffic logger into context
+		ctx = logger.WithTrafficEntry(
+			ctx,
+			logger.WithTrafficTracing(ctx, reqID).
+				WithFields(logger.Fields{
+					"url": url,
+				}).WithIgnores(
+				"password",
+				//"Authorization",
+			),
 		)
 
 		rec := logger.StartTrafficRec(ctx, &logger.ReqEntity{

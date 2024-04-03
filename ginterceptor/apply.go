@@ -13,7 +13,8 @@ import (
 )
 
 var (
-	appliers = []newApplierFunc{
+	newAppliers = []newApplierFunc{
+		newTrackingApplier,
 		newMetricsApplier,
 		newTrafficApplier,
 		newTimeoutApplier,
