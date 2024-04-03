@@ -150,16 +150,20 @@ func Test_interceptor_Apply(t *testing.T) {
 					return
 				}
 
-				transport, ok := args.hc.Transport.(*metricsTransport)
+				newTransport, ok := args.hc.Transport.(*metricsTransport)
+				t.Logf("type: %T, transport: %v", newTransport, newTransport)
 				if !ok {
-					t.Errorf("interceptor.Apply() = %v, want %v", args.hc.Transport, &metricsTransport{})
+					t.Errorf("interceptor.Apply() = %v, type: %T", args.hc.Transport, newTransport)
 					return
 				}
 
-				if !reflect.DeepEqual(transport.tripper, &mockMetricsTransport{}) {
-					t.Errorf("interceptor.Apply() = %v, want %v", transport.tripper, &mockMetricsTransport{})
+				parent, ok := newTransport.tripper.(*mockMetricsTransport)
+				t.Logf("type: %T, transport: %v", parent, parent)
+				if !ok {
+					t.Errorf("interceptor.Apply() = %v, want %v", newTransport.tripper, &mockMetricsTransport{})
 					return
 				}
+
 			},
 		},
 		{
@@ -181,16 +185,20 @@ func Test_interceptor_Apply(t *testing.T) {
 					return
 				}
 
-				transport, ok := args.hc.Transport.(*trafficTransport)
+				newTransport, ok := args.hc.Transport.(*trafficTransport)
+				t.Logf("type: %T, transport: %v", newTransport, newTransport)
 				if !ok {
-					t.Errorf("interceptor.Apply() = %v, want %v", args.hc.Transport, &trafficTransport{})
+					t.Errorf("interceptor.Apply() = %v, type: %T", args.hc.Transport, newTransport)
 					return
 				}
 
-				if !reflect.DeepEqual(transport.tripper, &mockMetricsTransport{}) {
-					t.Errorf("interceptor.Apply() = %v, want %v", transport.tripper, &mockMetricsTransport{})
+				parent, ok := newTransport.tripper.(*mockMetricsTransport)
+				t.Logf("type: %T, transport: %v", parent, parent)
+				if !ok {
+					t.Errorf("interceptor.Apply() = %v, want %v", newTransport.tripper, &mockMetricsTransport{})
 					return
 				}
+
 			},
 		},
 		{

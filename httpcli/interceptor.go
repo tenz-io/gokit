@@ -34,16 +34,13 @@ func (i *interceptor) Apply(hc *http.Client) {
 		transport = http.DefaultTransport
 	}
 
-	if i.config.EnableMetrics {
-		transport = &metricsTransport{
-			tripper: transport,
+	for _, transportF := range transporters {
+		newTransport, ok := transportF(i.config, transport).(transporter)
+		if !ok || !newTransport.active() {
+			continue
 		}
-	}
+		transport = newTransport
 
-	if i.config.EnableTraffic {
-		transport = &trafficTransport{
-			tripper: transport,
-		}
 	}
 
 	hc.Transport = transport

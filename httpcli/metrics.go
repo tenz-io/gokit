@@ -8,7 +8,15 @@ import (
 )
 
 type metricsTransport struct {
+	enable  bool
 	tripper http.RoundTripper
+}
+
+func newMetricsTransport(config Config, parent http.RoundTripper) transporter {
+	return &metricsTransport{
+		enable:  config.EnableMetrics,
+		tripper: parent,
+	}
 }
 
 func (mt *metricsTransport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
@@ -34,4 +42,11 @@ func (mt *metricsTransport) RoundTrip(req *http.Request) (resp *http.Response, e
 	}()
 
 	return mt.tripper.RoundTrip(req)
+}
+
+func (mt *metricsTransport) active() bool {
+	if mt == nil || mt.tripper == nil {
+		return false
+	}
+	return mt.enable
 }

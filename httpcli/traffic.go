@@ -13,7 +13,15 @@ import (
 )
 
 type trafficTransport struct {
+	enable  bool
 	tripper http.RoundTripper
+}
+
+func newTrafficTransport(config Config, parent http.RoundTripper) transporter {
+	return &trafficTransport{
+		enable:  config.EnableTraffic,
+		tripper: parent,
+	}
 }
 
 func (tt *trafficTransport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
@@ -54,6 +62,13 @@ func (tt *trafficTransport) RoundTrip(req *http.Request) (resp *http.Response, e
 	}()
 
 	return tt.tripper.RoundTrip(req)
+}
+
+func (tt *trafficTransport) active() bool {
+	if tt == nil || tt.tripper == nil {
+		return false
+	}
+	return tt.enable
 }
 
 func errorMsg(err error) string {
