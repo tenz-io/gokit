@@ -4,10 +4,12 @@ import "time"
 
 var (
 	defaultConfig = Config{
-		EnableTracking: true,
-		EnableTraffic:  true,
-		EnableMetrics:  false,
-		Timeout:        0,
+		EnableTracking:  true,
+		EnableTraffic:   true,
+		EnableMetrics:   false,
+		Timeout:         0,
+		EnableAccessLog: false,
+		AccessLog:       "log",
 	}
 )
 
@@ -21,6 +23,10 @@ type Config struct {
 	// Timeout is the maximum duration before timing out the request.
 	// if 0, it will not set timeout.
 	Timeout time.Duration `yaml:"timeout" json:"timeout"`
+	// EnableAccessLog is a flag to enable access log.
+	EnableAccessLog bool `yaml:"enable_access_log" json:"enable_access_log"`
+	// AccessLog is the directory to store access log.
+	AccessLog string `yaml:"access_log" json:"access_log"`
 }
 
 type ConfigOption func(*Config)
@@ -54,5 +60,17 @@ func WithTimeout(timeout time.Duration) ConfigOption {
 func WithTracking(enable bool) ConfigOption {
 	return func(c *Config) {
 		c.EnableTracking = enable
+	}
+}
+
+func WithEnableAccessLog(enable bool) ConfigOption {
+	return func(c *Config) {
+		c.EnableAccessLog = enable
+	}
+}
+
+func WithAccessLog(logDir string) ConfigOption {
+	return func(c *Config) {
+		c.AccessLog = logDir
 	}
 }

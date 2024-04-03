@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	syslog "log"
+	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -107,13 +108,18 @@ func captureRequest(c *gin.Context) (res any) {
 		err         error
 		contentType = strings.ToLower(c.ContentType())
 		ctx         = c.Request.Context()
+		le          = logger.FromContext(ctx).WithFields(logger.Fields{
+			"Content-Type": contentType,
+		})
 	)
 
-	le := logger.FromContext(ctx).WithFields(logger.Fields{
-		"Content-Type": contentType,
-	})
+	if c.Request.Method == http.MethodGet {
+		le.Debug("GET method request, skip capture request")
+		return nil
+	}
 
 	if strings.HasPrefix(contentType, "application/x-www-form-urlencoded") {
+		le.Debug("capture x-www-form-urlencoded")
 		return c.Request.PostForm
 	}
 

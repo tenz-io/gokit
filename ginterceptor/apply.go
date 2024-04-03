@@ -5,7 +5,11 @@ import (
 	"fmt"
 	syslog "log"
 	"net/http"
+	"runtime/debug"
+	"strings"
 	"time"
+
+	"gopkg.in/natefinch/lumberjack.v2"
 
 	"github.com/gin-gonic/gin"
 
@@ -14,10 +18,12 @@ import (
 
 var (
 	newAppliers = []newApplierFunc{
+		newAccessLogApplier,
 		newTrackingApplier,
 		newMetricsApplier,
 		newTrafficApplier,
 		newTimeoutApplier,
+		newPanicRecoveryApplier,
 	}
 )
 
@@ -108,7 +114,75 @@ func (t *timeoutApplier) apply() gin.HandlerFunc {
 			c.AbortWithStatus(http.StatusRequestTimeout)
 			return
 		case <-doneC:
-			// The request completed before the timeout
 		}
+	}
+}
+
+type accessLogApplier struct {
+	enable    bool
+	accessLog string
+}
+
+func newAccessLogApplier(config Config) applier {
+	return &accessLogApplier{
+		enable:    config.EnableAccessLog,
+		accessLog: config.AccessLog,
+	}
+}
+
+func (a *accessLogApplier) active() bool {
+	return a != nil && a.enable
+}
+
+func (a *accessLogApplier) apply() gin.HandlerFunc {
+	if !a.active() {
+		return func(c *gin.Context) {
+			c.Next()
+		}
+	}
+
+	accessLog := a.accessLog
+	if accessLog == "" {
+		accessLog = "log"
+	}
+
+	filename := strings.Join([]string{accessLog, "access.log"}, "/")
+
+	syslog.Println("[gin-interceptor] apply access log:", filename)
+
+	accessLogger := &lumberjack.Logger{
+		Filename:   filename,
+		LocalTime:  true,
+		MaxSize:    10,   // the maximum size of each log file (in megabytes)
+		MaxBackups: 5,    // the maximum number of old log files to retain
+		MaxAge:     30,   // the maximum number of days to retain old log files
+		Compress:   true, // compress old log files with gzip
+	}
+
+	return gin.LoggerWithWriter(accessLogger)
+}
+
+type panicRecoveryApplier struct {
+}
+
+func newPanicRecoveryApplier(_ Config) applier {
+	return &panicRecoveryApplier{}
+}
+
+func (p *panicRecoveryApplier) active() bool {
+	return true
+}
+
+func (p *panicRecoveryApplier) apply() gin.HandlerFunc {
+	syslog.Println("[gin-interceptor] apply panic recovery")
+	return func(c *gin.Context) {
+		defer func() {
+			if r := recover(); r != nil {
+				syslog.Printf("panic recovery: %s, stacktrace: %s\n", r, string(debug.Stack()))
+				c.AbortWithStatus(http.StatusInternalServerError)
+			}
+		}()
+
+		c.Next()
 	}
 }
