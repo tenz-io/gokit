@@ -28,10 +28,10 @@ github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
 github.com/stretchr/testify v1.8.1 h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYKsk=
 github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
-github.com/tenz-io/gokit/logger v1.2.0 h1:Jgl37K8H832U0jZCeEjD8C7Df6Wdwwk1wNsREeWIDsg=
-github.com/tenz-io/gokit/logger v1.2.0/go.mod h1:wsO/AvpAgEsgYuLkeEQviO1ZFP68EHSy7yPtJx29sDU=
-github.com/tenz-io/gokit/monitor v1.0.0 h1:MfbTSDudHwCcoMxEedWdxl+hGWSn31HvtpRxw5uR53I=
-github.com/tenz-io/gokit/monitor v1.0.0/go.mod h1:3DSZdgWnqOCKd/T5M4uvdZycdaz87g2uCwhi0x/wAlY=
+github.com/tenz-io/gokit/logger v1.2.2 h1:0kIBoxbkE4bsCHIquS+maHgpb+tzj0MYdN1Q83utR9Y=
+github.com/tenz-io/gokit/logger v1.2.2/go.mod h1:wsO/AvpAgEsgYuLkeEQviO1ZFP68EHSy7yPtJx29sDU=
+github.com/tenz-io/gokit/monitor v1.0.2 h1:QJdYSiHS6VToopqtNabFwVuXrfs0ZtZkYzv7G/ifVao=
+github.com/tenz-io/gokit/monitor v1.0.2/go.mod h1:3DSZdgWnqOCKd/T5M4uvdZycdaz87g2uCwhi0x/wAlY=
 go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=
 go.uber.org/multierr v1.10.0 h1:S0h4aNzvfcFsC3dRF1jLoaov7oRaKqRGC/pUEJ2yvPQ=
 go.uber.org/multierr v1.10.0/go.mod h1:20+QtiLqy0Nd6FdQB9TLXag12DsQkrbs3htMFfDN80Y=
