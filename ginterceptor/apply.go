@@ -13,6 +13,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/tenz-io/gokit/logger"
 	"github.com/tenz-io/gokit/monitor"
 )
 
@@ -176,9 +177,15 @@ func (p *panicRecoveryApplier) active() bool {
 func (p *panicRecoveryApplier) apply() gin.HandlerFunc {
 	syslog.Println("[gin-interceptor] apply panic recovery")
 	return func(c *gin.Context) {
+		var (
+			ctx = c.Request.Context()
+		)
 		defer func() {
 			if r := recover(); r != nil {
 				syslog.Printf("panic recovery: %s, stacktrace: %s\n", r, string(debug.Stack()))
+				logger.FromContext(ctx).WithFields(logger.Fields{
+					"panic": fmt.Sprintf("%s", r),
+				}).Error("panic recovery")
 				c.AbortWithStatus(http.StatusInternalServerError)
 			}
 		}()

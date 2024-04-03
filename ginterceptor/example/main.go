@@ -43,6 +43,11 @@ func main() {
 		})
 	})
 
+	engine.GET("/panic", func(c *gin.Context) {
+		// test panic recovery
+		panic("something went wrong")
+	})
+
 	log.Println("server is running on :8080")
 	err := engine.Run(":8080")
 	if err != nil {
