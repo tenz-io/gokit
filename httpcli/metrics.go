@@ -21,20 +21,15 @@ func newMetricsTransport(config Config, parent http.RoundTripper) transporter {
 
 func (mt *metricsTransport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
 	var (
-		ctx = req.Context()
-		url = req.URL.Path
+		ctx  = req.Context()
+		url  = req.URL.Path
+		code = 1
 	)
 
 	rec := monitor.BeginRecord(ctx, url)
 
 	defer func() {
-		var (
-			code int
-		)
-
-		if err != nil {
-			code = 1
-		} else {
+		if err == nil {
 			code = resp.StatusCode
 		}
 
