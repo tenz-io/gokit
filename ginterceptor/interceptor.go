@@ -1,21 +1,11 @@
 package ginterceptor
 
 import (
-	"context"
-	"fmt"
-	syslog "log"
-	"net/http"
-
 	"github.com/gin-gonic/gin"
-
-	"github.com/tenz-io/gokit/monitor"
 )
 
 type Interceptor interface {
-	ApplyTracking() gin.HandlerFunc
-	ApplyTraffic() gin.HandlerFunc
-	ApplyMetrics() gin.HandlerFunc
-	ApplyTimeout() gin.HandlerFunc
+	Apply(engine *gin.Engine)
 }
 
 func NewInterceptorWithOpts(opts ...ConfigOption) Interceptor {
@@ -28,66 +18,31 @@ func NewInterceptorWithOpts(opts ...ConfigOption) Interceptor {
 }
 
 func NewInterceptor(config Config) Interceptor {
+	var applierList []applier
+	for _, newApplier := range appliers {
+		a := newApplier(config)
+		if a.active() {
+			applierList = append(applierList, a)
+		}
+	}
 	return &interceptor{
-		config: config,
+		config:   config,
+		appliers: applierList,
 	}
 }
 
 type interceptor struct {
-	config Config
+	config   Config
+	appliers []applier
 }
 
-func (i *interceptor) ApplyMetrics() gin.HandlerFunc {
-	if !i.config.EnableMetrics {
-		return func(c *gin.Context) {
-			c.Next()
-		}
+func (i *interceptor) Apply(engine *gin.Engine) {
+	if engine == nil {
+		return
 	}
-	syslog.Println("[gin-interceptor] apply metrics")
 
-	return func(c *gin.Context) {
-		// get context from gin
-		var (
-			ctx = c.Request.Context()
-		)
-		rec := monitor.BeginRecord(ctx, "total")
-		defer func() {
-			httpStatus := c.Writer.Status()
-			rec.EndWithCode(fmt.Sprintf("%d", httpStatus))
-		}()
-
-		c.Next()
+	for _, a := range i.appliers {
+		engine.Use(a.apply())
 	}
-}
 
-func (i *interceptor) ApplyTimeout() gin.HandlerFunc {
-	if i.config.Timeout <= 0 {
-		return func(c *gin.Context) {
-			c.Next()
-		}
-	}
-	syslog.Println("[gin-interceptor] apply timeout:", i.config.Timeout)
-
-	return func(c *gin.Context) {
-		var (
-			ctx = c.Request.Context()
-		)
-
-		timeoutCtx, cancel := context.WithTimeout(ctx, i.config.Timeout)
-		defer cancel()
-
-		doneC := make(chan struct{})
-		go func() {
-			c.Next()
-			close(doneC)
-		}()
-
-		select {
-		case <-timeoutCtx.Done():
-			c.AbortWithStatus(http.StatusRequestTimeout)
-			return
-		case <-doneC:
-			// The request completed before the timeout
-		}
-	}
 }

@@ -13,12 +13,28 @@ import (
 	"github.com/tenz-io/gokit/logger"
 )
 
-func (i *interceptor) ApplyTraffic() gin.HandlerFunc {
-	if !i.config.EnableTraffic {
-		return func(context *gin.Context) {
-			context.Next()
+type trafficApplier struct {
+	enable bool
+}
+
+func newTrafficApplier(config Config) applier {
+	return &trafficApplier{
+		enable: config.EnableTraffic,
+	}
+
+}
+
+func (t *trafficApplier) active() bool {
+	return t != nil && t.enable
+}
+
+func (t *trafficApplier) apply() gin.HandlerFunc {
+	if !t.active() {
+		return func(c *gin.Context) {
+			c.Next()
 		}
 	}
+
 	syslog.Println("[gin-interceptor] apply traffic logging")
 
 	return func(c *gin.Context) {
@@ -62,6 +78,7 @@ func (i *interceptor) ApplyTraffic() gin.HandlerFunc {
 
 		c.Next()
 	}
+
 }
 
 // capture http body from gin context request

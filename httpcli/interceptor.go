@@ -36,11 +36,9 @@ func (i *interceptor) Apply(hc *http.Client) {
 
 	for _, transportF := range transporters {
 		newTransport, ok := transportF(i.config, transport).(transporter)
-		if !ok || !newTransport.active() {
-			continue
+		if ok && newTransport.active() {
+			transport = newTransport
 		}
-		transport = newTransport
-
 	}
 
 	hc.Transport = transport
