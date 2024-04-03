@@ -1,27 +1,27 @@
 GO = go
 
-PKG_LIST=logger monitor retriever app ginterceptor dbtracker httpcli
+SUBMODULES := $(shell grep './' go.work | sed 's/^[ \t]*//' | grep -v '^use (' | grep -v '^)' | tr -d '\r' | awk '{ print $$1 }')
 
-LIB_LIST=logger monitor retriever app ginterceptor dbtracker httpcli
 
 .PHONY: dep
 dep:
 	@echo "go mod tidy"
-	@for pkg in ${PKG_LIST} ; do \
-		cd $$pkg && $(GO) mod tidy -v && cd ..; \
+	@for module in $(SUBMODULES); do \
+		cd $$module && $(GO) mod tidy -v && cd - || exit 1; \
 	done
 
 
 test:
-	@for pkg in ${PKG_LIST} ; do \
-		echo "test $$pkg" && cd $$pkg && $(GO) test ./... -cover && cd ..; \
+	@for module in $(SUBMODULES); do \
+		echo "Testing $$module..."; \
+		cd $$module && $(GO) test ./... -cover -v && cd - || exit 1; \
 	done
 
 
 
 gci:
 	@echo "gci format"
-	@for pkg in ${PKG_LIST} ; do \
-		cd $$pkg && gci write -s standard -s default -s "prefix(github.com)" -s "prefix(github.com/tenz-io/gokit)" --skip-generated * && cd ..; \
+	@for module in $(SUBMODULES); do \
+		cd $$module && gci write -s standard -s default -s "prefix(github.com)" -s "prefix(github.com/tenz-io/gokit)" --skip-generated * && cd - || exit 1; \
 	done
 
