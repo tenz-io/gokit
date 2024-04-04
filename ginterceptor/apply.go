@@ -20,6 +20,7 @@ import (
 var (
 	newAppliers = []newApplierFunc{
 		newAccessLogApplier,
+		newSlowLogApplier,
 		newTrackingApplier,
 		newMetricsApplier,
 		newTrafficApplier,
@@ -187,6 +188,53 @@ func (p *panicRecoveryApplier) apply() gin.HandlerFunc {
 					"panic": fmt.Sprintf("%s", r),
 				}).Error("panic recovery")
 				c.AbortWithStatus(http.StatusInternalServerError)
+			}
+		}()
+
+		c.Next()
+	}
+}
+
+type slowLogApplier struct {
+	slowLogFloor time.Duration
+}
+
+func newSlowLogApplier(config Config) applier {
+	return &slowLogApplier{
+		slowLogFloor: config.SlowLogFloor,
+	}
+}
+
+func (s *slowLogApplier) active() bool {
+	return s != nil && s.slowLogFloor > 0
+}
+
+func (s *slowLogApplier) apply() gin.HandlerFunc {
+	if !s.active() {
+		return func(c *gin.Context) {
+			c.Next()
+		}
+	}
+
+	syslog.Println("[gin-interceptor] apply slow log:", s.slowLogFloor)
+
+	return func(c *gin.Context) {
+		var (
+			ctx   = c.Request.Context()
+			start = time.Now()
+		)
+
+		defer func() {
+			if duration := time.Since(start); duration > s.slowLogFloor {
+				logger.FromContext(ctx).WithFields(logger.Fields{
+					"duration":  duration,
+					"url":       c.Request.URL.String(),
+					"method":    c.Request.Method,
+					"query":     c.Request.URL.Query(),
+					"clientIP":  c.ClientIP(),
+					"status":    c.Writer.Status(),
+					"threshold": s.slowLogFloor,
+				}).Warn("slow log")
 			}
 		}()
 

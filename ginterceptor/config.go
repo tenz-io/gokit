@@ -10,6 +10,7 @@ var (
 		Timeout:         0,
 		EnableAccessLog: false,
 		AccessLog:       "log",
+		SlowLogFloor:    0,
 	}
 )
 
@@ -27,6 +28,10 @@ type Config struct {
 	EnableAccessLog bool `yaml:"enable_access_log" json:"enable_access_log"`
 	// AccessLog is the directory to store access log.
 	AccessLog string `yaml:"access_log" json:"access_log"`
+	// SlowLogFloor is the threshold for slow log,
+	// if the request duration is greater than this value, it will be logged as slow log
+	// if 0, it will not log slow log
+	SlowLogFloor time.Duration `yaml:"slow_log_floor" json:"slow_log_floor"`
 }
 
 type ConfigOption func(*Config)
@@ -72,5 +77,11 @@ func WithEnableAccessLog(enable bool) ConfigOption {
 func WithAccessLog(logDir string) ConfigOption {
 	return func(c *Config) {
 		c.AccessLog = logDir
+	}
+}
+
+func WithSlowLogFloor(slowLogFloor time.Duration) ConfigOption {
+	return func(c *Config) {
+		c.SlowLogFloor = slowLogFloor
 	}
 }
