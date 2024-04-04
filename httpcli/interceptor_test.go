@@ -418,7 +418,64 @@ func TestInterceptor(t *testing.T) {
 			before: func(t *testing.T, fields *fields, args *args) {
 				// iterate get deep level of transport until we get the mocked transport
 				var (
-					mockedTransport = fields.hc.Transport.(*trafficTransport).tripper.(*metricsTransport).tripper.(*mockMetricsTransport)
+					mockedTransport = fields.hc.Transport.(*trafficTransport).
+						//tripper.(*injectHeaderTransport).
+						tripper.(*metricsTransport).
+						tripper.(*mockMetricsTransport)
+				)
+
+				mockedTransport.On("RoundTrip", args.req).Return(&http.Response{
+					StatusCode: http.StatusOK,
+					Header: http.Header{
+						"Content-Type": []string{"text/plain; charset=utf-8"},
+					},
+					Body: func() io.ReadCloser {
+						return io.NopCloser(strings.NewReader("hello world"))
+					}(),
+				}, nil).Times(1)
+			},
+		},
+		{
+			name: "when traffic and metrics are enabled and header is injected",
+			fields: fields{
+				config: Config{
+					EnableMetrics: false,
+					EnableTraffic: true,
+					Headers: map[string]string{
+						"Authorization": "Bearer token",
+						"Content-Type":  "application/json",
+						"X-Request-ID":  "123",
+					},
+				},
+				hc: &http.Client{
+					Transport: &mockMetricsTransport{},
+				},
+			},
+			args: args{
+				req: &http.Request{
+					Method: "POST",
+					URL: &url.URL{
+						Scheme: "https",
+						Host:   "localhost",
+						Path:   "/hello",
+					},
+					Header: http.Header{
+						"Content-Type": []string{"text/plain; charset=utf-8"},
+					},
+					Body: func() io.ReadCloser {
+						return io.NopCloser(strings.NewReader("hello world"))
+					}(),
+				},
+			},
+			wantResp: true,
+			wantErr:  assert.NoError,
+			before: func(t *testing.T, fields *fields, args *args) {
+				// iterate get deep level of transport until we get the mocked transport
+				var (
+					mockedTransport = fields.hc.Transport.(*trafficTransport).
+						tripper.(*injectHeaderTransport).
+						//tripper.(*metricsTransport).
+						tripper.(*mockMetricsTransport)
 				)
 
 				mockedTransport.On("RoundTrip", args.req).Return(&http.Response{
