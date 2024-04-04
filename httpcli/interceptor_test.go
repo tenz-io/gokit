@@ -16,11 +16,11 @@ import (
 	"github.com/tenz-io/gokit/logger"
 )
 
-type mockMetricsTransport struct {
+type mockTransport struct {
 	mock.Mock
 }
 
-func (m *mockMetricsTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+func (m *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	args := m.Called(req)
 	return args.Get(0).(*http.Response), args.Error(1)
 }
@@ -114,7 +114,7 @@ func Test_interceptor_Apply(t *testing.T) {
 			},
 			args: args{
 				hc: &http.Client{
-					Transport: &mockMetricsTransport{},
+					Transport: &mockTransport{},
 				},
 			},
 			after: func(t *testing.T, fields *fields, args *args) {
@@ -123,8 +123,8 @@ func Test_interceptor_Apply(t *testing.T) {
 					return
 				}
 
-				if !reflect.DeepEqual(args.hc.Transport, &mockMetricsTransport{}) {
-					t.Errorf("interceptor.Apply() = %v, want %v", args.hc.Transport, &mockMetricsTransport{})
+				if !reflect.DeepEqual(args.hc.Transport, &mockTransport{}) {
+					t.Errorf("interceptor.Apply() = %v, want %v", args.hc.Transport, &mockTransport{})
 					return
 				}
 
@@ -140,7 +140,7 @@ func Test_interceptor_Apply(t *testing.T) {
 			},
 			args: args{
 				hc: &http.Client{
-					Transport: &mockMetricsTransport{},
+					Transport: &mockTransport{},
 				},
 			},
 			after: func(t *testing.T, fields *fields, args *args) {
@@ -156,10 +156,10 @@ func Test_interceptor_Apply(t *testing.T) {
 					return
 				}
 
-				parent, ok := newTransport.tripper.(*mockMetricsTransport)
+				parent, ok := newTransport.tripper.(*mockTransport)
 				t.Logf("type: %T, transport: %v", parent, parent)
 				if !ok {
-					t.Errorf("interceptor.Apply() = %v, want %v", newTransport.tripper, &mockMetricsTransport{})
+					t.Errorf("interceptor.Apply() = %v, want %v", newTransport.tripper, &mockTransport{})
 					return
 				}
 
@@ -175,7 +175,7 @@ func Test_interceptor_Apply(t *testing.T) {
 			},
 			args: args{
 				hc: &http.Client{
-					Transport: &mockMetricsTransport{},
+					Transport: &mockTransport{},
 				},
 			},
 			after: func(t *testing.T, fields *fields, args *args) {
@@ -191,10 +191,10 @@ func Test_interceptor_Apply(t *testing.T) {
 					return
 				}
 
-				parent, ok := newTransport.tripper.(*mockMetricsTransport)
+				parent, ok := newTransport.tripper.(*mockTransport)
 				t.Logf("type: %T, transport: %v", parent, parent)
 				if !ok {
-					t.Errorf("interceptor.Apply() = %v, want %v", newTransport.tripper, &mockMetricsTransport{})
+					t.Errorf("interceptor.Apply() = %v, want %v", newTransport.tripper, &mockTransport{})
 					return
 				}
 
@@ -210,7 +210,7 @@ func Test_interceptor_Apply(t *testing.T) {
 			},
 			args: args{
 				hc: &http.Client{
-					Transport: &mockMetricsTransport{},
+					Transport: &mockTransport{},
 				},
 			},
 			after: func(t *testing.T, fields *fields, args *args) {
@@ -231,8 +231,8 @@ func Test_interceptor_Apply(t *testing.T) {
 					return
 				}
 
-				if !reflect.DeepEqual(mt.tripper, &mockMetricsTransport{}) {
-					t.Errorf("interceptor.Apply() = %v, want %v", transport.tripper, &mockMetricsTransport{})
+				if !reflect.DeepEqual(mt.tripper, &mockTransport{}) {
+					t.Errorf("interceptor.Apply() = %v, want %v", transport.tripper, &mockTransport{})
 					return
 				}
 			},
@@ -277,7 +277,7 @@ func TestInterceptor(t *testing.T) {
 					EnableTraffic: false,
 				},
 				hc: &http.Client{
-					Transport: &mockMetricsTransport{},
+					Transport: &mockTransport{},
 				},
 			},
 			args: args{
@@ -295,7 +295,7 @@ func TestInterceptor(t *testing.T) {
 			wantErr:  assert.NoError,
 			before: func(t *testing.T, fields *fields, args *args) {
 				var (
-					mockedTransport = fields.hc.Transport.(*mockMetricsTransport)
+					mockedTransport = fields.hc.Transport.(*mockTransport)
 				)
 
 				mockedTransport.On("RoundTrip", args.req).Return(&http.Response{
@@ -314,7 +314,7 @@ func TestInterceptor(t *testing.T) {
 					EnableTraffic: false,
 				},
 				hc: &http.Client{
-					Transport: &mockMetricsTransport{},
+					Transport: &mockTransport{},
 				},
 			},
 			args: args{
@@ -334,7 +334,7 @@ func TestInterceptor(t *testing.T) {
 
 				// iterate get deep level of transport until we get the mocked transport
 				var (
-					mockedTransport = fields.hc.Transport.(*metricsTransport).tripper.(*mockMetricsTransport)
+					mockedTransport = fields.hc.Transport.(*metricsTransport).tripper.(*mockTransport)
 				)
 
 				mockedTransport.On("RoundTrip", args.req).Return(&http.Response{
@@ -353,7 +353,7 @@ func TestInterceptor(t *testing.T) {
 					EnableTraffic: true,
 				},
 				hc: &http.Client{
-					Transport: &mockMetricsTransport{},
+					Transport: &mockTransport{},
 				},
 			},
 			args: args{
@@ -372,7 +372,7 @@ func TestInterceptor(t *testing.T) {
 			before: func(t *testing.T, fields *fields, args *args) {
 				// iterate get deep level of transport until we get the mocked transport
 				var (
-					mockedTransport = fields.hc.Transport.(*trafficTransport).tripper.(*mockMetricsTransport)
+					mockedTransport = fields.hc.Transport.(*trafficTransport).tripper.(*mockTransport)
 				)
 
 				mockedTransport.On("RoundTrip", args.req).Return(&http.Response{
@@ -394,7 +394,7 @@ func TestInterceptor(t *testing.T) {
 					EnableTraffic: true,
 				},
 				hc: &http.Client{
-					Transport: &mockMetricsTransport{},
+					Transport: &mockTransport{},
 				},
 			},
 			args: args{
@@ -421,7 +421,7 @@ func TestInterceptor(t *testing.T) {
 					mockedTransport = fields.hc.Transport.(*trafficTransport).
 						//tripper.(*injectHeaderTransport).
 						tripper.(*metricsTransport).
-						tripper.(*mockMetricsTransport)
+						tripper.(*mockTransport)
 				)
 
 				mockedTransport.On("RoundTrip", args.req).Return(&http.Response{
@@ -448,7 +448,7 @@ func TestInterceptor(t *testing.T) {
 					},
 				},
 				hc: &http.Client{
-					Transport: &mockMetricsTransport{},
+					Transport: &mockTransport{},
 				},
 			},
 			args: args{
@@ -475,7 +475,7 @@ func TestInterceptor(t *testing.T) {
 					mockedTransport = fields.hc.Transport.(*trafficTransport).
 						tripper.(*injectHeaderTransport).
 						//tripper.(*metricsTransport).
-						tripper.(*mockMetricsTransport)
+						tripper.(*mockTransport)
 				)
 
 				mockedTransport.On("RoundTrip", args.req).Return(&http.Response{

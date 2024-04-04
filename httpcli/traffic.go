@@ -193,13 +193,13 @@ func captureResponse(resp *http.Response) any {
 	}
 
 	if strings.HasPrefix(contentType, "application/json") {
-		var res map[string]any
-		if err = json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		var resMap map[string]any
+		if err = json.Unmarshal(body, &resMap); err != nil {
 			le.WithError(err).Warn("error decoding response body")
 			return "<json decode failed>"
 		}
 
-		return res
+		return resMap
 	}
 
 	le.Debug("capture response")

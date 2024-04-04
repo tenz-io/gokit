@@ -38,9 +38,6 @@ func (sq *SimpleRequest) validate() error {
 	switch sq.Method {
 	case http.MethodGet, http.MethodDelete, http.MethodHead:
 	case http.MethodPost, http.MethodPut:
-		if len(sq.ReqBody) == 0 {
-			return fmt.Errorf("request body is empty")
-		}
 	default:
 		return fmt.Errorf("unsupported method: %s", sq.Method)
 	}
@@ -100,13 +97,13 @@ func (c *client) JSON(ctx context.Context, url string, method string, reqBody, r
 		return fmt.Errorf("error marshal request body: %w", err)
 	}
 
-	resp, err := c.DoSimple(ctx, req)
+	respData, err := c.DoSimple(ctx, req)
 	if err != nil {
 		return fmt.Errorf("error do simple request: %w", err)
 	}
 
-	if respBody != nil {
-		err = json.Unmarshal(resp, respBody)
+	if respData != nil && respBody != nil {
+		err = json.Unmarshal(respData, respBody)
 		if err != nil {
 			return fmt.Errorf("error unmarshal response body: %w", err)
 		}
@@ -187,17 +184,22 @@ func (c *client) newRequest(ctx context.Context,
 }
 
 func (c *client) readBody(resp *http.Response) ([]byte, error) {
-	if resp == nil || resp.Body == nil {
-		return nil, fmt.Errorf("response body is nil")
+	if resp == nil {
+		return nil, fmt.Errorf("response is nil")
 	}
+
+	if resp.Body == nil {
+		return nil, nil
+	}
+
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	bs, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("error read response body: %w", err)
 	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
 
 	return bs, nil
 }
