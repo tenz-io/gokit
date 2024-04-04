@@ -26,7 +26,7 @@ func prepare(t *testing.T) (teardown func(t *testing.T)) {
 
 	logger.ConfigureTrafficWithOpts(
 		logger.WithTrafficEnabled(true),
-		logger.WithTrafficIgnoresOpt("Authorization"),
+		logger.WithTrafficIgnoresOpt(HeaderNameAuthorization),
 	)
 
 	return func(t *testing.T) {

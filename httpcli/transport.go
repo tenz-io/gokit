@@ -3,7 +3,9 @@ package httpcli
 import (
 	"fmt"
 	"net/http"
+	"time"
 
+	"github.com/tenz-io/gokit/logger"
 	"github.com/tenz-io/gokit/monitor"
 )
 
@@ -12,6 +14,7 @@ var (
 		newInjectHeaderTransport,
 		newMetricsTransport,
 		newTrafficTransport,
+		newSlowLogTransport,
 	}
 )
 
@@ -88,4 +91,39 @@ func (it *injectHeaderTransport) RoundTrip(req *http.Request) (*http.Response, e
 
 func (it *injectHeaderTransport) active() bool {
 	return it != nil && it.tripper != nil && len(it.headers) > 0
+}
+
+type slowLogTransport struct {
+	slowLogFloor time.Duration
+}
+
+func newSlowLogTransport(config Config, parent http.RoundTripper) transporter {
+	return &slowLogTransport{
+		slowLogFloor: config.SlowLogFloor,
+	}
+}
+
+func (st *slowLogTransport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
+	var (
+		ctx   = req.Context()
+		start = time.Now()
+	)
+
+	defer func() {
+		if duration := time.Since(start); duration > st.slowLogFloor {
+			logger.FromContext(ctx).WithFields(logger.Fields{
+				"duration":  duration,
+				"method":    req.Method,
+				"url":       req.URL.String(),
+				"query":     req.URL.Query(),
+				"threshold": st.slowLogFloor,
+			}).WithError(err).Warn("slow request")
+		}
+	}()
+
+	return http.DefaultTransport.RoundTrip(req)
+}
+
+func (st *slowLogTransport) active() bool {
+	return st != nil && st.slowLogFloor > 0
 }
