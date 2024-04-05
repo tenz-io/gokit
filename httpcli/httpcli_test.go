@@ -44,7 +44,7 @@ func Test_client_JSON(t *testing.T) {
 	type args struct {
 		ctx      context.Context
 		url      string
-		method   string
+		method   HttpMethod
 		reqBody  any
 		respBody any
 		reqOpts  []RequestOption
@@ -66,7 +66,7 @@ func Test_client_JSON(t *testing.T) {
 			args: args{
 				ctx:      context.Background(),
 				url:      "",
-				method:   http.MethodPost,
+				method:   MethodPost,
 				reqBody:  nil,
 				respBody: nil,
 				reqOpts:  []RequestOption{},
@@ -98,7 +98,7 @@ func Test_client_JSON(t *testing.T) {
 			args: args{
 				ctx:      context.Background(),
 				url:      "https://example.com/add",
-				method:   http.MethodPost,
+				method:   MethodPost,
 				reqBody:  map[string]int{"a": 1, "b": 2},
 				respBody: &map[string]int{},
 				reqOpts:  []RequestOption{},

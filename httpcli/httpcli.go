@@ -9,6 +9,17 @@ import (
 	"net/http"
 )
 
+type HttpMethod string
+
+const (
+	MethodGet    HttpMethod = http.MethodGet
+	MethodPost   HttpMethod = http.MethodPost
+	MethodPut    HttpMethod = http.MethodPut
+	MethodDelete HttpMethod = http.MethodDelete
+	MethodHead   HttpMethod = http.MethodHead
+	MethodPatch  HttpMethod = http.MethodPatch
+)
+
 type (
 	Params  map[string][]string
 	Headers map[string]string
@@ -16,16 +27,19 @@ type (
 
 type Client interface {
 	// JSON sends a POST request marshaling reqBody to JSON and unmarshalling respBody from JSON.
-	JSON(ctx context.Context, url string, method string, reqBody, respBody any, reqOpts ...RequestOption) (err error)
+	// The request headers will be set to "application/json" in the Content-Type field.
+	// respBody must be a pointer to a struct.
+	JSON(ctx context.Context, url string, method HttpMethod, reqBody, respBody any, reqOpts ...RequestOption) (err error)
 	// DoSimple sends an HTTP request and returns an HTTP response body as a byte slice.
 	DoSimple(ctx context.Context, req *SimpleRequest) (respBody []byte, err error)
-	// Do sends an HTTP request and returns an HTTP response body as a byte slice.
+	// Do send an HTTP request and returns an HTTP response and error.
+	// it delegates to http.Client.Do.
 	Do(req *http.Request) (resp *http.Response, err error)
 }
 
 type SimpleRequest struct {
 	Url     string
-	Method  string
+	Method  HttpMethod
 	Headers Headers
 	Params  Params
 	ReqBody []byte
@@ -36,8 +50,8 @@ func (sq *SimpleRequest) validate() error {
 		return fmt.Errorf("url is empty")
 	}
 	switch sq.Method {
-	case http.MethodGet, http.MethodDelete, http.MethodHead:
-	case http.MethodPost, http.MethodPut:
+	case MethodGet, MethodDelete, MethodHead:
+	case MethodPost, MethodPut, MethodPatch:
 	default:
 		return fmt.Errorf("unsupported method: %s", sq.Method)
 	}
@@ -64,7 +78,7 @@ func WithRequestBody(body []byte) RequestOption {
 	}
 }
 
-func NewSimpleRequest(url, method string, opts ...RequestOption) *SimpleRequest {
+func NewSimpleRequest(url string, method HttpMethod, opts ...RequestOption) *SimpleRequest {
 	req := &SimpleRequest{
 		Url:    url,
 		Method: method,
@@ -83,8 +97,11 @@ func NewClient(cli *http.Client) Client {
 	return &client{cli: cli}
 }
 
-func (c *client) JSON(ctx context.Context, url string, method string, reqBody, respBody any, reqOpts ...RequestOption) (err error) {
-	req := NewSimpleRequest(url, method, reqOpts...)
+func (c *client) JSON(ctx context.Context, url string, method HttpMethod, reqBody, respBody any, reqOpts ...RequestOption) error {
+	var (
+		err error
+		req = NewSimpleRequest(url, method, reqOpts...)
+	)
 
 	// set head content type
 	if req.Headers == nil {
@@ -155,13 +172,13 @@ func (c *client) Do(req *http.Request) (resp *http.Response, err error) {
 }
 
 func (c *client) newRequest(ctx context.Context,
-	method string,
+	method HttpMethod,
 	url string,
 	params Params,
 	headers Headers,
 	body io.Reader,
 ) (req *http.Request, err error) {
-	req, err = http.NewRequestWithContext(ctx, method, url, body)
+	req, err = http.NewRequestWithContext(ctx, string(method), url, body)
 	if err != nil {
 		return nil, fmt.Errorf("error creating %s request: %w", method, err)
 	}
