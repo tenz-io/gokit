@@ -3,8 +3,8 @@ module github.com/tenz-io/gokit/dbtracker
 go 1.20
 
 require (
-	github.com/tenz-io/gokit/logger v1.0.0-beta.1
-	github.com/tenz-io/gokit/monitor v1.0.0-beta.1
+	github.com/tenz-io/gokit/logger v1.5.0
+	github.com/tenz-io/gokit/monitor v1.5.0
 	gorm.io/gorm v1.25.9
 )
 
