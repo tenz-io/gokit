@@ -11,6 +11,7 @@ use (
 	./ginterceptor/example
 	./httpcli
 	./httpcli/example
+	./localcache
 	./logger
 	./logger/example
 	./monitor
