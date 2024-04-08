@@ -139,7 +139,3 @@ func (m *manager) Eval(ctx context.Context, script string, keys []string, args .
 	val, err = m.client.Eval(ctx, script, keys, args...).Result()
 	return
 }
-
-type Interceptor interface {
-	Apply(cli *redis.Client)
-}

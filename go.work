@@ -12,6 +12,7 @@ use (
 	./httpcli
 	./httpcli/example
 	./cache
+	./cache/example
 	./logger
 	./logger/example
 	./monitor

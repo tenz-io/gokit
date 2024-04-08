@@ -1,11 +1,11 @@
-module github.com/tenz-io/gokit/cache
+module cache-example
 
 go 1.20
 
 require (
 	github.com/go-redis/redis/v8 v8.10.0
+	github.com/tenz-io/gokit/cache v0.0.0
 	github.com/tenz-io/gokit/logger v1.5.0
-	github.com/tenz-io/gokit/monitor v1.5.0
 )
 
 require (
@@ -16,6 +16,7 @@ require (
 	github.com/prometheus/client_model v0.5.0 // indirect
 	github.com/prometheus/common v0.48.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
+	github.com/tenz-io/gokit/monitor v1.5.0 // indirect
 	go.opentelemetry.io/otel v0.20.0 // indirect
 	go.opentelemetry.io/otel/metric v0.20.0 // indirect
 	go.opentelemetry.io/otel/trace v0.20.0 // indirect
@@ -26,3 +27,5 @@ require (
 	google.golang.org/protobuf v1.32.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
+
+replace github.com/tenz-io/gokit/cache => ./..
