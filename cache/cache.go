@@ -1,4 +1,4 @@
-package localcache
+package cache
 
 import (
 	"context"
