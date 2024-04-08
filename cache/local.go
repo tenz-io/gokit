@@ -20,7 +20,7 @@ type local struct {
 	lock    sync.RWMutex
 }
 
-func NewManager() Manager {
+func NewLocal() Manager {
 	lm := &local{
 		m:       make(map[string]*item),
 		nowFunc: time.Now,
