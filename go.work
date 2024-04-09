@@ -18,4 +18,5 @@ use (
 	./monitor
 	./retriever
 	./retriever/example
+	./tracer
 )
