@@ -6,6 +6,7 @@ require (
 	github.com/go-redis/redis/v8 v8.10.0
 	github.com/tenz-io/gokit/logger v1.5.0
 	github.com/tenz-io/gokit/monitor v1.5.0
+	github.com/tenz-io/gokit/tracer v1.0.0
 )
 
 require (

@@ -10,6 +10,7 @@ import (
 
 	"github.com/tenz-io/gokit/logger"
 	"github.com/tenz-io/gokit/monitor"
+	"github.com/tenz-io/gokit/tracer"
 )
 
 type trackingKeyType string
@@ -60,7 +61,7 @@ func (t *tracker) begin(cmd string) func(db *gorm.DB) {
 			m.metricsRec = monitor.BeginRecord(ctx, cmd)
 		}
 
-		if t.config.EnableTraffic {
+		if t.config.EnableTraffic || tracer.FromContext(ctx).IsDebug() {
 			m.trafficRec = logger.StartTrafficRec(ctx, &logger.ReqEntity{
 				Typ: logger.TrafficTypSend,
 				Cmd: cmd,
@@ -91,7 +92,8 @@ func (t *tracker) stop() func(db *gorm.DB) {
 			m.metricsRec.EndWithError(db.Error)
 		}
 
-		if t.config.EnableTraffic && m.trafficRec != nil {
+		if (t.config.EnableTraffic || tracer.FromContext(ctx).IsDebug()) &&
+			m.trafficRec != nil {
 			m.trafficRec.End(&logger.RespEntity{
 				Code: errorCode(db.Error),
 				Msg:  errorMsg(db.Error),

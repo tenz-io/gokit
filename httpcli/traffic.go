@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/tenz-io/gokit/logger"
+	"github.com/tenz-io/gokit/tracer"
 )
 
 type trafficTransport struct {
@@ -25,6 +26,10 @@ func newTrafficTransport(config Config, parent http.RoundTripper) transporter {
 }
 
 func (tt *trafficTransport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
+	if !tt.enable && !tracer.FromContext(req.Context()).IsDebug() {
+		return tt.tripper.RoundTrip(req)
+	}
+
 	var (
 		ctx        = req.Context()
 		url        = req.URL.Path
@@ -68,7 +73,7 @@ func (tt *trafficTransport) active() bool {
 	if tt == nil || tt.tripper == nil {
 		return false
 	}
-	return tt.enable
+	return true
 }
 
 func errorMsg(err error) string {

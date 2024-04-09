@@ -10,6 +10,7 @@ import (
 
 	"github.com/tenz-io/gokit/logger"
 	"github.com/tenz-io/gokit/monitor"
+	"github.com/tenz-io/gokit/tracer"
 )
 
 var (
@@ -102,7 +103,7 @@ func newTrafficHook(conf Config) redis.Hook {
 }
 
 func (th *trafficHook) BeforeProcess(ctx context.Context, cmd redis.Cmder) (context.Context, error) {
-	if !th.enable {
+	if !th.enable && !tracer.FromContext(ctx).IsDebug() {
 		return ctx, nil
 	}
 
@@ -118,7 +119,7 @@ func (th *trafficHook) BeforeProcess(ctx context.Context, cmd redis.Cmder) (cont
 }
 
 func (th *trafficHook) AfterProcess(ctx context.Context, cmd redis.Cmder) error {
-	if !th.enable {
+	if !th.enable && !tracer.FromContext(ctx).IsDebug() {
 		return nil
 	}
 

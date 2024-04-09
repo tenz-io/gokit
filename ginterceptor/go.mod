@@ -7,6 +7,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/tenz-io/gokit/logger v1.5.0
 	github.com/tenz-io/gokit/monitor v1.5.0
+	github.com/tenz-io/gokit/tracer v1.0.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 

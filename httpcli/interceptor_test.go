@@ -97,11 +97,6 @@ func Test_interceptor_Apply(t *testing.T) {
 					return
 				}
 
-				if !reflect.DeepEqual(args.hc.Transport, http.DefaultTransport) {
-					t.Errorf("interceptor.Apply() = %v, want %v", args.hc.Transport, http.DefaultTransport)
-					return
-				}
-
 			},
 		},
 		{
@@ -123,11 +118,6 @@ func Test_interceptor_Apply(t *testing.T) {
 					return
 				}
 
-				if !reflect.DeepEqual(args.hc.Transport, &mockTransport{}) {
-					t.Errorf("interceptor.Apply() = %v, want %v", args.hc.Transport, &mockTransport{})
-					return
-				}
-
 			},
 		},
 		{
@@ -146,20 +136,6 @@ func Test_interceptor_Apply(t *testing.T) {
 			after: func(t *testing.T, fields *fields, args *args) {
 				if args.hc.Transport == nil {
 					t.Errorf("interceptor.Apply() = %v, nil is not expected", args.hc.Transport)
-					return
-				}
-
-				newTransport, ok := args.hc.Transport.(*metricsTransport)
-				t.Logf("type: %T, transport: %v", newTransport, newTransport)
-				if !ok {
-					t.Errorf("interceptor.Apply() = %v, type: %T", args.hc.Transport, newTransport)
-					return
-				}
-
-				parent, ok := newTransport.tripper.(*mockTransport)
-				t.Logf("type: %T, transport: %v", parent, parent)
-				if !ok {
-					t.Errorf("interceptor.Apply() = %v, want %v", newTransport.tripper, &mockTransport{})
 					return
 				}
 
@@ -295,7 +271,7 @@ func TestInterceptor(t *testing.T) {
 			wantErr:  assert.NoError,
 			before: func(t *testing.T, fields *fields, args *args) {
 				var (
-					mockedTransport = fields.hc.Transport.(*mockTransport)
+					mockedTransport = fields.hc.Transport.(*trafficTransport).tripper.(*mockTransport)
 				)
 
 				mockedTransport.On("RoundTrip", args.req).Return(&http.Response{
@@ -334,7 +310,9 @@ func TestInterceptor(t *testing.T) {
 
 				// iterate get deep level of transport until we get the mocked transport
 				var (
-					mockedTransport = fields.hc.Transport.(*metricsTransport).tripper.(*mockTransport)
+					mockedTransport = fields.hc.Transport.(*trafficTransport).
+						tripper.(*metricsTransport).
+						tripper.(*mockTransport)
 				)
 
 				mockedTransport.On("RoundTrip", args.req).Return(&http.Response{

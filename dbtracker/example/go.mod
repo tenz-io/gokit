@@ -20,6 +20,7 @@ require (
 	github.com/prometheus/common v0.48.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/tenz-io/gokit/monitor v1.5.0 // indirect
+	github.com/tenz-io/gokit/tracer v1.0.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/sys v0.16.0 // indirect

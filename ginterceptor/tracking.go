@@ -3,16 +3,19 @@ package ginterceptor
 import (
 	"context"
 	syslog "log"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
 	"github.com/tenz-io/gokit/logger"
+	"github.com/tenz-io/gokit/tracer"
 )
 
 const (
-	headerNameRequestId = "X-Request-Id"
+	headerNameRequestId   = "X-Request-Id"
+	headerNameRequestFlag = "X-Request-Flag"
 )
 
 const (
@@ -49,8 +52,12 @@ func (t *trackingApplier) apply() gin.HandlerFunc {
 		var (
 			url   = c.Request.URL.Path
 			reqID = requestIdFromGinCtx(c)
+			flag  = requestFlagFromHeader(c)
 			ctx   = WithRequestId(c.Request.Context(), reqID)
 		)
+
+		// inject trace flag into context
+		ctx = tracer.WithFlags(ctx, flag)
 
 		// inject logger into context
 		ctx = logger.WithLogger(
@@ -82,7 +89,24 @@ func requestIdFromGinCtx(c *gin.Context) string {
 	}
 
 	return RequestIdFromCtx(c.Request.Context())
+}
 
+func requestFlagFromHeader(c *gin.Context) tracer.Flag {
+	if c == nil {
+		return tracer.FlagNone
+	}
+	headFlag := c.GetHeader(headerNameRequestFlag)
+	if headFlag == "" {
+		return tracer.FlagNone
+	}
+
+	// convert headFlag from string to int
+	flag, err := strconv.Atoi(headFlag)
+	if err != nil {
+		return tracer.FlagNone
+	}
+
+	return tracer.Flag(flag)
 }
 
 // RequestIdFromCtx returns the value associated with this context for key, or nil

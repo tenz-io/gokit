@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/tenz-io/gokit/logger"
+	"github.com/tenz-io/gokit/tracer"
 )
 
 type trafficApplier struct {
@@ -26,7 +27,10 @@ func newTrafficApplier(config Config) applier {
 }
 
 func (t *trafficApplier) active() bool {
-	return t != nil && t.enable
+	if t == nil {
+		return false
+	}
+	return true
 }
 
 func (t *trafficApplier) apply() gin.HandlerFunc {
@@ -39,6 +43,11 @@ func (t *trafficApplier) apply() gin.HandlerFunc {
 	syslog.Println("[gin-interceptor] apply traffic logging")
 
 	return func(c *gin.Context) {
+		if !t.enable && !tracer.FromContext(c.Request.Context()).IsDebug() {
+			c.Next()
+			return
+		}
+
 		var (
 			ctx     = c.Request.Context()
 			url     = c.Request.URL.Path
@@ -68,6 +77,7 @@ func (t *trafficApplier) apply() gin.HandlerFunc {
 				"query":         c.Request.URL.Query(),
 				"req_header":    c.Request.Header,
 				"req_body_size": c.Request.ContentLength,
+				"trace_flag":    tracer.FromContext(ctx),
 			},
 		})
 
