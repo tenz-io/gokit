@@ -11,7 +11,7 @@ var (
 	ErrInActive = errors.New("cache: inactive")
 )
 
-//go:generate mockery --name Manager --filename Manager_mock.go --inpackage
+//go:generate mockery --name Manager --filename manager_mock.go --inpackage
 type Manager interface {
 	// Get returns the value associated with the given key.
 	Get(ctx context.Context, key string) (raw string, err error)
