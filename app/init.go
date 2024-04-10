@@ -9,9 +9,12 @@ import (
 
 	"gopkg.in/yaml.v2"
 
+	"github.com/joho/godotenv"
+
 	"github.com/tenz-io/gokit/logger"
 )
 
+// WithYamlConfig will read the yaml config file and unmarshal it to the confPtr
 func WithYamlConfig() InitFunc {
 	return func(c *Context, confPtr any) (CleanFunc, error) {
 		var (
@@ -34,6 +37,7 @@ func WithYamlConfig() InitFunc {
 	}
 }
 
+// WithJsonConfig will read the json config file and unmarshal it to the confPtr
 func WithJsonConfig() InitFunc {
 	return func(c *Context, confPtr any) (CleanFunc, error) {
 		var (
@@ -56,6 +60,24 @@ func WithJsonConfig() InitFunc {
 	}
 }
 
+// WithDotEnvConfig will read the .env file and set the environment variables
+func WithDotEnvConfig(filenames ...string) InitFunc {
+	return func(c *Context, _ any) (CleanFunc, error) {
+		var (
+			cleanFn = func() {}
+		)
+
+		err := godotenv.Load(filenames...)
+		if err != nil {
+			return cleanFn, fmt.Errorf("error loading .env file: %w", err)
+		}
+
+		return cleanFn, nil
+	}
+
+}
+
+// WithLogger will configure the logger with the given options
 func WithLogger(trafficEnabled bool) InitFunc {
 	return func(c *Context, _ any) (CleanFunc, error) {
 		var (
