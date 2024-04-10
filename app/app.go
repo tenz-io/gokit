@@ -29,25 +29,35 @@ type Config struct {
 	// Inits is a list of initializer function that will be called sequentially before Run
 	Inits []InitFunc
 
-	// Run is the main function that will be called
+	// Command is used for run once tools, exist after the command is done
+	// e.g: such as command line tools
+	Command RunFunc
+
+	// Run is used for server, will block until the server is stopped
+	// e.g: such as http server
 	Run RunFunc
 }
 
 type application struct {
-	name   string
-	initFs []InitFunc
-	runF   RunFunc
+	name     string
+	initFs   []InitFunc
+	runF     RunFunc // for server
+	commandF RunFunc // for command line tools
+	cleanFs  []CleanFunc
 }
 
 func newApplication(
 	name string,
 	initFs []InitFunc,
 	runF RunFunc,
+	commandF RunFunc,
 ) *application {
 	return &application{
-		name:   name,
-		initFs: initFs,
-		runF:   runF,
+		name:     name,
+		initFs:   initFs,
+		runF:     runF,
+		commandF: commandF,
+		cleanFs:  make([]CleanFunc, 0, len(initFs)),
 	}
 }
 
@@ -61,7 +71,7 @@ func Run(cfg Config, flags []Flag) {
 	appCtx, cancel := context.WithCancel(context.Background())
 	c := NewContext(appCtx, fs)
 
-	app := newApplication(cfg.Name, cfg.Inits, cfg.Run)
+	app := newApplication(cfg.Name, cfg.Inits, cfg.Run, cfg.Command)
 	err = app.run(c, cfg.Conf, cancel)
 	if err != nil {
 		log.Fatalf("run error, err: %+v", err)
