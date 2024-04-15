@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	syslog "log"
+	"log"
 	"time"
 
 	"gorm.io/driver/mysql"
@@ -32,7 +32,7 @@ func main() {
 	dsn := "root:mysql_123@tcp(localhost:3306)/trackertest_db?charset=utf8mb4&parseTime=True&loc=Local"
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
-		syslog.Fatal("open database error: ", err)
+		log.Fatal("open database error: ", err)
 		return
 	}
 
@@ -45,7 +45,7 @@ func main() {
 	)
 
 	if err = tracker.Apply(db); err != nil {
-		syslog.Fatal("setup tracking error: ", err)
+		log.Fatal("setup tracking error: ", err)
 		return
 	}
 
@@ -54,13 +54,13 @@ func main() {
 		Username: "admin",
 		Password: "admin",
 	})
-	syslog.Printf("save user error: %+v\n", err)
+	log.Printf("save user error: %+v\n", err)
 
 	user, err := Find(ctx, db, "admin")
-	syslog.Printf("find user error: %+v, user: %+v\n", err, user)
+	log.Printf("find user error: %+v, user: %+v\n", err, user)
 
 	user, err = Find(ctx, db, "sky")
-	syslog.Printf("find user error: %+v, user: %+v\n", err, user)
+	log.Printf("find user error: %+v, user: %+v\n", err, user)
 
 	time.Sleep(100 * time.Millisecond)
 

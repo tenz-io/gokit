@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	syslog "log"
+	"log"
 	"net/http"
 	"strings"
 
@@ -40,7 +40,7 @@ func (t *trafficApplier) apply() gin.HandlerFunc {
 		}
 	}
 
-	syslog.Println("[gin-interceptor] apply traffic logging")
+	log.Println("[gin-interceptor] apply traffic logging")
 
 	return func(c *gin.Context) {
 		if !t.enable && !tracer.FromContext(c.Request.Context()).IsDebug() {

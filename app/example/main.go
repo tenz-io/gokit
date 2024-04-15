@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/tenz-io/gokit/app"
@@ -23,20 +24,14 @@ func main() {
 		Usage: "Sample Server",
 		Conf:  &MyConfig{},
 		Inits: []app.InitFunc{
+			app.WithDotEnvConfig(),
 			app.WithYamlConfig(),
 			app.WithLogger(true),
 			app.WithAdminHTTPServer(),
 		},
-		Command: command(),
-		Run:     run(),
+		Run: run(),
 	}
 	app.Run(cfg, flags)
-}
-
-func command() app.RunFunc {
-	return func(c *app.Context, confPtr any, errC chan<- error) {
-		logger.Infof("command application")
-	}
 }
 
 func run() app.RunFunc {
@@ -59,6 +54,7 @@ func run() app.RunFunc {
 
 		logger.WithFields(logger.Fields{
 			"config": mycnf,
+			"FOO":    os.Getenv("FOO"),
 		}).Debug("debug config")
 
 		logTraffic(context.Background())

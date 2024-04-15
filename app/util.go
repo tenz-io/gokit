@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	syslog "log"
+	"log"
 	"os"
 	"os/signal"
 )
@@ -15,18 +15,23 @@ func WaitSignal(ctx context.Context, errC <-chan error, hook func()) {
 	signal.Notify(signC, os.Interrupt, os.Kill)
 	select {
 	case <-signC:
-		syslog.Println("received interrupt signal")
+		log.Println("received interrupt signal")
 		hook()
 		os.Exit(0)
 	case <-ctx.Done():
-		syslog.Println("context done")
+		log.Println("context done")
 		hook()
 		os.Exit(0)
 	case err := <-errC:
-		syslog.Printf("run error: %+v", err)
-		hook()
-		os.Exit(1)
-
+		if err != nil {
+			log.Printf("run error: %+v", err)
+			hook()
+			os.Exit(1)
+		} else {
+			log.Println("run successfully")
+			hook()
+			os.Exit(0)
+		}
 	}
 }
 

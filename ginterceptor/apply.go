@@ -3,7 +3,7 @@ package ginterceptor
 import (
 	"context"
 	"fmt"
-	syslog "log"
+	"log"
 	"net/http"
 	"runtime/debug"
 	"strings"
@@ -57,7 +57,7 @@ func (m *metricsApplier) apply() gin.HandlerFunc {
 		}
 	}
 
-	syslog.Println("[gin-interceptor] apply metrics")
+	log.Println("[gin-interceptor] apply metrics")
 
 	return func(c *gin.Context) {
 		var (
@@ -95,7 +95,7 @@ func (t *timeoutApplier) apply() gin.HandlerFunc {
 		}
 	}
 
-	syslog.Println("[gin-interceptor] apply timeout:", t.timeout)
+	log.Println("[gin-interceptor] apply timeout:", t.timeout)
 
 	return func(c *gin.Context) {
 		var (
@@ -150,7 +150,7 @@ func (a *accessLogApplier) apply() gin.HandlerFunc {
 
 	filename := strings.Join([]string{accessLog, "access.log"}, "/")
 
-	syslog.Println("[gin-interceptor] apply access log:", filename)
+	log.Println("[gin-interceptor] apply access log:", filename)
 
 	accessLogger := &lumberjack.Logger{
 		Filename:   filename,
@@ -176,14 +176,14 @@ func (p *panicRecoveryApplier) active() bool {
 }
 
 func (p *panicRecoveryApplier) apply() gin.HandlerFunc {
-	syslog.Println("[gin-interceptor] apply panic recovery")
+	log.Println("[gin-interceptor] apply panic recovery")
 	return func(c *gin.Context) {
 		var (
 			ctx = c.Request.Context()
 		)
 		defer func() {
 			if r := recover(); r != nil {
-				syslog.Printf("panic recovery: %s, stacktrace: %s\n", r, string(debug.Stack()))
+				log.Printf("panic recovery: %s, stacktrace: %s\n", r, string(debug.Stack()))
 				logger.FromContext(ctx).WithFields(logger.Fields{
 					"panic": fmt.Sprintf("%s", r),
 				}).Error("panic recovery")
@@ -216,7 +216,7 @@ func (s *slowLogApplier) apply() gin.HandlerFunc {
 		}
 	}
 
-	syslog.Println("[gin-interceptor] apply slow log:", s.slowLogFloor)
+	log.Println("[gin-interceptor] apply slow log:", s.slowLogFloor)
 
 	return func(c *gin.Context) {
 		var (

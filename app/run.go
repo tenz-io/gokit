@@ -11,7 +11,7 @@ func (a *application) run(c *Context, confPtr any, cancelAppContext context.Canc
 	)
 
 	// Run init functions
-	for _, initFn := range a.initFs {
+	for _, initFn := range a.initFns {
 		// Run the init function
 		cleanFn, err := initFn(c, confPtr)
 		if err != nil {
@@ -19,34 +19,23 @@ func (a *application) run(c *Context, confPtr any, cancelAppContext context.Canc
 		}
 
 		if cleanFn != nil {
-			a.cleanFs = append(a.cleanFs, cleanFn)
+			a.cleanFns = append(a.cleanFns, cleanFn)
 		}
 	}
 
-	// Run the command function
-	if a.commandF != nil {
-		a.commandF(c, confPtr, errC)
-	}
-
 	// Run the main logic
-	if a.runF != nil {
-		go a.runF(c, confPtr, errC)
-
-		WaitSignal(c, errC, func() {
-			cancelAppContext()
-			a.cleanup()
-		})
-	} else {
+	go a.runFn(c, confPtr, errC)
+	WaitSignal(c, errC, func() {
 		cancelAppContext()
 		a.cleanup()
-	}
+	})
 
 	return nil
 }
 
 // cleanup will run all cleanup functions
 func (a *application) cleanup() {
-	for _, cleanFn := range a.cleanFs {
+	for _, cleanFn := range a.cleanFns {
 		cleanFn()
 	}
 }

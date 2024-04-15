@@ -2,7 +2,7 @@ package ginterceptor
 
 import (
 	"context"
-	syslog "log"
+	"log"
 	"strconv"
 	"strings"
 
@@ -46,7 +46,7 @@ func (t *trackingApplier) apply() gin.HandlerFunc {
 		}
 	}
 
-	syslog.Println("[gin-interceptor] apply tracking")
+	log.Println("[gin-interceptor] apply tracking")
 
 	return func(c *gin.Context) {
 		var (

@@ -1,7 +1,7 @@
 package main
 
 import (
-	syslog "log"
+	"log"
 	"net/http"
 	"time"
 
@@ -34,10 +34,10 @@ func main() {
 	interceptor.Apply(&client)
 
 	resp, err := client.Get("http://localhost:8080")
-	syslog.Printf("resp: %+v, err: %v", resp, err)
+	log.Printf("resp: %+v, err: %v", resp, err)
 
 	resp, err = client.Get("https://www.google.com")
-	syslog.Printf("resp: %+v, err: %v", resp, err)
+	log.Printf("resp: %+v, err: %v", resp, err)
 
 	time.Sleep(100 * time.Millisecond)
 }
