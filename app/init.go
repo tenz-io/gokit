@@ -20,13 +20,17 @@ func WithYamlConfig() InitFunc {
 		var (
 			cleanFn = func() {}
 		)
-		bs, err := readConfigFile(c)
+		configPath, err := c.GetFlags().String("config")
 		if err != nil {
-			return cleanFn, err
+			return nil, fmt.Errorf("get config from flags error, err: %w", err)
+		}
+		if configPath == "" {
+			return nil, fmt.Errorf("config file is empty")
 		}
 
-		if err = yaml.Unmarshal(bs, confPtr); err != nil {
-			return cleanFn, fmt.Errorf("yaml unmarshal config file fail, err: %w", err)
+		err = ReadConfig(configPath, confPtr, yaml.Unmarshal)
+		if err != nil {
+			return cleanFn, err
 		}
 
 		if v, err := c.GetFlags().Bool("verbose"); v && err == nil {
@@ -43,13 +47,18 @@ func WithJsonConfig() InitFunc {
 		var (
 			cleanFn = func() {}
 		)
-		bs, err := readConfigFile(c)
+
+		configPath, err := c.GetFlags().String("config")
 		if err != nil {
-			return cleanFn, err
+			return nil, fmt.Errorf("get config from flags error, err: %w", err)
+		}
+		if configPath == "" {
+			return nil, fmt.Errorf("config file is empty")
 		}
 
-		if err = json.Unmarshal(bs, confPtr); err != nil {
-			return cleanFn, fmt.Errorf("json unmarshal config file fail, err: %w", err)
+		err = ReadConfig(configPath, confPtr, json.Unmarshal)
+		if err != nil {
+			return cleanFn, err
 		}
 
 		if v, err := c.GetFlags().Bool("verbose"); v && err == nil {
@@ -159,19 +168,16 @@ func WithAdminHTTPServer() InitFunc {
 	}
 }
 
-func readConfigFile(c *Context) ([]byte, error) {
-	configPath, err := c.GetFlags().String("config")
+// ReadConfig will read the config file and unmarshal it to the confPtr
+func ReadConfig(confPath string, confPtr any, unmarshalFn func([]byte, any) error) error {
+	bs, err := os.ReadFile(confPath)
 	if err != nil {
-		return nil, fmt.Errorf("get config file error, err: %w", err)
-	}
-	if configPath == "" {
-		return nil, fmt.Errorf("config file is empty")
+		return fmt.Errorf("read config file %s fail, err: %w", confPath, err)
 	}
 
-	bs, err := os.ReadFile(configPath)
+	err = unmarshalFn(bs, confPtr)
 	if err != nil {
-		return nil, fmt.Errorf("read config file fail, err: %w", err)
+		return fmt.Errorf("unmarshal config file fail, err: %w", err)
 	}
-
-	return bs, nil
+	return nil
 }
