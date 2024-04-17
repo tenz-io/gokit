@@ -5,6 +5,7 @@ toolchain go1.20
 use (
 	./app
 	./app/example
+	./async
 	./dbtracker
 	./dbtracker/example
 	./ginterceptor
