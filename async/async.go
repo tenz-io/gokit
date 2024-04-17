@@ -8,21 +8,23 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+type Fn[T any] func(context.Context) (T, error)
+
 type RunnableJob interface {
 	run(ctx context.Context) error
 	errorMessage() string
 	isNil() bool
 }
 
-type Job[Val any] struct {
-	fn  func(ctx context.Context) (Val, error)
-	val Val
+type Job[T any] struct {
+	fn  Fn[T]
+	val T
 
 	errMsg string
 }
 
-func NewJob[Val any](fn func(ctx context.Context) (Val, error), errMsg string) *Job[Val] {
-	job := &Job[Val]{
+func NewJob[T any](fn Fn[T], errMsg string) *Job[T] {
+	job := &Job[T]{
 		errMsg: errMsg,
 		fn:     fn,
 	}
@@ -30,7 +32,7 @@ func NewJob[Val any](fn func(ctx context.Context) (Val, error), errMsg string) *
 	return job
 }
 
-func (j *Job[Val]) run(ctx context.Context) error {
+func (j *Job[T]) run(ctx context.Context) error {
 	result, err := j.fn(ctx)
 	if err != nil {
 		return err
@@ -40,21 +42,21 @@ func (j *Job[Val]) run(ctx context.Context) error {
 	return nil
 }
 
-func (j *Job[Val]) errorMessage() string {
+func (j *Job[T]) errorMessage() string {
 	return j.errMsg
 }
 
-func (j *Job[Val]) Value() Val {
+func (j *Job[T]) Value() T {
 	return j.val
 }
 
-func (j *Job[Val]) isNil() bool {
+func (j *Job[T]) isNil() bool {
 	return j == nil
 }
 
-func (j *Job[Val]) ValueOrZero() Val {
+func (j *Job[T]) ValueOrZero() T {
 	if j == nil {
-		var zeroV Val
+		var zeroV T
 		return zeroV
 	}
 
@@ -96,11 +98,13 @@ func (p *Builder) AddJob(jobs ...RunnableJob) {
 	p.jobList = append(p.jobList, jobs...)
 }
 
+// Run runs all jobs concurrently and returns the first error encountered.
 func (p *Builder) Run(ctx context.Context) (errMsg string, err error) {
-	return Submit(ctx, p.jobList...)
+	return AllOf(ctx, p.jobList...)
 }
 
-func Submit(ctx context.Context, jobList ...RunnableJob) (errMsg string, err error) {
+// AllOf runs all jobs concurrently and returns the first error encountered.
+func AllOf(ctx context.Context, jobList ...RunnableJob) (errMsg string, err error) {
 	wge, wgCtx := errgroup.WithContext(ctx)
 
 	for _, job := range jobList {
@@ -141,4 +145,42 @@ func Submit(ctx context.Context, jobList ...RunnableJob) (errMsg string, err err
 	}
 
 	return "", nil
+}
+
+// OneOf runs all jobs concurrently and returns the first job result that is not error.
+func OneOf[T any](ctx context.Context, fnList ...Fn[T]) (T, error) {
+	resultC := make(chan T, len(fnList))
+	errC := make(chan error, len(fnList))
+	for _, fn := range fnList {
+		if fn == nil {
+			var zero T
+			return zero, fmt.Errorf("has nil function")
+		}
+
+		newCtx, cancel := context.WithCancel(ctx)
+		go func(f Fn[T]) {
+			defer cancel()
+			result, err := f(newCtx)
+			if err != nil {
+				errC <- err
+				return
+			}
+
+			resultC <- result
+		}(fn)
+	}
+
+	errCount := 0
+	for {
+		select {
+		case result := <-resultC:
+			return result, nil
+		case err := <-errC:
+			errCount++
+			if errCount == len(fnList) {
+				var zero T
+				return zero, fmt.Errorf("all jobs are failed, one of error: %w", err)
+			}
+		}
+	}
 }

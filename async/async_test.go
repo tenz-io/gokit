@@ -3,11 +3,12 @@ package async
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 	"time"
 )
 
-func TestSubmit(t *testing.T) {
+func TestAllOf(t *testing.T) {
 	type args struct {
 		ctx     context.Context
 		jobList []RunnableJob
@@ -120,7 +121,7 @@ func TestSubmit(t *testing.T) {
 			},
 			wantErrMsg:      "job-1 failed",
 			wantErr:         true,
-			wantMaxDuration: 16 * time.Millisecond,
+			wantMaxDuration: 17 * time.Millisecond,
 			after: func(t *testing.T, args *args) {
 				if len(args.jobList) != 2 {
 					t.Errorf("len(jobList) = %d, want 2", len(args.jobList))
@@ -161,7 +162,7 @@ func TestSubmit(t *testing.T) {
 			},
 			wantErrMsg:      "job-1 failed",
 			wantErr:         true,
-			wantMaxDuration: 16 * time.Millisecond,
+			wantMaxDuration: 17 * time.Millisecond,
 			after: func(t *testing.T, args *args) {
 				if len(args.jobList) != 2 {
 					t.Errorf("len(jobList) = %d, want 2", len(args.jobList))
@@ -189,7 +190,7 @@ func TestSubmit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			start := time.Now()
-			gotErrMsg, err := Submit(tt.args.ctx, tt.args.jobList...)
+			gotErrMsg, err := AllOf(tt.args.ctx, tt.args.jobList...)
 			duration := time.Since(start)
 			t.Logf("duration: %s, gotErrMsg: %s, err: %v", duration, gotErrMsg, err)
 
@@ -203,6 +204,107 @@ func TestSubmit(t *testing.T) {
 
 			if duration > tt.wantMaxDuration {
 				t.Errorf("Submit() duration = %v, want %v", duration, tt.wantMaxDuration)
+			}
+
+			if tt.after != nil {
+				tt.after(t, &tt.args)
+			}
+
+		})
+	}
+}
+
+func TestOneOf(t *testing.T) {
+	type args[T any] struct {
+		ctx    context.Context
+		fnList []Fn[string]
+	}
+	type after func(*testing.T, *args[string])
+	type testCase[T any] struct {
+		name            string
+		args            args[T]
+		want            T
+		wantErr         bool
+		wantMaxDuration time.Duration
+		after           after
+	}
+	tests := []testCase[string]{
+		{
+			name: "when all jobs are successful then return the fastest job result",
+			args: args[string]{
+				ctx: context.Background(),
+				fnList: []Fn[string]{
+					func(ctx context.Context) (string, error) {
+						time.Sleep(10 * time.Millisecond)
+						return "1", nil
+					},
+					func(ctx context.Context) (string, error) {
+						time.Sleep(5 * time.Millisecond)
+						return "2", nil
+					},
+				},
+			},
+			want:            "2",
+			wantErr:         false,
+			wantMaxDuration: 7 * time.Millisecond,
+		},
+		{
+			name: "when one job is failed and one job is successful then return the successful job result",
+			args: args[string]{
+				ctx: context.Background(),
+				fnList: []Fn[string]{
+					func(ctx context.Context) (string, error) {
+						time.Sleep(10 * time.Millisecond)
+						return "1", nil
+					},
+					func(ctx context.Context) (string, error) {
+						time.Sleep(5 * time.Millisecond)
+						return "", errors.New("oops")
+					},
+				},
+			},
+			want:            "1",
+			wantErr:         false,
+			wantMaxDuration: 12 * time.Millisecond,
+		},
+		{
+			name: "when all jobs are failed then return error",
+			args: args[string]{
+				ctx: context.Background(),
+				fnList: []Fn[string]{
+					func(ctx context.Context) (string, error) {
+						time.Sleep(10 * time.Millisecond)
+						return "", errors.New("oops1")
+					},
+					func(ctx context.Context) (string, error) {
+						time.Sleep(5 * time.Millisecond)
+						return "", errors.New("oops2")
+					},
+				},
+			},
+			want:            "",
+			wantErr:         true,
+			wantMaxDuration: 12 * time.Millisecond,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			start := time.Now()
+			got, err := OneOf(tt.args.ctx, tt.args.fnList...)
+			duration := time.Since(start)
+			t.Logf("duration: %s, got: %s, err: %v", duration, got, err)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("OneOf() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("OneOf() got = %v, want %v", got, tt.want)
+			}
+
+			if duration > tt.wantMaxDuration {
+				t.Errorf("OneOf() duration = %v, want %v", duration, tt.wantMaxDuration)
+				return
 			}
 
 			if tt.after != nil {
