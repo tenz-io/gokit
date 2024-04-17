@@ -4,37 +4,42 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"runtime/debug"
+	"sync"
 
 	"golang.org/x/sync/errgroup"
 )
 
 type Fn[T any] func(context.Context) (T, error)
 
-type RunnableJob interface {
+// job is an interface that represents a job that can be run concurrently.
+// make it private to prevent other package to implement it.
+type job interface {
 	run(ctx context.Context) error
 	errorMessage() string
 	isNil() bool
 }
 
+func NewJob[T any](fn Fn[T], errMsg string) *Job[T] {
+	return &Job[T]{
+		errMsg: errMsg,
+		fn:     fn,
+	}
+}
+
 type Job[T any] struct {
 	fn  Fn[T]
+	err error
 	val T
 
 	errMsg string
 }
 
-func NewJob[T any](fn Fn[T], errMsg string) *Job[T] {
-	job := &Job[T]{
-		errMsg: errMsg,
-		fn:     fn,
-	}
-
-	return job
-}
-
 func (j *Job[T]) run(ctx context.Context) error {
-	result, err := j.fn(ctx)
+	result, err := withPanicProof(j.fn)(ctx)
 	if err != nil {
+		j.err = err
 		return err
 	}
 
@@ -54,10 +59,14 @@ func (j *Job[T]) isNil() bool {
 	return j == nil
 }
 
+func (j *Job[T]) Result() (T, error) {
+	return j.val, j.err
+}
+
 func (j *Job[T]) ValueOrZero() T {
 	if j == nil {
-		var zeroV T
-		return zeroV
+		var zero T
+		return zero
 	}
 
 	return j.val
@@ -72,29 +81,17 @@ func (e *errPair) Error() string {
 	return e.err.Error()
 }
 
-func errorFromPanic(i any) error {
-	switch err := i.(type) {
-	case string:
-		return fmt.Errorf(err)
-	case error:
-		return err
-	default:
-		return fmt.Errorf("unknown panic")
-
-	}
-}
-
 type Builder struct {
-	jobList []RunnableJob
+	jobList []job
 }
 
 func NewBuilder() *Builder {
 	return &Builder{
-		jobList: make([]RunnableJob, 0),
+		jobList: make([]job, 0),
 	}
 }
 
-func (p *Builder) AddJob(jobs ...RunnableJob) {
+func (p *Builder) AddJob(jobs ...job) {
 	p.jobList = append(p.jobList, jobs...)
 }
 
@@ -103,30 +100,49 @@ func (p *Builder) Run(ctx context.Context) (errMsg string, err error) {
 	return AllOf(ctx, p.jobList...)
 }
 
+// Submit runs all jobs concurrently and returns when all jobs are done.
+func (p *Builder) Submit(ctx context.Context) {
+	Submit(ctx, p.jobList...)
+}
+
+// Submit runs all jobs concurrently and returns when all jobs are done.
+func Submit(ctx context.Context, jobs ...job) {
+	if len(jobs) == 0 {
+		return
+	}
+
+	wg := sync.WaitGroup{}
+	for _, jb := range jobs {
+		if jb == nil || jb.isNil() {
+			continue
+		}
+
+		newCtx := context.WithoutCancel(ctx)
+		wg.Add(1)
+		go func(rj job) {
+			defer wg.Done()
+			_ = rj.run(newCtx)
+		}(jb)
+	}
+
+	wg.Wait()
+
+}
+
 // AllOf runs all jobs concurrently and returns the first error encountered.
-func AllOf(ctx context.Context, jobList ...RunnableJob) (errMsg string, err error) {
-	if len(jobList) == 0 {
+func AllOf(ctx context.Context, jobs ...job) (errMsg string, err error) {
+	if len(jobs) == 0 {
 		return "", fmt.Errorf("empty job list")
 	}
 
 	wge, wgCtx := errgroup.WithContext(ctx)
-	for _, job := range jobList {
-		if job == nil || job.isNil() {
+	for _, jb := range jobs {
+		if jb == nil || jb.isNil() {
 			continue
 		}
 
-		tempJob := job
-
+		tempJob := jb
 		wge.Go(func() (innerErr error) {
-			defer func() {
-				if rec := recover(); rec != nil {
-					innerErr = &errPair{
-						errMsg: tempJob.errorMessage(),
-						err:    errorFromPanic(rec),
-					}
-				}
-			}()
-
 			if jobErr := tempJob.run(wgCtx); jobErr != nil {
 				return &errPair{
 					errMsg: tempJob.errorMessage(),
@@ -150,8 +166,8 @@ func AllOf(ctx context.Context, jobList ...RunnableJob) (errMsg string, err erro
 	return "", nil
 }
 
-// OneOf runs all jobs concurrently and returns the first job result that is not error.
-func OneOf[T any](ctx context.Context, fnList ...Fn[T]) (T, error) {
+// AnyOf runs all jobs concurrently and returns the fastest job result that is not error.
+func AnyOf[T any](ctx context.Context, fnList ...Fn[T]) (T, error) {
 	var (
 		zero T
 	)
@@ -170,15 +186,13 @@ func OneOf[T any](ctx context.Context, fnList ...Fn[T]) (T, error) {
 			return zero, fmt.Errorf("has nil function")
 		}
 
-		newCtx, cancel := context.WithCancel(allCtx)
+		newCtx := context.WithoutCancel(allCtx)
 		go func(f Fn[T]) {
-			defer cancel()
-			result, err := f(newCtx)
+			result, err := withPanicProof(f)(newCtx)
 			if err != nil {
 				errC <- err
 				return
 			}
-
 			resultC <- result
 		}(fn)
 	}
@@ -194,5 +208,34 @@ func OneOf[T any](ctx context.Context, fnList ...Fn[T]) (T, error) {
 				return zero, fmt.Errorf("all jobs are failed, one of error: %w", err)
 			}
 		}
+	}
+}
+
+// withPanicProof is a wrapper function to catch panic and convert it to error.
+// It is useful to prevent the application from crashing due to panic.
+// The panic message and stack trace will be logged.
+func withPanicProof[T any](fn Fn[T]) Fn[T] {
+	return func(ctx context.Context) (result T, err error) {
+		defer func() {
+			if rec := recover(); rec != nil {
+				log.Printf("panic recovery: %s, stacktrace: %s\n", rec, string(debug.Stack()))
+				err = errorFromPanic(rec)
+			}
+		}()
+
+		result, err = fn(ctx)
+		return
+	}
+}
+
+// errorFromPanic converts panic to error.
+func errorFromPanic(rec any) error {
+	switch rt := rec.(type) {
+	case string:
+		return fmt.Errorf(rt)
+	case error:
+		return rt
+	default:
+		return fmt.Errorf("unknown panic")
 	}
 }

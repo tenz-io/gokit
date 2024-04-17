@@ -3,6 +3,7 @@ package async
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -11,7 +12,7 @@ import (
 func TestAllOf(t *testing.T) {
 	type args struct {
 		ctx     context.Context
-		jobList []RunnableJob
+		jobList []job
 	}
 	type after func(*testing.T, *args)
 	tests := []struct {
@@ -26,7 +27,7 @@ func TestAllOf(t *testing.T) {
 			name: "when all jobs are successful then return no error",
 			args: args{
 				ctx: context.Background(),
-				jobList: []RunnableJob{
+				jobList: []job{
 					NewJob(func(ctx context.Context) (int, error) {
 						time.Sleep(10 * time.Millisecond)
 						return 1, nil
@@ -67,7 +68,7 @@ func TestAllOf(t *testing.T) {
 			name: "when one job is failed then return error",
 			args: args{
 				ctx: context.Background(),
-				jobList: []RunnableJob{
+				jobList: []job{
 					NewJob(func(ctx context.Context) (int, error) {
 						time.Sleep(10 * time.Millisecond)
 						return 1, nil
@@ -108,7 +109,7 @@ func TestAllOf(t *testing.T) {
 			name: "when all jobs are failed then return error",
 			args: args{
 				ctx: context.Background(),
-				jobList: []RunnableJob{
+				jobList: []job{
 					NewJob(func(ctx context.Context) (int, error) {
 						time.Sleep(10 * time.Millisecond)
 						return 0, errors.New("timeout")
@@ -149,7 +150,7 @@ func TestAllOf(t *testing.T) {
 			name: "when one job panic then return error",
 			args: args{
 				ctx: context.Background(),
-				jobList: []RunnableJob{
+				jobList: []job{
 					NewJob(func(ctx context.Context) (int, error) {
 						time.Sleep(10 * time.Millisecond)
 						panic("panic")
@@ -214,7 +215,7 @@ func TestAllOf(t *testing.T) {
 	}
 }
 
-func TestOneOf(t *testing.T) {
+func TestAnyOf(t *testing.T) {
 	type args[T any] struct {
 		ctx    context.Context
 		fnList []Fn[string]
@@ -286,24 +287,58 @@ func TestOneOf(t *testing.T) {
 			wantErr:         true,
 			wantMaxDuration: 12 * time.Millisecond,
 		},
+		{
+			name: "when one job panic then return error",
+			args: args[string]{
+				ctx: context.Background(),
+				fnList: []Fn[string]{
+					func(ctx context.Context) (string, error) {
+						time.Sleep(5 * time.Millisecond)
+						panic("oops panic")
+					},
+				},
+			},
+			want:            "",
+			wantErr:         true,
+			wantMaxDuration: 7 * time.Millisecond,
+		},
+		{
+			name: "when one job panic and one job is successful then return the successful job result",
+			args: args[string]{
+				ctx: context.Background(),
+				fnList: []Fn[string]{
+					func(ctx context.Context) (string, error) {
+						time.Sleep(10 * time.Millisecond)
+						return "1", nil
+					},
+					func(ctx context.Context) (string, error) {
+						time.Sleep(5 * time.Millisecond)
+						panic("oops panic")
+					},
+				},
+			},
+			want:            "1",
+			wantErr:         false,
+			wantMaxDuration: 12 * time.Millisecond,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			start := time.Now()
-			got, err := OneOf(tt.args.ctx, tt.args.fnList...)
+			got, err := AnyOf(tt.args.ctx, tt.args.fnList...)
 			duration := time.Since(start)
 			t.Logf("duration: %s, got: %s, err: %v", duration, got, err)
 
 			if (err != nil) != tt.wantErr {
-				t.Errorf("OneOf() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("AnyOf() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("OneOf() got = %v, want %v", got, tt.want)
+				t.Errorf("AnyOf() got = %v, want %v", got, tt.want)
 			}
 
 			if duration > tt.wantMaxDuration {
-				t.Errorf("OneOf() duration = %v, want %v", duration, tt.wantMaxDuration)
+				t.Errorf("AnyOf() duration = %v, want %v", duration, tt.wantMaxDuration)
 				return
 			}
 
@@ -311,6 +346,163 @@ func TestOneOf(t *testing.T) {
 				tt.after(t, &tt.args)
 			}
 
+		})
+	}
+}
+
+func TestSubmit(t *testing.T) {
+	type args struct {
+		ctx     context.Context
+		jobList []job
+	}
+	type after func(*testing.T, *args)
+	tests := []struct {
+		name            string
+		args            args
+		wantMaxDuration time.Duration
+		after           after
+	}{
+		{
+			name: "when jobList is empty then return",
+			args: args{
+				ctx:     context.Background(),
+				jobList: nil,
+			},
+			wantMaxDuration: time.Millisecond,
+		},
+		{
+			name: "when jobList is not empty then run all jobs concurrently",
+			args: args{
+				ctx: context.Background(),
+				jobList: []job{
+					NewJob(func(ctx context.Context) (int, error) {
+						time.Sleep(10 * time.Millisecond)
+						return 1, nil
+					}, "job-1 failed"),
+					NewJob(func(ctx context.Context) (string, error) {
+						time.Sleep(15 * time.Millisecond)
+						return "2", nil
+					}, "job-2 failed"),
+				},
+			},
+			wantMaxDuration: 17 * time.Millisecond,
+			after: func(t *testing.T, args *args) {
+				if len(args.jobList) != 2 {
+					t.Errorf("len(jobList) = %d, want 2", len(args.jobList))
+					return
+				}
+
+				var (
+					job1 = args.jobList[0].(*Job[int])
+					job2 = args.jobList[1].(*Job[string])
+				)
+
+				if r1, err := job1.Result(); r1 != 1 || err != nil {
+					t.Errorf("job1.Result() = %d, nil, want 1, nil", r1)
+					return
+				}
+
+				if r2, err := job2.Result(); r2 != "2" || err != nil {
+					t.Errorf("job2.Result() = %s, nil, want 2, nil", r2)
+					return
+				}
+
+			},
+		},
+		{
+			name: "when one job is failed then continue to run other jobs",
+			args: args{
+				ctx: context.Background(),
+				jobList: []job{
+					NewJob(func(ctx context.Context) (int, error) {
+						time.Sleep(10 * time.Millisecond)
+						return 0, fmt.Errorf("oops")
+					}, "job-1 failed"),
+					NewJob(func(ctx context.Context) (string, error) {
+						time.Sleep(15 * time.Millisecond)
+						return "2", nil
+					}, "job-2 failed"),
+				},
+			},
+			wantMaxDuration: 17 * time.Millisecond,
+			after: func(t *testing.T, args *args) {
+				if len(args.jobList) != 2 {
+					t.Errorf("len(jobList) = %d, want 2", len(args.jobList))
+					return
+				}
+
+				var (
+					job1 = args.jobList[0].(*Job[int])
+					job2 = args.jobList[1].(*Job[string])
+				)
+
+				if r1, err := job1.Result(); r1 != 0 || err == nil {
+					t.Errorf("job1.Result() = %d, nil, want 0, error", r1)
+					return
+				}
+
+				if r2, err := job2.Result(); r2 != "2" || err != nil {
+					t.Errorf("job2.Result() = %s, nil, want 2, nil", r2)
+					return
+				}
+
+			},
+		},
+		{
+			name: "when one job panic then continue to run other jobs",
+			args: args{
+				ctx: context.Background(),
+				jobList: []job{
+					NewJob(func(ctx context.Context) (int, error) {
+						time.Sleep(10 * time.Millisecond)
+						panic("oops panic")
+					}, "job-1 failed"),
+					NewJob(func(ctx context.Context) (string, error) {
+						time.Sleep(15 * time.Millisecond)
+						return "2", nil
+					}, "job-2 failed"),
+				},
+			},
+			wantMaxDuration: 17 * time.Millisecond,
+			after: func(t *testing.T, args *args) {
+				if len(args.jobList) != 2 {
+					t.Errorf("len(jobList) = %d, want 2", len(args.jobList))
+					return
+				}
+
+				var (
+					job1 = args.jobList[0].(*Job[int])
+					job2 = args.jobList[1].(*Job[string])
+				)
+
+				if r1, err := job1.Result(); r1 != 0 || err == nil {
+					t.Errorf("job1.Result() = %d, nil, want 0, error", r1)
+					return
+				}
+
+				if r2, err := job2.Result(); r2 != "2" || err != nil {
+					t.Errorf("job2.Result() = %s, nil, want 2, nil", r2)
+					return
+				}
+
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			start := time.Now()
+			Submit(tt.args.ctx, tt.args.jobList...)
+			duration := time.Since(start)
+			t.Logf("duration: %s", duration)
+
+			if duration > tt.wantMaxDuration {
+				t.Errorf("Submit() duration = %v > want %v", duration, tt.wantMaxDuration)
+				return
+			}
+
+			if tt.after != nil {
+				tt.after(t, &tt.args)
+			}
 		})
 	}
 }

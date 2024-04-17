@@ -6,6 +6,7 @@ use (
 	./app
 	./app/example
 	./async
+	./async/example
 	./dbtracker
 	./dbtracker/example
 	./ginterceptor
