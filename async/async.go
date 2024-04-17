@@ -105,8 +105,11 @@ func (p *Builder) Run(ctx context.Context) (errMsg string, err error) {
 
 // AllOf runs all jobs concurrently and returns the first error encountered.
 func AllOf(ctx context.Context, jobList ...RunnableJob) (errMsg string, err error) {
-	wge, wgCtx := errgroup.WithContext(ctx)
+	if len(jobList) == 0 {
+		return "", fmt.Errorf("empty job list")
+	}
 
+	wge, wgCtx := errgroup.WithContext(ctx)
 	for _, job := range jobList {
 		if job == nil || job.isNil() {
 			continue
@@ -149,15 +152,25 @@ func AllOf(ctx context.Context, jobList ...RunnableJob) (errMsg string, err erro
 
 // OneOf runs all jobs concurrently and returns the first job result that is not error.
 func OneOf[T any](ctx context.Context, fnList ...Fn[T]) (T, error) {
+	var (
+		zero T
+	)
+
+	if len(fnList) == 0 {
+		return zero, fmt.Errorf("empty function list")
+	}
+
+	allCtx, cancelAll := context.WithCancel(ctx)
+	defer cancelAll()
+
 	resultC := make(chan T, len(fnList))
 	errC := make(chan error, len(fnList))
 	for _, fn := range fnList {
 		if fn == nil {
-			var zero T
 			return zero, fmt.Errorf("has nil function")
 		}
 
-		newCtx, cancel := context.WithCancel(ctx)
+		newCtx, cancel := context.WithCancel(allCtx)
 		go func(f Fn[T]) {
 			defer cancel()
 			result, err := f(newCtx)
@@ -178,7 +191,6 @@ func OneOf[T any](ctx context.Context, fnList ...Fn[T]) (T, error) {
 		case err := <-errC:
 			errCount++
 			if errCount == len(fnList) {
-				var zero T
 				return zero, fmt.Errorf("all jobs are failed, one of error: %w", err)
 			}
 		}
