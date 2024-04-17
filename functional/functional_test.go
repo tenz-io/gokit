@@ -800,63 +800,6 @@ func TestTopK(t *testing.T) {
 	}
 }
 
-func TestMedian(t *testing.T) {
-	type args[T number] struct {
-		list []T
-	}
-	type testCase[T number] struct {
-		name    string
-		args    args[T]
-		wantVal T
-		wantOk  bool
-	}
-	tests := []testCase[int]{
-		{
-			name: "when empty list then return false",
-			args: args[int]{
-				list: []int{},
-			},
-			wantVal: 0,
-			wantOk:  false,
-		},
-		{
-			name: "when list has one element then return element",
-			args: args[int]{
-				list: []int{1},
-			},
-			wantVal: 1,
-			wantOk:  true,
-		},
-		{
-			name: "when list has odd elements then return median",
-			args: args[int]{
-				list: []int{2, 1, 3},
-			},
-			wantVal: 2,
-			wantOk:  true,
-		},
-		{
-			name: "when list has even elements then return average of two middle elements",
-			args: args[int]{
-				list: []int{2, 1, 3, 4},
-			},
-			wantVal: 2,
-			wantOk:  true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotVal, gotOk := Median(tt.args.list)
-			if !reflect.DeepEqual(gotVal, tt.wantVal) {
-				t.Errorf("Median() gotVal = %v, want %v", gotVal, tt.wantVal)
-			}
-			if gotOk != tt.wantOk {
-				t.Errorf("Median() gotOk = %v, want %v", gotOk, tt.wantOk)
-			}
-		})
-	}
-}
-
 func TestPartition(t *testing.T) {
 	type args[T any] struct {
 		list      []T
@@ -911,6 +854,257 @@ func TestPartition(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got1, tt.unsatisfied) {
 				t.Errorf("Partition() got1 = %v, want %v", got1, tt.unsatisfied)
+			}
+		})
+	}
+}
+
+func TestSum(t *testing.T) {
+	type args[T number] struct {
+		list []T
+	}
+	type testCase[T number] struct {
+		name string
+		args args[T]
+		want T
+	}
+	tests := []testCase[int]{
+		{
+			name: "when empty list then return 0",
+			args: args[int]{
+				list: []int{},
+			},
+			want: 0,
+		},
+		{
+			name: "when list has elements then return sum",
+			args: args[int]{
+				list: []int{1, 2, 3},
+			},
+			want: 6,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := Sum(tt.args.list); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Sum() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestMin(t *testing.T) {
+	type args[T number] struct {
+		list []T
+	}
+	type testCase[T number] struct {
+		name    string
+		args    args[T]
+		wantVal T
+		wantOk  bool
+	}
+	tests := []testCase[int]{
+		{
+			name: "when empty list then return false",
+			args: args[int]{
+				list: []int{},
+			},
+			wantVal: 0,
+			wantOk:  false,
+		},
+		{
+			name: "when list has elements then return min",
+			args: args[int]{
+				list: []int{1, 2, 3},
+			},
+			wantVal: 1,
+			wantOk:  true,
+		},
+		{
+			name: "when list has elements then return min",
+			args: args[int]{
+				list: []int{3, 2, 1},
+			},
+			wantVal: 1,
+			wantOk:  true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotVal, gotOk := Min(tt.args.list)
+			if !reflect.DeepEqual(gotVal, tt.wantVal) {
+				t.Errorf("Min() gotVal = %v, want %v", gotVal, tt.wantVal)
+			}
+			if gotOk != tt.wantOk {
+				t.Errorf("Min() gotOk = %v, want %v", gotOk, tt.wantOk)
+			}
+		})
+	}
+}
+
+func TestMinWith(t *testing.T) {
+	type item struct {
+		id   int
+		desc string
+	}
+	type args[T any] struct {
+		list []T
+		less func(t1, t2 T) bool
+	}
+	type testCase[T any] struct {
+		name    string
+		args    args[T]
+		wantVal T
+		wantOk  bool
+	}
+	tests := []testCase[item]{
+		{
+			name: "when empty list then return false",
+			args: args[item]{
+				list: []item{},
+				less: func(t1, t2 item) bool {
+					return t1.id < t2.id
+				},
+			},
+			wantVal: item{},
+			wantOk:  false,
+		},
+		{
+			name: "when list has elements then return min",
+			args: args[item]{
+				list: []item{
+					{1, "one"},
+					{2, "two"},
+					{3, "three"},
+				},
+				less: func(t1, t2 item) bool {
+					return t1.id < t2.id
+				},
+			},
+			wantVal: item{1, "one"},
+			wantOk:  true,
+		},
+		{
+			name: "when list has raffled elements then return min",
+			args: args[item]{
+				list: []item{
+					{3, "three"},
+					{1, "one"},
+					{2, "two"},
+				},
+				less: func(t1, t2 item) bool {
+					return t1.id < t2.id
+				},
+			},
+			wantVal: item{1, "one"},
+			wantOk:  true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotVal, gotOk := MinWith(tt.args.list, tt.args.less)
+			if !reflect.DeepEqual(gotVal, tt.wantVal) {
+				t.Errorf("MinWith() gotVal = %v, want %v", gotVal, tt.wantVal)
+			}
+			if gotOk != tt.wantOk {
+				t.Errorf("MinWith() gotOk = %v, want %v", gotOk, tt.wantOk)
+			}
+		})
+	}
+}
+
+func TestMax(t *testing.T) {
+	type args[T number] struct {
+		list []T
+	}
+	type testCase[T number] struct {
+		name    string
+		args    args[T]
+		wantVal T
+		wantOk  bool
+	}
+	tests := []testCase[int]{
+		{
+			name: "when empty list then return false",
+			args: args[int]{
+				list: []int{},
+			},
+			wantVal: 0,
+			wantOk:  false,
+		},
+		{
+			name: "when list has elements then return max",
+			args: args[int]{
+				list: []int{1, 3, 1, 2},
+			},
+			wantVal: 3,
+			wantOk:  true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotVal, gotOk := Max(tt.args.list)
+			if !reflect.DeepEqual(gotVal, tt.wantVal) {
+				t.Errorf("Max() gotVal = %v, want %v", gotVal, tt.wantVal)
+			}
+			if gotOk != tt.wantOk {
+				t.Errorf("Max() gotOk = %v, want %v", gotOk, tt.wantOk)
+			}
+		})
+	}
+}
+
+func TestMaxWith(t *testing.T) {
+	type item struct {
+		id   int
+		desc string
+	}
+	type args[T any] struct {
+		list []T
+		less func(t1, t2 T) bool
+	}
+	type testCase[T any] struct {
+		name    string
+		args    args[T]
+		wantVal T
+		wantOk  bool
+	}
+	tests := []testCase[item]{
+		{
+			name: "when empty list then return false",
+			args: args[item]{
+				list: []item{},
+				less: func(t1, t2 item) bool {
+					return t1.id < t2.id
+				},
+			},
+			wantVal: item{},
+			wantOk:  false,
+		},
+		{
+			name: "when list has elements then return max",
+			args: args[item]{
+				list: []item{
+					{1, "one"},
+					{3, "three"},
+					{2, "two"},
+				},
+				less: func(t1, t2 item) bool {
+					return t1.id < t2.id
+				},
+			},
+			wantVal: item{3, "three"},
+			wantOk:  true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotVal, gotOk := MaxWith(tt.args.list, tt.args.less)
+			if !reflect.DeepEqual(gotVal, tt.wantVal) {
+				t.Errorf("MaxWith() gotVal = %v, want %v", gotVal, tt.wantVal)
+			}
+			if gotOk != tt.wantOk {
+				t.Errorf("MaxWith() gotOk = %v, want %v", gotOk, tt.wantOk)
 			}
 		})
 	}

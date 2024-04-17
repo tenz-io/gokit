@@ -211,7 +211,7 @@ func None[T any](list []T, predicate func(T) bool) bool {
 }
 
 // Min is a function that returns the minimum element in a slice.
-func Min[T number](list []T) (T, bool) {
+func Min[T number](list []T) (val T, ok bool) {
 	if len(list) == 0 {
 		var zero T
 		return zero, false
@@ -229,7 +229,7 @@ func Min[T number](list []T) (T, bool) {
 }
 
 // MinWith is a function that returns the minimum element in a slice based on a comparison function.
-func MinWith[T any](list []T, less func(T, T) bool) (T, bool) {
+func MinWith[T any](list []T, less func(t1, t2 T) bool) (val T, ok bool) {
 	if len(list) == 0 {
 		var zero T
 		return zero, false
@@ -245,7 +245,7 @@ func MinWith[T any](list []T, less func(T, T) bool) (T, bool) {
 }
 
 // Max is a function that returns the maximum element in a slice.
-func Max[T number](list []T) (T, bool) {
+func Max[T number](list []T) (val T, ok bool) {
 	if len(list) == 0 {
 		var zero T
 		return zero, false
@@ -261,7 +261,7 @@ func Max[T number](list []T) (T, bool) {
 }
 
 // MaxWith is a function that returns the maximum element in a slice based on a comparison function.
-func MaxWith[T any](list []T, less func(t1, t2 T) bool) (T, bool) {
+func MaxWith[T any](list []T, less func(t1, t2 T) bool) (val T, ok bool) {
 	if len(list) == 0 {
 		var zero T
 		return zero, false
@@ -288,31 +288,6 @@ func Sum[T number](list []T) T {
 		sum += elem
 	}
 	return sum
-}
-
-// Median is a function that returns the median of elements in a slice.
-func Median[T number](list []T) (val T, ok bool) {
-	if len(list) == 0 {
-		var zero T
-		return zero, false
-	}
-
-	mid := len(list) / 2
-	subList := TopK(list, mid+1, func(t1, t2 T) int {
-		if t1 < t2 {
-			return -1
-		}
-		if t1 > t2 {
-			return 1
-		}
-		return 0
-	})
-	if len(subList) == 0 {
-		return val, false
-	}
-
-	return subList[len(subList)-1], true
-
 }
 
 // Partition is a function that partitions a slice into two slices based on a predicate function.
