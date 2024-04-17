@@ -7,6 +7,9 @@ import (
 	"slices"
 )
 
+// number is a type alias for cmp.Ordered.
+type number = cmp.Ordered
+
 // Map is a function that maps a list of items to another list of items based on a function.
 func Map[T, U any](list []T, mapper func(T) U) []U {
 	if list == nil {
@@ -206,8 +209,6 @@ func None[T any](list []T, predicate func(T) bool) bool {
 	}
 	return true
 }
-
-type number cmp.Ordered
 
 // Min is a function that returns the minimum element in a slice.
 func Min[T number](list []T) (T, bool) {
