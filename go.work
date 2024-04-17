@@ -9,6 +9,7 @@ use (
 	./async/example
 	./dbtracker
 	./dbtracker/example
+	./functional
 	./ginterceptor
 	./ginterceptor/example
 	./httpcli
