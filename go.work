@@ -12,6 +12,8 @@ use (
 	./functional
 	./ginterceptor
 	./ginterceptor/example
+	./grpcext
+	./grpcext/example
 	./httpcli
 	./httpcli/example
 	./cache
