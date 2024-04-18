@@ -51,7 +51,7 @@ func (t *trafficApplier) apply() gin.HandlerFunc {
 		var (
 			ctx     = c.Request.Context()
 			url     = c.Request.URL.Path
-			reqID   = RequestIdFromCtx(ctx)
+			reqID   = tracer.RequestIdFromCtx(ctx)
 			reqCopy = captureRequest(c)
 		)
 

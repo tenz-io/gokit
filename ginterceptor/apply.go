@@ -61,8 +61,10 @@ func (m *metricsApplier) apply() gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		var (
-			ctx = c.Request.Context()
+			url = c.Request.URL.Path
+			ctx = monitor.InitSingleFlight(c.Request.Context(), url)
 		)
+
 		rec := monitor.BeginRecord(ctx, "total")
 		defer func() {
 			httpStatus := c.Writer.Status()

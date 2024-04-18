@@ -4,10 +4,8 @@ import (
 	"context"
 	"log"
 	"strconv"
-	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 
 	"github.com/tenz-io/gokit/logger"
 	"github.com/tenz-io/gokit/tracer"
@@ -53,7 +51,7 @@ func (t *trackingApplier) apply() gin.HandlerFunc {
 			url   = c.Request.URL.Path
 			reqID = requestIdFromGinCtx(c)
 			flag  = requestFlagFromHeader(c)
-			ctx   = WithRequestId(c.Request.Context(), reqID)
+			ctx   = tracer.WithRequestId(c.Request.Context(), reqID)
 		)
 
 		// inject trace flag into context
@@ -88,7 +86,7 @@ func requestIdFromGinCtx(c *gin.Context) string {
 		return requestId
 	}
 
-	return RequestIdFromCtx(c.Request.Context())
+	return tracer.RequestIdFromCtx(c.Request.Context())
 }
 
 func requestFlagFromHeader(c *gin.Context) tracer.Flag {
@@ -107,29 +105,6 @@ func requestFlagFromHeader(c *gin.Context) tracer.Flag {
 	}
 
 	return tracer.Flag(flag)
-}
-
-// RequestIdFromCtx returns the value associated with this context for key, or nil
-func RequestIdFromCtx(ctx context.Context) string {
-	if ctx == nil {
-		return ""
-	}
-
-	if requestId, ok := ctx.Value(requestIdCtxKey).(string); ok {
-		return requestId
-	}
-
-	return newRequestId()
-}
-
-// WithRequestId returns a copy of parent in which the value associated with key is val.
-func WithRequestId(ctx context.Context, requestID string) context.Context {
-	ctx = context.WithValue(ctx, requestIdCtxKey, requestID)
-	return ctx
-}
-
-func newRequestId() string {
-	return strings.ReplaceAll(uuid.NewString(), "-", "")
 }
 
 // WithContext returns a copy of parent in which the value associated with key is val.

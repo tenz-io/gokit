@@ -2,39 +2,85 @@ package grpcext
 
 import (
 	"context"
-	"log"
 
 	"google.golang.org/grpc"
+
+	"github.com/tenz-io/gokit/logger"
+	"github.com/tenz-io/gokit/monitor"
+	"github.com/tenz-io/gokit/tracer"
 )
 
-// UnaryServerInterceptor logs details of the unary RPC calls
-func UnaryServerInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-	// Log the incoming request
-	log.Printf("Request - Method: %s, Request: %+v", info.FullMethod, req)
+func newTrackingUnaryServerInterceptor(serverInterceptor grpc.UnaryServerInterceptor, _ Config) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+		var (
+			reqID = tracer.RequestIdFromCtx(ctx)
+			cmd   = info.FullMethod
+		)
+		ctx = tracer.WithRequestId(ctx, reqID)
+		ctx = logger.WithLogger(ctx,
+			logger.WithTracing(reqID).
+				WithFields(logger.Fields{
+					"cmd": cmd,
+				}))
 
-	// Handle the request
-	resp, err := handler(ctx, req)
-
-	// Log the response
-	if err != nil {
-		log.Printf("Response - Method: %s, Error: %v", info.FullMethod, err)
-	} else {
-		log.Printf("Response - Method: %s, Response: %+v", info.FullMethod, resp)
+		return serverInterceptor(ctx, req, info, handler)
 	}
 
-	return resp, err
 }
 
-// StreamServerInterceptor logs the initiation of stream RPC calls
-func StreamServerInterceptor(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-	// Log the stream initiation
-	log.Printf("Stream Call - Method: %s, IsClientStream: %v, IsServerStream: %v", info.FullMethod, info.IsClientStream, info.IsServerStream)
-
-	// Handle the stream
-	err := handler(srv, ss)
-	if err != nil {
-		log.Printf("Stream Error - Method: %s, Error: %v", info.FullMethod, err)
+func newTrafficUnaryServerInterceptor(serverInterceptor grpc.UnaryServerInterceptor, config Config) grpc.UnaryServerInterceptor {
+	if !config.EnabledServerTraffic {
+		return serverInterceptor
 	}
 
-	return err
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+		var (
+			cmd   = info.FullMethod
+			reqID = tracer.RequestIdFromCtx(ctx)
+		)
+
+		ctx = logger.WithTrafficEntry(
+			ctx,
+			logger.WithTrafficTracing(ctx, reqID).
+				WithFields(logger.Fields{
+					"cmd": cmd,
+				}).WithIgnores(
+				"password",
+			),
+		)
+
+		rec := logger.StartTrafficRec(ctx, &logger.ReqEntity{
+			Typ: logger.TrafficTypRecv,
+			Cmd: cmd,
+			Req: req,
+		})
+
+		defer func() {
+			rec.End(&logger.RespEntity{
+				Code: errCode(err),
+				Msg:  errMsg(err),
+				Resp: resp,
+			}, logger.Fields{})
+		}()
+
+		return serverInterceptor(ctx, req, info, handler)
+
+	}
+}
+
+func newMetricsUnaryServerInterceptor(serverInterceptor grpc.UnaryServerInterceptor, config Config) grpc.UnaryServerInterceptor {
+	if !config.EnabledServerMetrics {
+		return serverInterceptor
+	}
+
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+		ctx = monitor.InitSingleFlight(ctx, info.FullMethod)
+		rec := monitor.BeginRecord(ctx, "total")
+
+		defer func() {
+			rec.EndWithError(err)
+		}()
+
+		return serverInterceptor(ctx, req, info, handler)
+	}
 }

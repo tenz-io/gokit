@@ -4,6 +4,8 @@ github.com/cespare/xxhash/v2 v2.2.0 h1:DC2CZ1Ep5Y4k3ZQ899DldepgrayRUGE6BBZ/cd9Cj
 github.com/cespare/xxhash/v2 v2.2.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
+github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
+github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/prometheus/client_golang v1.19.0 h1:ygXvpU1AoN1MhdzckN+PyD9QJOSD4x7kmXYlnfbA6JU=
 github.com/prometheus/client_golang v1.19.0/go.mod h1:ZRM9uEAypZakd+q/x7+gmsvXdURP+DABIEIjnmDdp+k=
@@ -19,6 +21,8 @@ github.com/tenz-io/gokit/logger v1.5.0 h1:zPfsLbG55JFgQu5sOuWWaewJiUWW1jasNjSKHv
 github.com/tenz-io/gokit/logger v1.5.0/go.mod h1:wsO/AvpAgEsgYuLkeEQviO1ZFP68EHSy7yPtJx29sDU=
 github.com/tenz-io/gokit/monitor v1.5.0 h1:qMtAJujc+/66/C8MHgYcDzhlv0E+SfGQ9VIAe82NFqg=
 github.com/tenz-io/gokit/monitor v1.5.0/go.mod h1:3DSZdgWnqOCKd/T5M4uvdZycdaz87g2uCwhi0x/wAlY=
+github.com/tenz-io/gokit/tracer v1.0.1 h1:1ZTXjtefUP2c12T3btYn78y0t8g6G+SYXGeo5C0fX5g=
+github.com/tenz-io/gokit/tracer v1.0.1/go.mod h1:F9L1dQrnGP93XGbNFBkBBw9W0EfqT5M76ewJawb95EA=
 go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=
 go.uber.org/multierr v1.10.0 h1:S0h4aNzvfcFsC3dRF1jLoaov7oRaKqRGC/pUEJ2yvPQ=
 go.uber.org/multierr v1.10.0/go.mod h1:20+QtiLqy0Nd6FdQB9TLXag12DsQkrbs3htMFfDN80Y=
