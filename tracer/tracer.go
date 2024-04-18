@@ -1,6 +1,17 @@
 package tracer
 
-import "context"
+import (
+	"context"
+	"strings"
+
+	"github.com/google/uuid"
+)
+
+var (
+	requestIdCtxKey = requestIdCtxKeyType("_requestId_ctx_key")
+)
+
+type requestIdCtxKeyType string
 
 // Flag is a type to represent the trace flag of traffic.
 type Flag int
@@ -70,4 +81,27 @@ func (f Flag) IsStress() bool {
 // IsShadow returns true if the trace flag is set.
 func (f Flag) IsShadow() bool {
 	return f.Is(FlagShadow)
+}
+
+// RequestIdFromCtx returns the value associated with this context for key, or nil
+func RequestIdFromCtx(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+
+	if requestId, ok := ctx.Value(requestIdCtxKey).(string); ok {
+		return requestId
+	}
+
+	return newRequestId()
+}
+
+// WithRequestId returns a copy of parent in which the value associated with key is val.
+func WithRequestId(ctx context.Context, requestID string) context.Context {
+	ctx = context.WithValue(ctx, requestIdCtxKey, requestID)
+	return ctx
+}
+
+func newRequestId() string {
+	return strings.ReplaceAll(uuid.NewString(), "-", "")
 }
