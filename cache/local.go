@@ -230,7 +230,7 @@ func (l *local) Expire(_ context.Context, key string, expire time.Duration) (err
 
 func (l *local) Eval(_ context.Context, script string, keys []string, args ...any) (val any, err error) {
 	// ignore
-	return nil, fmt.Errorf("not support")
+	return nil, ErrNotSupported
 }
 
 func (l *local) expireAt(expire time.Duration) int64 {

@@ -7,8 +7,9 @@ import (
 )
 
 var (
-	ErrNotFound = errors.New("cache: key not found")
-	ErrInActive = errors.New("cache: inactive")
+	ErrNotFound     = errors.New("cache: key not found")
+	ErrInActive     = errors.New("cache: inactive")
+	ErrNotSupported = errors.New("cache: not supported")
 )
 
 //go:generate mockery --name Manager --filename manager_mock.go --inpackage
