@@ -1,9 +1,8 @@
 package cache
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -162,9 +161,7 @@ func (lc *localCache) GetBlob(ctx context.Context, key string, output any) (err 
 	}
 
 	if it.expire == 0 || lc.nowFunc().Unix() < it.expire {
-		r := bytes.NewReader(it.raw)
-		decoder := gob.NewDecoder(r)
-		if err = decoder.Decode(output); err != nil {
+		if err = json.Unmarshal(it.raw, output); err != nil {
 			return fmt.Errorf("decode error: %w", err)
 		}
 		return nil
@@ -184,14 +181,13 @@ func (lc *localCache) SetBlob(_ context.Context, key string, val any, expire tim
 	lc.lock.Lock()
 	defer lc.lock.Unlock()
 
-	var buf bytes.Buffer
-	encoder := gob.NewEncoder(&buf)
-	if err = encoder.Encode(val); err != nil {
+	bs, err := json.Marshal(val)
+	if err != nil {
 		return fmt.Errorf("encode error: %w", err)
 	}
 
 	lc.m[key] = &item{
-		raw:    buf.Bytes(),
+		raw:    bs,
 		expire: lc.expireAt(expire),
 	}
 	return nil

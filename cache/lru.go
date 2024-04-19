@@ -1,9 +1,8 @@
 package cache
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -77,8 +76,7 @@ func (lc *lruCache) GetBlob(ctx context.Context, key string, output any) (err er
 		return ErrNotFound
 	}
 
-	decoder := gob.NewDecoder(bytes.NewReader(bs))
-	if err = decoder.Decode(output); err != nil {
+	if err = json.Unmarshal(bs, output); err != nil {
 		return fmt.Errorf("decode error: %w", err)
 	}
 	return nil
@@ -89,13 +87,12 @@ func (lc *lruCache) SetBlob(ctx context.Context, key string, val any, expire tim
 		return ErrInActive
 	}
 
-	var buf bytes.Buffer
-	encoder := gob.NewEncoder(&buf)
-	if err = encoder.Encode(val); err != nil {
+	bs, err := json.Marshal(val)
+	if err != nil {
 		return fmt.Errorf("encode error: %w", err)
 	}
 
-	lc.c.Set(key, buf.Bytes(), expire)
+	lc.c.Set(key, bs, expire)
 	return nil
 }
 

@@ -1,9 +1,8 @@
 package cache
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -73,9 +72,7 @@ func (rc *redisCache) GetBlob(ctx context.Context, key string, output any) (err 
 		return err
 	}
 
-	r := bytes.NewReader(bs)
-	decoder := gob.NewDecoder(r)
-	if err = decoder.Decode(output); err != nil {
+	if err = json.Unmarshal(bs, output); err != nil {
 		return fmt.Errorf("decode error: %w", err)
 	}
 	return nil
@@ -86,15 +83,14 @@ func (rc *redisCache) SetBlob(ctx context.Context, key string, val any, expire t
 		return ErrInActive
 	}
 
-	var buf bytes.Buffer
-	encoder := gob.NewEncoder(&buf)
-	if err = encoder.Encode(val); err != nil {
+	bs, err := json.Marshal(val)
+	if err != nil {
 		return fmt.Errorf("encode error: %w", err)
 	}
 
 	// expire is 0, then set no expire
 	// expire is -1, then set default expire
-	if err = rc.client.Set(ctx, key, buf.Bytes(), expire).Err(); err != nil {
+	if err = rc.client.Set(ctx, key, bs, expire).Err(); err != nil {
 		return fmt.Errorf("set error: %w", err)
 	}
 	return nil
