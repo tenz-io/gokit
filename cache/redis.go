@@ -23,15 +23,15 @@ type redisCache struct {
 	client *redis.Client
 }
 
-func (m *redisCache) active() bool {
-	return m != nil && m.client != nil
+func (rc *redisCache) active() bool {
+	return rc != nil && rc.client != nil
 }
 
-func (m *redisCache) Get(ctx context.Context, key string) (raw string, err error) {
-	if !m.active() {
+func (rc *redisCache) Get(ctx context.Context, key string) (raw string, err error) {
+	if !rc.active() {
 		return "", ErrInActive
 	}
-	raw, err = m.client.Get(ctx, key).Result()
+	raw, err = rc.client.Get(ctx, key).Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			return "", ErrNotFound
@@ -42,30 +42,30 @@ func (m *redisCache) Get(ctx context.Context, key string) (raw string, err error
 	return raw, nil
 }
 
-func (m *redisCache) Set(ctx context.Context, key string, raw string, expire time.Duration) (err error) {
-	if !m.active() {
+func (rc *redisCache) Set(ctx context.Context, key string, raw string, expire time.Duration) (err error) {
+	if !rc.active() {
 		return ErrInActive
 	}
 
-	err = m.client.Set(ctx, key, raw, expire).Err()
+	err = rc.client.Set(ctx, key, raw, expire).Err()
 	return
 }
 
-func (m *redisCache) SetNx(ctx context.Context, key string, raw string, expire time.Duration) (existing bool, err error) {
-	if !m.active() {
+func (rc *redisCache) SetNx(ctx context.Context, key string, raw string, expire time.Duration) (existing bool, err error) {
+	if !rc.active() {
 		return false, ErrInActive
 	}
 
-	existing, err = m.client.SetNX(ctx, key, raw, expire).Result()
+	existing, err = rc.client.SetNX(ctx, key, raw, expire).Result()
 	return
 }
 
-func (m *redisCache) GetBlob(ctx context.Context, key string, output any) (err error) {
-	if !m.active() {
+func (rc *redisCache) GetBlob(ctx context.Context, key string, output any) (err error) {
+	if !rc.active() {
 		return ErrInActive
 	}
 
-	bs, err := m.client.Get(ctx, key).Bytes()
+	bs, err := rc.client.Get(ctx, key).Bytes()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			return ErrNotFound
@@ -81,8 +81,8 @@ func (m *redisCache) GetBlob(ctx context.Context, key string, output any) (err e
 	return nil
 }
 
-func (m *redisCache) SetBlob(ctx context.Context, key string, val any, expire time.Duration) (err error) {
-	if !m.active() {
+func (rc *redisCache) SetBlob(ctx context.Context, key string, val any, expire time.Duration) (err error) {
+	if !rc.active() {
 		return ErrInActive
 	}
 
@@ -94,36 +94,36 @@ func (m *redisCache) SetBlob(ctx context.Context, key string, val any, expire ti
 
 	// expire is 0, then set no expire
 	// expire is -1, then set default expire
-	if err = m.client.Set(ctx, key, buf.Bytes(), expire).Err(); err != nil {
+	if err = rc.client.Set(ctx, key, buf.Bytes(), expire).Err(); err != nil {
 		return fmt.Errorf("set error: %w", err)
 	}
 	return nil
 
 }
 
-func (m *redisCache) Del(ctx context.Context, key string) (err error) {
-	if !m.active() {
+func (rc *redisCache) Del(ctx context.Context, key string) (err error) {
+	if !rc.active() {
 		return ErrInActive
 	}
 
-	err = m.client.Del(ctx, key).Err()
+	err = rc.client.Del(ctx, key).Err()
 	return
 }
 
-func (m *redisCache) Expire(ctx context.Context, key string, expire time.Duration) (err error) {
-	if !m.active() {
+func (rc *redisCache) Expire(ctx context.Context, key string, expire time.Duration) (err error) {
+	if !rc.active() {
 		return ErrInActive
 	}
 
-	err = m.client.Expire(ctx, key, expire).Err()
+	err = rc.client.Expire(ctx, key, expire).Err()
 	return
 }
 
-func (m *redisCache) Eval(ctx context.Context, script string, keys []string, args ...any) (val any, err error) {
-	if !m.active() {
+func (rc *redisCache) Eval(ctx context.Context, script string, keys []string, args ...any) (val any, err error) {
+	if !rc.active() {
 		return nil, ErrInActive
 	}
 
-	val, err = m.client.Eval(ctx, script, keys, args...).Result()
+	val, err = rc.client.Eval(ctx, script, keys, args...).Result()
 	return
 }
