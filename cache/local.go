@@ -74,38 +74,35 @@ func (l *local) Get(ctx context.Context, key string) (raw string, err error) {
 		return "", ErrInActive
 	}
 
+	var needDel bool
 	l.lock.RLock()
+	defer func() {
+		l.lock.RUnlock()
+		if needDel {
+			go l.Del(ctx, key)
+		}
+	}()
 
 	it, found := l.m[key]
 	if !found {
-		defer l.lock.RUnlock()
 		return "", ErrNotFound
 	}
 
 	if it == nil {
-		l.lock.RUnlock()
-
-		l.lock.Lock()
-		defer l.lock.Unlock()
-		delete(l.m, key)
+		needDel = true
 		return "", ErrNotFound
 	}
 
 	if it.expire == 0 || l.nowFunc().Unix() < it.expire {
-		defer l.lock.RUnlock()
 		return string(it.raw), nil
 	} else {
-		l.lock.RUnlock()
-
-		l.lock.Lock()
-		defer l.lock.Unlock()
-		delete(l.m, key)
+		needDel = true
 		return "", ErrNotFound
 	}
 
 }
 
-func (l *local) Set(ctx context.Context, key string, raw string, expire time.Duration) (err error) {
+func (l *local) Set(_ context.Context, key string, raw string, expire time.Duration) (err error) {
 	if !l.active() {
 		return ErrInActive
 	}
@@ -120,7 +117,7 @@ func (l *local) Set(ctx context.Context, key string, raw string, expire time.Dur
 	return nil
 }
 
-func (l *local) SetNx(ctx context.Context, key string, raw string, expire time.Duration) (existing bool, err error) {
+func (l *local) SetNx(_ context.Context, key string, raw string, expire time.Duration) (existing bool, err error) {
 	if !l.active() {
 		return false, ErrInActive
 	}
@@ -144,25 +141,27 @@ func (l *local) GetBlob(ctx context.Context, key string, output any) (err error)
 		return ErrInActive
 	}
 
+	var needDel bool
 	l.lock.RLock()
+	defer func() {
+		l.lock.RUnlock()
+		if needDel {
+			go l.Del(ctx, key)
+		}
+	}()
+
 	it, found := l.m[key]
 	if !found {
-		defer l.lock.RUnlock()
 		return ErrNotFound
 	}
 
 	if it == nil {
-		l.lock.RUnlock()
-
-		l.lock.Lock()
-		defer l.lock.Unlock()
-		delete(l.m, key)
+		// invalid item
+		needDel = true
 		return ErrNotFound
 	}
 
 	if it.expire == 0 || l.nowFunc().Unix() < it.expire {
-		defer l.lock.RUnlock()
-
 		r := bytes.NewReader(it.raw)
 		decoder := gob.NewDecoder(r)
 		if err = decoder.Decode(output); err != nil {
@@ -170,17 +169,14 @@ func (l *local) GetBlob(ctx context.Context, key string, output any) (err error)
 		}
 		return nil
 	} else {
-		l.lock.RUnlock()
-
-		l.lock.Lock()
-		defer l.lock.Unlock()
-		delete(l.m, key)
+		// expired
+		needDel = true
 		return ErrNotFound
 	}
 
 }
 
-func (l *local) SetBlob(ctx context.Context, key string, val any, expire time.Duration) (err error) {
+func (l *local) SetBlob(_ context.Context, key string, val any, expire time.Duration) (err error) {
 	if !l.active() {
 		return ErrInActive
 	}
@@ -202,7 +198,7 @@ func (l *local) SetBlob(ctx context.Context, key string, val any, expire time.Du
 
 }
 
-func (l *local) Del(ctx context.Context, key string) (err error) {
+func (l *local) Del(_ context.Context, key string) (err error) {
 	if !l.active() {
 		return ErrInActive
 	}
@@ -216,7 +212,7 @@ func (l *local) Del(ctx context.Context, key string) (err error) {
 	return nil
 }
 
-func (l *local) Expire(ctx context.Context, key string, expire time.Duration) (err error) {
+func (l *local) Expire(_ context.Context, key string, expire time.Duration) (err error) {
 	if !l.active() {
 		return ErrInActive
 	}
@@ -232,7 +228,7 @@ func (l *local) Expire(ctx context.Context, key string, expire time.Duration) (e
 
 }
 
-func (l *local) Eval(ctx context.Context, script string, keys []string, args ...any) (val any, err error) {
+func (l *local) Eval(_ context.Context, script string, keys []string, args ...any) (val any, err error) {
 	// ignore
 	return nil, fmt.Errorf("not support")
 }
