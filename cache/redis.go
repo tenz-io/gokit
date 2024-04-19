@@ -11,35 +11,23 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-type Opt func(m *manager)
-type Options []Opt
-
-func NewManager(
+func NewRedis(
 	client *redis.Client,
-	opts Options,
 ) Manager {
-	m := &manager{
+	return &redisCache{
 		client: client,
 	}
-
-	for _, opt := range opts {
-		opt(m)
-	}
-
-	return m
 }
 
-type manager struct {
-	client        *redis.Client
-	enableMetrics bool
-	enableTraffic bool
+type redisCache struct {
+	client *redis.Client
 }
 
-func (m *manager) active() bool {
+func (m *redisCache) active() bool {
 	return m != nil && m.client != nil
 }
 
-func (m *manager) Get(ctx context.Context, key string) (raw string, err error) {
+func (m *redisCache) Get(ctx context.Context, key string) (raw string, err error) {
 	if !m.active() {
 		return "", ErrInActive
 	}
@@ -54,7 +42,7 @@ func (m *manager) Get(ctx context.Context, key string) (raw string, err error) {
 	return raw, nil
 }
 
-func (m *manager) Set(ctx context.Context, key string, raw string, expire time.Duration) (err error) {
+func (m *redisCache) Set(ctx context.Context, key string, raw string, expire time.Duration) (err error) {
 	if !m.active() {
 		return ErrInActive
 	}
@@ -63,7 +51,7 @@ func (m *manager) Set(ctx context.Context, key string, raw string, expire time.D
 	return
 }
 
-func (m *manager) SetNx(ctx context.Context, key string, raw string, expire time.Duration) (existing bool, err error) {
+func (m *redisCache) SetNx(ctx context.Context, key string, raw string, expire time.Duration) (existing bool, err error) {
 	if !m.active() {
 		return false, ErrInActive
 	}
@@ -72,7 +60,7 @@ func (m *manager) SetNx(ctx context.Context, key string, raw string, expire time
 	return
 }
 
-func (m *manager) GetBlob(ctx context.Context, key string, output any) (err error) {
+func (m *redisCache) GetBlob(ctx context.Context, key string, output any) (err error) {
 	if !m.active() {
 		return ErrInActive
 	}
@@ -93,7 +81,7 @@ func (m *manager) GetBlob(ctx context.Context, key string, output any) (err erro
 	return nil
 }
 
-func (m *manager) SetBlob(ctx context.Context, key string, val any, expire time.Duration) (err error) {
+func (m *redisCache) SetBlob(ctx context.Context, key string, val any, expire time.Duration) (err error) {
 	if !m.active() {
 		return ErrInActive
 	}
@@ -113,7 +101,7 @@ func (m *manager) SetBlob(ctx context.Context, key string, val any, expire time.
 
 }
 
-func (m *manager) Del(ctx context.Context, key string) (err error) {
+func (m *redisCache) Del(ctx context.Context, key string) (err error) {
 	if !m.active() {
 		return ErrInActive
 	}
@@ -122,7 +110,7 @@ func (m *manager) Del(ctx context.Context, key string) (err error) {
 	return
 }
 
-func (m *manager) Expire(ctx context.Context, key string, expire time.Duration) (err error) {
+func (m *redisCache) Expire(ctx context.Context, key string, expire time.Duration) (err error) {
 	if !m.active() {
 		return ErrInActive
 	}
@@ -131,7 +119,7 @@ func (m *manager) Expire(ctx context.Context, key string, expire time.Duration) 
 	return
 }
 
-func (m *manager) Eval(ctx context.Context, script string, keys []string, args ...any) (val any, err error) {
+func (m *redisCache) Eval(ctx context.Context, script string, keys []string, args ...any) (val any, err error) {
 	if !m.active() {
 		return nil, ErrInActive
 	}

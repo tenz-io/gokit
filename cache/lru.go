@@ -7,39 +7,36 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/golang-lru/v2/expirable"
+	"github.com/tenz-io/gokit/cache/lru"
 )
 
-type lru struct {
-	impl *expirable.LRU[string, []byte]
+type lruCache struct {
+	c *lru.Cache[string, []byte]
 }
 
-func NewURL(
+func NewLRU(
 	capability int,
 	onEvict func(key string, val []byte),
 	expire time.Duration,
 ) Manager {
-	l := &lru{}
+	l := &lruCache{}
 	if capability <= 0 {
-		capability = 150
+		capability = 120
 	}
-	if expire <= 0 {
-		expire = 15 * time.Minute
-	}
-	l.impl = expirable.NewLRU[string, []byte](capability, onEvict, expire)
+	l.c = lru.New(capability, onEvict, expire)
 	return l
 }
 
-func (l *lru) active() bool {
-	return l != nil && l.impl != nil
+func (lc *lruCache) active() bool {
+	return lc != nil && lc.c != nil
 }
 
-func (l *lru) Get(ctx context.Context, key string) (raw string, err error) {
-	if !l.active() {
+func (lc *lruCache) Get(ctx context.Context, key string) (raw string, err error) {
+	if !lc.active() {
 		return "", ErrInActive
 	}
 
-	bs, ok := l.impl.Get(key)
+	bs, ok := lc.c.Get(key)
 	if !ok {
 		return "", ErrNotFound
 	}
@@ -48,34 +45,34 @@ func (l *lru) Get(ctx context.Context, key string) (raw string, err error) {
 
 }
 
-func (l *lru) Set(ctx context.Context, key string, raw string, expire time.Duration) (err error) {
-	if !l.active() {
+func (lc *lruCache) Set(ctx context.Context, key string, raw string, expire time.Duration) (err error) {
+	if !lc.active() {
 		return ErrInActive
 	}
 
-	l.impl.Add(key, []byte(raw))
+	lc.c.Set(key, []byte(raw), expire)
 	return nil
 }
 
-func (l *lru) SetNx(ctx context.Context, key string, raw string, expire time.Duration) (existing bool, err error) {
-	if !l.active() {
+func (lc *lruCache) SetNx(ctx context.Context, key string, raw string, expire time.Duration) (existing bool, err error) {
+	if !lc.active() {
 		return false, ErrInActive
 	}
 
-	if _, ok := l.impl.Get(key); ok {
+	if _, ok := lc.c.Get(key); ok {
 		return true, nil
 	}
 
-	l.impl.Add(key, []byte(raw))
+	lc.c.Set(key, []byte(raw), expire)
 	return false, nil
 }
 
-func (l *lru) GetBlob(ctx context.Context, key string, output any) (err error) {
-	if !l.active() {
+func (lc *lruCache) GetBlob(ctx context.Context, key string, output any) (err error) {
+	if !lc.active() {
 		return ErrInActive
 	}
 
-	bs, ok := l.impl.Get(key)
+	bs, ok := lc.c.Get(key)
 	if !ok {
 		return ErrNotFound
 	}
@@ -87,8 +84,8 @@ func (l *lru) GetBlob(ctx context.Context, key string, output any) (err error) {
 	return nil
 }
 
-func (l *lru) SetBlob(ctx context.Context, key string, val any, expire time.Duration) (err error) {
-	if !l.active() {
+func (lc *lruCache) SetBlob(ctx context.Context, key string, val any, expire time.Duration) (err error) {
+	if !lc.active() {
 		return ErrInActive
 	}
 
@@ -98,25 +95,29 @@ func (l *lru) SetBlob(ctx context.Context, key string, val any, expire time.Dura
 		return fmt.Errorf("encode error: %w", err)
 	}
 
-	l.impl.Add(key, buf.Bytes())
+	lc.c.Set(key, buf.Bytes(), expire)
 	return nil
 }
 
-func (l *lru) Del(ctx context.Context, key string) (err error) {
-	if !l.active() {
+func (lc *lruCache) Del(ctx context.Context, key string) (err error) {
+	if !lc.active() {
 		return ErrInActive
 	}
 
-	l.impl.Remove(key)
+	lc.c.Remove(key)
 	return nil
 }
 
-func (l *lru) Expire(ctx context.Context, key string, expire time.Duration) (err error) {
-	// skip
+func (lc *lruCache) Expire(ctx context.Context, key string, expire time.Duration) (err error) {
+	if !lc.active() {
+		return ErrInActive
+	}
+
+	lc.c.Expire(key, expire)
 	return nil
 }
 
-func (l *lru) Eval(ctx context.Context, script string, keys []string, args ...any) (val any, err error) {
+func (lc *lruCache) Eval(ctx context.Context, script string, keys []string, args ...any) (val any, err error) {
 	// not supported
 	return nil, ErrNotSupported
 }

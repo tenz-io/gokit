@@ -80,7 +80,7 @@ func Test_local_Get(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := &local{
+			l := &localCache{
 				m:       tt.fields.m,
 				nowFunc: tt.fields.nowFunc,
 			}

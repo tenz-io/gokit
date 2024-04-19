@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -31,20 +30,35 @@ func main() {
 		},
 	)
 
-	cli.Conn(context.Background()).Set(context.Background(), "some_key", "some_value", 0)
-
 	interceptor := cache.NewInterceptorWithOpts(
 		cache.WithEnableMetrics(true),
 		cache.WithEnableTraffic(true),
 	)
 
 	interceptor.Apply(cli)
+	cacheMgr := cache.NewRedis(cli)
+	key := "some_key_xxx"
+	raw, err := cacheMgr.Get(context.Background(), key)
+	logger.WithFields(logger.Fields{
+		"key": key,
+		"raw": raw,
+		"err": err,
+	}).Infof("1st time get from cache")
 
-	cli.Set(context.Background(), "some_key", "some_value", 15*time.Second)
+	err = cacheMgr.Set(context.Background(), key, "new_value", 0)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"key": key,
+			"err": err,
+		}).Warnf("set cache failed")
+	}
 
-	cmd := cli.Get(context.Background(), "some_key")
-	log.Println(cmd.Result())
-	_ = cli.Get(context.Background(), "some_key_not_exist")
+	raw, err = cacheMgr.Get(context.Background(), key)
+	logger.WithFields(logger.Fields{
+		"key": key,
+		"raw": raw,
+		"err": err,
+	}).Infof("2nd time get from cache")
 
 	time.Sleep(100 * time.Millisecond)
 

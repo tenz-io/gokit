@@ -14,14 +14,14 @@ type item struct {
 	expire int64
 }
 
-type local struct {
+type localCache struct {
 	m       map[string]*item
 	nowFunc func() time.Time
 	lock    sync.RWMutex
 }
 
 func NewLocal() Manager {
-	lm := &local{
+	lm := &localCache{
 		m:       make(map[string]*item),
 		nowFunc: time.Now,
 	}
@@ -31,59 +31,59 @@ func NewLocal() Manager {
 	return lm
 }
 
-func (l *local) active() bool {
-	if l == nil || l.m == nil {
+func (lc *localCache) active() bool {
+	if lc == nil || lc.m == nil {
 		return false
 	}
 	return true
 }
 
 // startEvict evict expired with interval
-func (l *local) startEvict(interval time.Duration) {
-	if !l.active() {
+func (lc *localCache) startEvict(interval time.Duration) {
+	if !lc.active() {
 		return
 	}
 
 	go func() {
 		for {
-			l.evict()
+			lc.evict()
 			time.Sleep(interval)
 		}
 	}()
 }
 
 // evict expired items
-func (l *local) evict() {
-	if !l.active() {
+func (lc *localCache) evict() {
+	if !lc.active() {
 		return
 	}
 
-	l.lock.Lock()
-	defer l.lock.Unlock()
+	lc.lock.Lock()
+	defer lc.lock.Unlock()
 
-	now := l.nowFunc().Unix()
-	for k, v := range l.m {
+	now := lc.nowFunc().Unix()
+	for k, v := range lc.m {
 		if v.expire != 0 && now > v.expire {
-			delete(l.m, k)
+			delete(lc.m, k)
 		}
 	}
 }
 
-func (l *local) Get(ctx context.Context, key string) (raw string, err error) {
-	if !l.active() {
+func (lc *localCache) Get(ctx context.Context, key string) (raw string, err error) {
+	if !lc.active() {
 		return "", ErrInActive
 	}
 
 	var needDel bool
-	l.lock.RLock()
+	lc.lock.RLock()
 	defer func() {
-		l.lock.RUnlock()
+		lc.lock.RUnlock()
 		if needDel {
-			go l.Del(ctx, key)
+			go lc.Del(ctx, key)
 		}
 	}()
 
-	it, found := l.m[key]
+	it, found := lc.m[key]
 	if !found {
 		return "", ErrNotFound
 	}
@@ -93,7 +93,7 @@ func (l *local) Get(ctx context.Context, key string) (raw string, err error) {
 		return "", ErrNotFound
 	}
 
-	if it.expire == 0 || l.nowFunc().Unix() < it.expire {
+	if it.expire == 0 || lc.nowFunc().Unix() < it.expire {
 		return string(it.raw), nil
 	} else {
 		needDel = true
@@ -102,55 +102,55 @@ func (l *local) Get(ctx context.Context, key string) (raw string, err error) {
 
 }
 
-func (l *local) Set(_ context.Context, key string, raw string, expire time.Duration) (err error) {
-	if !l.active() {
+func (lc *localCache) Set(_ context.Context, key string, raw string, expire time.Duration) (err error) {
+	if !lc.active() {
 		return ErrInActive
 	}
 
-	l.lock.Lock()
-	defer l.lock.Unlock()
+	lc.lock.Lock()
+	defer lc.lock.Unlock()
 
-	l.m[key] = &item{
+	lc.m[key] = &item{
 		raw:    []byte(raw),
-		expire: l.expireAt(expire),
+		expire: lc.expireAt(expire),
 	}
 	return nil
 }
 
-func (l *local) SetNx(_ context.Context, key string, raw string, expire time.Duration) (existing bool, err error) {
-	if !l.active() {
+func (lc *localCache) SetNx(_ context.Context, key string, raw string, expire time.Duration) (existing bool, err error) {
+	if !lc.active() {
 		return false, ErrInActive
 	}
 
-	l.lock.Lock()
-	defer l.lock.Unlock()
+	lc.lock.Lock()
+	defer lc.lock.Unlock()
 
-	if _, ok := l.m[key]; ok {
+	if _, ok := lc.m[key]; ok {
 		return true, nil
 	} else {
-		l.m[key] = &item{
+		lc.m[key] = &item{
 			raw:    []byte(raw),
-			expire: l.expireAt(expire),
+			expire: lc.expireAt(expire),
 		}
 		return false, nil
 	}
 }
 
-func (l *local) GetBlob(ctx context.Context, key string, output any) (err error) {
-	if !l.active() {
+func (lc *localCache) GetBlob(ctx context.Context, key string, output any) (err error) {
+	if !lc.active() {
 		return ErrInActive
 	}
 
 	var needDel bool
-	l.lock.RLock()
+	lc.lock.RLock()
 	defer func() {
-		l.lock.RUnlock()
+		lc.lock.RUnlock()
 		if needDel {
-			go l.Del(ctx, key)
+			go lc.Del(ctx, key)
 		}
 	}()
 
-	it, found := l.m[key]
+	it, found := lc.m[key]
 	if !found {
 		return ErrNotFound
 	}
@@ -161,7 +161,7 @@ func (l *local) GetBlob(ctx context.Context, key string, output any) (err error)
 		return ErrNotFound
 	}
 
-	if it.expire == 0 || l.nowFunc().Unix() < it.expire {
+	if it.expire == 0 || lc.nowFunc().Unix() < it.expire {
 		r := bytes.NewReader(it.raw)
 		decoder := gob.NewDecoder(r)
 		if err = decoder.Decode(output); err != nil {
@@ -176,13 +176,13 @@ func (l *local) GetBlob(ctx context.Context, key string, output any) (err error)
 
 }
 
-func (l *local) SetBlob(_ context.Context, key string, val any, expire time.Duration) (err error) {
-	if !l.active() {
+func (lc *localCache) SetBlob(_ context.Context, key string, val any, expire time.Duration) (err error) {
+	if !lc.active() {
 		return ErrInActive
 	}
 
-	l.lock.Lock()
-	defer l.lock.Unlock()
+	lc.lock.Lock()
+	defer lc.lock.Unlock()
 
 	var buf bytes.Buffer
 	encoder := gob.NewEncoder(&buf)
@@ -190,37 +190,37 @@ func (l *local) SetBlob(_ context.Context, key string, val any, expire time.Dura
 		return fmt.Errorf("encode error: %w", err)
 	}
 
-	l.m[key] = &item{
+	lc.m[key] = &item{
 		raw:    buf.Bytes(),
-		expire: l.expireAt(expire),
+		expire: lc.expireAt(expire),
 	}
 	return nil
 
 }
 
-func (l *local) Del(_ context.Context, key string) (err error) {
-	if !l.active() {
+func (lc *localCache) Del(_ context.Context, key string) (err error) {
+	if !lc.active() {
 		return ErrInActive
 	}
 
-	l.lock.Lock()
-	defer l.lock.Unlock()
+	lc.lock.Lock()
+	defer lc.lock.Unlock()
 
-	if _, ok := l.m[key]; ok {
-		delete(l.m, key)
+	if _, ok := lc.m[key]; ok {
+		delete(lc.m, key)
 	}
 	return nil
 }
 
-func (l *local) Expire(_ context.Context, key string, expire time.Duration) (err error) {
-	if !l.active() {
+func (lc *localCache) Expire(_ context.Context, key string, expire time.Duration) (err error) {
+	if !lc.active() {
 		return ErrInActive
 	}
 
-	l.lock.Lock()
-	defer l.lock.Unlock()
-	if it, ok := l.m[key]; ok && it != nil {
-		it.expire = l.expireAt(expire)
+	lc.lock.Lock()
+	defer lc.lock.Unlock()
+	if it, ok := lc.m[key]; ok && it != nil {
+		it.expire = lc.expireAt(expire)
 		return nil
 	} else {
 		return ErrNotFound
@@ -228,15 +228,15 @@ func (l *local) Expire(_ context.Context, key string, expire time.Duration) (err
 
 }
 
-func (l *local) Eval(_ context.Context, script string, keys []string, args ...any) (val any, err error) {
+func (lc *localCache) Eval(_ context.Context, script string, keys []string, args ...any) (val any, err error) {
 	// ignore
 	return nil, ErrNotSupported
 }
 
-func (l *local) expireAt(expire time.Duration) int64 {
+func (lc *localCache) expireAt(expire time.Duration) int64 {
 	if expire == 0 {
 		return 0
 	} else {
-		return l.nowFunc().Add(expire).Unix()
+		return lc.nowFunc().Add(expire).Unix()
 	}
 }
