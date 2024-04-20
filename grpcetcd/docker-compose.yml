@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   etcd:
-    image: 'bitnami/etcd:3.4'
+    image: 'bitnami/etcd:3.5.13'
     container_name: "example-etcd"
     environment:
       - ALLOW_NONE_AUTHENTICATION=yes

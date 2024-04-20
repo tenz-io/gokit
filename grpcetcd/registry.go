@@ -46,6 +46,7 @@ func (r *Registry) Register(ctx context.Context, addr, metaData string) (revoke 
 	var (
 		revokeFunc = func(_ context.Context) {}
 		le         = r.le.WithFields(logger.Fields{
+			"path": r.path,
 			"Addr": addr,
 			"Meta": metaData,
 		})
@@ -75,10 +76,7 @@ func (r *Registry) Register(ctx context.Context, addr, metaData string) (revoke 
 		"putResp": putResp,
 	}).Infof("etcd client put ok")
 
-	kaCtx, kaCancel := context.WithTimeout(ctx, 5*time.Second)
-	defer kaCancel()
-
-	keepAliveC, err := r.etcdClient.KeepAlive(kaCtx, lease.ID)
+	keepAliveC, err := r.etcdClient.KeepAlive(ctx, lease.ID)
 	if err != nil {
 		return revokeFunc, fmt.Errorf("etcd client keep alive error: %w", err)
 	}
@@ -94,8 +92,8 @@ func (r *Registry) Register(ctx context.Context, addr, metaData string) (revoke 
 				le.Info("etcd client keep alive context done")
 				return
 			case _, ok := <-keepAliveC:
-				le.Debugf("etcd client keep alive: %v", ok)
 				if !ok {
+					le.Warnf("etcd client keep alive channel closed")
 					return
 				}
 			}
