@@ -6,6 +6,7 @@ import (
 	"time"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.etcd.io/etcd/client/v3/naming/endpoints"
 
 	"github.com/tenz-io/gokit/logger"
 )
@@ -40,19 +41,26 @@ func NewRegistry(
 
 // Register registers the service with etcd
 // addr: the address of the service, eg: 10.10.10.10:50051
-// metaData: the metadata of the service
 // returns a revoke function to deregister the service
-func (r *Registry) Register(ctx context.Context, addr, metaData string) (revoke func(context.Context), err error) {
+func (r *Registry) Register(ctx context.Context, addr string) (revoke func(context.Context), err error) {
 	var (
 		revokeFunc = func(_ context.Context) {}
-		le         = r.le.WithFields(logger.Fields{
-			"path": r.path,
-			"Addr": addr,
-			"Meta": metaData,
+		fullPath   = fmt.Sprintf("%s/%s", r.path, addr)
+		endpoint   = endpoints.Endpoint{
+			Addr: addr,
+		}
+		le = r.le.WithFields(logger.Fields{
+			"path":     r.path,
+			"Addr":     addr,
+			"fullPath": fullPath,
+			"endpoint": endpoint,
 		})
 	)
 
-	fullPath := fmt.Sprintf("%s/%s", r.path, addr)
+	em, err := endpoints.NewManager(r.etcdClient, r.path)
+	if err != nil {
+		return nil, fmt.Errorf("etcd client endpoints manager error: %w", err)
+	}
 
 	grantCtx, grantCancel := context.WithTimeout(ctx, 5*time.Second)
 	defer grantCancel()
@@ -67,14 +75,12 @@ func (r *Registry) Register(ctx context.Context, addr, metaData string) (revoke 
 	putCtx, putCancel := context.WithTimeout(ctx, 5*time.Second)
 	defer putCancel()
 
-	putResp, err := r.etcdClient.Put(putCtx, fullPath, metaData, clientv3.WithLease(lease.ID))
+	err = em.AddEndpoint(putCtx, fullPath, endpoint, clientv3.WithLease(lease.ID))
 	if err != nil {
-		return revokeFunc, fmt.Errorf("etcd client put error: %w", err)
+		return nil, fmt.Errorf("etcd client add endpoint error: %w", err)
 	}
 
-	le.WithFields(logger.Fields{
-		"putResp": putResp,
-	}).Infof("etcd client put ok")
+	le.Infof("etcd client add endpoint ok")
 
 	keepAliveC, err := r.etcdClient.KeepAlive(ctx, lease.ID)
 	if err != nil {
