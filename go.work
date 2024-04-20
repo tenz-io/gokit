@@ -7,16 +7,16 @@ use (
 	./app/example
 	./async
 	./async/example
-	./dbtracker
-	./dbtracker/example
 	./functional
-	./ginterceptor
-	./ginterceptor/example
+	./ginext
+	./ginext/example
+	./gormext
+	./gormext/example
 	./grpcext
 	./grpcext/example-server
 	./grpcext/example-client
-	./httpcli
-	./httpcli/example
+	./httpext
+	./httpext/example
 	./cache
 	./cache/example
 	./logger
