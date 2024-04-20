@@ -1,24 +1,27 @@
-go 1.20
+go 1.21
 
-toolchain go1.20
+toolchain go1.21
 
 use (
 	./app
 	./app/example
 	./async
 	./async/example
+	./cache
+	./cache/example
 	./functional
 	./ginext
 	./ginext/example
 	./gormext
 	./gormext/example
+	./grpcetcd
+	./grpcetcd/example-client
+	./grpcetcd/example-server
 	./grpcext
-	./grpcext/example-server
 	./grpcext/example-client
+	./grpcext/example-server
 	./httpext
 	./httpext/example
-	./cache
-	./cache/example
 	./logger
 	./logger/example
 	./monitor
