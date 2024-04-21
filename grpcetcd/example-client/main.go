@@ -71,7 +71,8 @@ func getConnClient() (*grpc.ClientConn, error) {
 		return nil, fmt.Errorf("failed to create etcd client: %w", err)
 	}
 
-	discovery := grpcetcd.NewDiscovery(cli, path, opts...)
+	le := logger.WithFields(logger.Fields{})
+	discovery := grpcetcd.NewDiscovery(cli, path, le, opts...)
 
 	// Create a client connection
 	diaCtx, diaCancel := context.WithTimeout(context.Background(), 5*time.Second)

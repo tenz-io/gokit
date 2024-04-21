@@ -16,10 +16,10 @@ import (
 )
 
 const (
-	etcdAddr = "http://127.0.0.1:2379"
+	etcdAddr = "http://localhost:2379"
 	path     = "/services/echo"
 	port     = ":50051"
-	addr     = "127.0.0.0" + port
+	addr     = "localhost" + port
 )
 
 func init() {
@@ -37,6 +37,11 @@ func init() {
 }
 
 func main() {
+	lis, err := net.Listen("tcp", port)
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+
 	interceptor := grpcext.NewInterceptorWithOpts(
 		grpcext.WithServerTraffic(true),
 		grpcext.WithServerMetrics(true),
@@ -52,10 +57,7 @@ func main() {
 	// Register your services here
 	pb.RegisterEchoServiceServer(srv, &server{})
 	log.Printf("Starting gRPC server on %s", port)
-	lis, err := net.Listen("tcp", port)
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-	}
+
 	if err := srv.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
@@ -70,6 +72,7 @@ func register(addr string) {
 	if err != nil {
 		panic(err)
 	}
+
 	registry := grpcetcd.NewRegistry(cli, path, 15, logger.WithFields(logger.Fields{}))
 
 	_, err = registry.Register(context.Background(), addr)
