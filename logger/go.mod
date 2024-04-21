@@ -1,6 +1,6 @@
 module github.com/tenz-io/gokit/logger
 
-go 1.20
+go 1.21
 
 require (
 	github.com/smarty/assertions v1.15.1

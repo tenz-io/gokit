@@ -1,6 +1,6 @@
 module httpext-example
 
-go 1.20
+go 1.21
 
 require (
 	github.com/tenz-io/gokit/httpext v0.0.0

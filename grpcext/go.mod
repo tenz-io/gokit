@@ -1,6 +1,6 @@
 module github.com/tenz-io/gokit/grpcext
 
-go 1.20
+go 1.21
 
 require (
 	github.com/tenz-io/gokit/logger v1.5.0
