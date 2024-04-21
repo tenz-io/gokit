@@ -1,13 +1,14 @@
 syntax = "proto3";
 
-option go_package = ".;example";
+option go_package = ".;helloworld";
+package helloworld;
 
 message EchoRequest {
   string msg = 1;
 }
 
 message EchoResponse {
-  string msg = 2;
+  string msg = 1;
 }
 
 service EchoService {

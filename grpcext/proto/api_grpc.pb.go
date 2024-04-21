@@ -4,7 +4,7 @@
 // - protoc             v5.26.1
 // source: api.proto
 
-package example
+package helloworld
 
 import (
 	context "context"
@@ -19,7 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	EchoService_Echo_FullMethodName = "/EchoService/Echo"
+	EchoService_Echo_FullMethodName = "/helloworld.EchoService/Echo"
 )
 
 // EchoServiceClient is the client API for EchoService service.
@@ -96,7 +96,7 @@ func _EchoService_Echo_Handler(srv interface{}, ctx context.Context, dec func(in
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var EchoService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "EchoService",
+	ServiceName: "helloworld.EchoService",
 	HandlerType: (*EchoServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
