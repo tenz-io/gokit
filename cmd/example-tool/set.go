@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/urfave/cli/v2"
-
 	"github.com/tenz-io/gokit/cmd"
 )
 
@@ -13,16 +11,17 @@ var setCmd = &cmd.Command{
 	Name:  "set",
 	Usage: "demonstrate set command",
 	Flags: []cmd.Flag{
-		&cli.StringFlag{
+		&cmd.StringFlag{
 			Name:    "key",
 			Aliases: []string{"k"},
 			Usage:   "key",
 			Value:   "",
 		},
-		&cli.StringFlag{
-			Name:  "val",
-			Usage: "val",
-			Value: "",
+		&cmd.StringFlag{
+			Name:    "val",
+			Aliases: []string{"v"},
+			Usage:   "val",
+			Value:   "",
 		},
 	},
 	Action: set,

@@ -1,5 +1,6 @@
 .PHONY: build
 build:
+	rm -f example
 	go build -o example main.go
 
 

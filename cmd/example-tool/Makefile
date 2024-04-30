@@ -5,4 +5,4 @@ build:
 
 .PHONY: run
 run: build
-	./example 
+	./example set -k hello -v world

@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/urfave/cli/v2"
-
 	"github.com/tenz-io/gokit/cmd"
 )
 
@@ -13,10 +11,11 @@ var getCmd = &cmd.Command{
 	Name:  "get",
 	Usage: "demonstrate get command",
 	Flags: []cmd.Flag{
-		&cli.StringFlag{
-			Name:  "key",
-			Usage: "key",
-			Value: "",
+		&cmd.StringFlag{
+			Name:    "key",
+			Aliases: []string{"k"},
+			Usage:   "key",
+			Value:   "",
 		},
 	},
 	Action: get,

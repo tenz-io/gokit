@@ -51,7 +51,7 @@ var commonFlags = []Flag{
 	},
 	&BoolFlag{
 		Name:    FlagNameVerbose,
-		Aliases: []string{"v"},
+		Aliases: []string{"vv"},
 		Usage:   "verbose mode",
 		Value:   true,
 	},
