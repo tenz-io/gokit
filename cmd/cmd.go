@@ -41,7 +41,7 @@ var commonFlags = []Flag{
 		Name:    FlagNameConfig,
 		Aliases: []string{"c"},
 		Usage:   "config file path",
-		Value:   "config/app.yml",
+		Value:   "config/app.yaml",
 	},
 	&StringFlag{
 		Name:    FlagNameLog,
@@ -133,6 +133,7 @@ func run(runFunc RunFunc, confPtr any) func(c *Context) error {
 		}
 
 		if c.Bool(FlagNameVerbose) {
+			printArgs(c)
 			printConfig(confPtr)
 		}
 
@@ -157,6 +158,15 @@ func printConfig(confPtr any) {
 		return
 	}
 	fmt.Printf("config: %s\n", string(j))
+}
+
+// printArgs returns the command line arguments
+func printArgs(c *Context) {
+	fmt.Println("=== command line arguments ===")
+	for _, flagName := range c.FlagNames() {
+		fmt.Printf("%s: %v\n", flagName, c.Generic(flagName))
+	}
+	fmt.Println("================================")
 }
 
 func waitSignal(ctx context.Context, errC <-chan error, hook func()) {
