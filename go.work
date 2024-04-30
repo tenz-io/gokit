@@ -9,6 +9,9 @@ use (
 	./async/example
 	./cache
 	./cache/example
+	./cmd
+	./cmd/example
+	./cmd/example-tool
 	./functional
 	./ginext
 	./ginext/example
