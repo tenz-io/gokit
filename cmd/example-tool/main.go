@@ -9,6 +9,15 @@ var commands = []*cmd.Command{
 	setCmd,
 }
 
+var flags = []cmd.Flag{
+	&cmd.StringFlag{
+		Name:    "env",
+		Aliases: []string{"e"},
+		Value:   "test",
+		Usage:   "Environment",
+	},
+}
+
 func main() {
 	app := cmd.App{
 		Name:    "example-tool",
@@ -20,7 +29,7 @@ func main() {
 		},
 	}
 
-	cmd.Run(app, nil, commands...)
+	cmd.Run(app, flags, commands...)
 }
 
 type MyConfig struct {
