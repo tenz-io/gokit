@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/tenz-io/gokit/cmd"
@@ -29,7 +30,10 @@ func main() {
 		},
 		Run: run(),
 	}
-	cmd.Run(app, flags)
+	err := cmd.Run(app, flags)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func run() cmd.RunFunc {
@@ -47,8 +51,14 @@ func run() cmd.RunFunc {
 			errC <- fmt.Errorf("invalid config type: %T", confPtr)
 		}
 
+		mycnf2, err := cmd.GetConfig[*MyConfig](c)
+		if err != nil {
+			errC <- fmt.Errorf("get config error: %w", err)
+		}
+
 		logger.WithFields(logger.Fields{
 			"config": mycnf,
+			"mycnf2": mycnf2,
 			"FOO":    os.Getenv("FOO"),
 		}).Debug("debug config")
 

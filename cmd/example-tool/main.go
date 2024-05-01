@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/tenz-io/gokit/cmd"
+	"log"
 )
 
 var commands = []*cmd.Command{
@@ -26,5 +27,8 @@ func main() {
 		Inits:   []cmd.InitFunc{},
 	}
 
-	cmd.Run(app, flags, commands...)
+	err := cmd.Run(app, flags, commands...)
+	if err != nil {
+		log.Fatal(err)
+	}
 }

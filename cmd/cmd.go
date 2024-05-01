@@ -97,7 +97,7 @@ func Run(app App, extraFlags []Flag, extraCommands ...*Command) error {
 		Flags:       flags,
 		Commands:    extraCommands,
 		Metadata: map[string]any{
-			"config": app.ConfPtr,
+			FlagNameConfig: app.ConfPtr,
 		},
 		Before: func(c *Context) error {
 			for _, init := range app.Inits {
@@ -192,4 +192,24 @@ func waitSignal(ctx context.Context, errC <-chan error, hook func()) {
 			os.Exit(0)
 		}
 	}
+}
+
+func GetConfig[Ptr any](c *Context) (Ptr, error) {
+	var (
+		zeroPtr Ptr
+	)
+	cnf, ok := c.App.Metadata[FlagNameConfig]
+	if !ok {
+		return zeroPtr, fmt.Errorf("config not found")
+	}
+
+	if cnf == nil {
+		return zeroPtr, nil
+	}
+
+	if v, ok := cnf.(Ptr); ok {
+		return v, nil
+	}
+
+	return zeroPtr, fmt.Errorf("invalid config type")
 }
