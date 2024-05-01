@@ -1,8 +1,9 @@
 package function
 
 import (
-	"cmp"
 	"container/heap"
+
+	"cmp"
 	"slices"
 )
 
