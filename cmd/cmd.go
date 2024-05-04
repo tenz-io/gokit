@@ -38,6 +38,12 @@ const (
 // commonFlags app common flags
 var (
 	basicFlags = []Flag{
+		&StringFlag{
+			Name:    FlagNameConfig,
+			Aliases: []string{"c"},
+			Usage:   "config file path",
+			Value:   "config/app.yaml",
+		},
 		&BoolFlag{
 			Name:    FlagNameHelp,
 			Aliases: []string{"h"},
@@ -46,12 +52,6 @@ var (
 		},
 	}
 	commonFlags = []Flag{
-		&StringFlag{
-			Name:    FlagNameConfig,
-			Aliases: []string{"c"},
-			Usage:   "config file path",
-			Value:   "config/app.yaml",
-		},
 		&StringFlag{
 			Name:    FlagNameLog,
 			Aliases: []string{"l"},
