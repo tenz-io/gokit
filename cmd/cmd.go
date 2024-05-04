@@ -36,57 +36,67 @@ const (
 )
 
 // commonFlags app common flags
-var commonFlags = []Flag{
-	&StringFlag{
-		Name:    FlagNameConfig,
-		Aliases: []string{"c"},
-		Usage:   "config file path",
-		Value:   "config/app.yaml",
-	},
-	&StringFlag{
-		Name:    FlagNameLog,
-		Aliases: []string{"l"},
-		Usage:   "log directory",
-		Value:   "log",
-	},
-	&BoolFlag{
-		Name:    FlagNameVerbose,
-		Aliases: []string{"vv"},
-		Usage:   "verbose mode",
-		Value:   true,
-	},
-	&BoolFlag{
-		Name:    FlagNameConsole,
-		Aliases: []string{"s"},
-		Usage:   "print log to console",
-		Value:   false,
-	},
-	&IntFlag{
-		Name:    FlagNameAdmin,
-		Aliases: []string{"a"},
-		Usage:   "admin port",
-		Value:   8085,
-	},
-	&BoolFlag{
-		Name:    FlagNameHelp,
-		Aliases: []string{"h"},
-		Usage:   "print help message",
-		Value:   false,
-	},
-}
+var (
+	basicFlags = []Flag{
+		&BoolFlag{
+			Name:    FlagNameHelp,
+			Aliases: []string{"h"},
+			Usage:   "print help message",
+			Value:   false,
+		},
+	}
+	commonFlags = []Flag{
+		&StringFlag{
+			Name:    FlagNameConfig,
+			Aliases: []string{"c"},
+			Usage:   "config file path",
+			Value:   "config/app.yaml",
+		},
+		&StringFlag{
+			Name:    FlagNameLog,
+			Aliases: []string{"l"},
+			Usage:   "log directory",
+			Value:   "log",
+		},
+		&BoolFlag{
+			Name:    FlagNameVerbose,
+			Aliases: []string{"vv"},
+			Usage:   "verbose mode",
+			Value:   true,
+		},
+		&BoolFlag{
+			Name:    FlagNameConsole,
+			Aliases: []string{"s"},
+			Usage:   "print log to console",
+			Value:   false,
+		},
+		&IntFlag{
+			Name:    FlagNameAdmin,
+			Aliases: []string{"a"},
+			Usage:   "admin port",
+			Value:   8085,
+		},
+	}
+)
 
 type App struct {
-	Name    string
-	Usage   string
-	ConfPtr any
-	Run     RunFunc
-	Inits   []InitFunc
-	cleans  []CleanFunc
+	Name        string
+	Usage       string
+	CommonFlags bool
+	ConfPtr     any
+	Run         RunFunc
+	Inits       []InitFunc
+	cleans      []CleanFunc
 }
 
 // Run creates a new tool and run
 func Run(app App, extraFlags []Flag, extraCommands ...*Command) error {
-	flags := append(commonFlags, extraFlags...)
+	var (
+		flags = append(basicFlags, extraFlags...)
+	)
+	if app.CommonFlags {
+		flags = append(flags, commonFlags...)
+	}
 	sort.Sort(cli.FlagsByName(flags))
 
 	cliApp := cli.App{

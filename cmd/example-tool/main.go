@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/tenz-io/gokit/cmd"
 	"log"
+
+	"github.com/tenz-io/gokit/cmd"
 )
 
 var commands = []*cmd.Command{
