@@ -16,6 +16,8 @@ import (
 
 // WithYamlConfig will read the yaml config file and unmarshal it to the confPtr
 func WithYamlConfig() InitFunc {
+	commonFlags = append(commonFlags, yamlConfigFlag)
+
 	return func(c *Context, confPtr any) (CleanFunc, error) {
 		var (
 			cleanFn = func(_ *Context) {}
@@ -37,6 +39,8 @@ func WithYamlConfig() InitFunc {
 
 // WithJsonConfig will read the json config file and unmarshal it to the confPtr
 func WithJsonConfig() InitFunc {
+	commonFlags = append(commonFlags, jsonConfigFlag)
+
 	return func(c *Context, confPtr any) (CleanFunc, error) {
 		var (
 			cleanFn = func(_ *Context) {}
@@ -57,13 +61,15 @@ func WithJsonConfig() InitFunc {
 }
 
 // WithDotEnvConfig will read the .env file and set the environment variables
-func WithDotEnvConfig(filenames ...string) InitFunc {
+func WithDotEnvConfig() InitFunc {
+	commonFlags = append(commonFlags, dotEnvFlag)
+
 	return func(c *Context, _ any) (CleanFunc, error) {
 		var (
 			cleanFn = func(_ *Context) {}
 		)
 
-		err := godotenv.Load(filenames...)
+		err := godotenv.Load(c.String(FlagNameEnv))
 		if err != nil {
 			return cleanFn, fmt.Errorf("error loading .env file: %w", err)
 		}
@@ -75,20 +81,22 @@ func WithDotEnvConfig(filenames ...string) InitFunc {
 
 // WithLogger will configure the logger with the given options
 func WithLogger(trafficEnabled bool) InitFunc {
+	commonFlags = append(commonFlags, logFlag, consoleFlag)
+
 	return func(c *Context, _ any) (CleanFunc, error) {
 		var (
-			logDir         = c.String(FlagNameLog)
-			verbose        = c.Bool(FlagNameVerbose)
-			loggingConsole = c.Bool(FlagNameConsole)
-			lvl            = logger.InfoLevel
-			loggingFile    = true
-			cleanFn        = func(_ *Context) {}
+			logDir      = c.String(FlagNameLog)
+			verbose     = c.Bool(FlagNameVerbose)
+			console     = c.Bool(FlagNameConsole)
+			lvl         = logger.InfoLevel
+			loggingFile = true
+			cleanFn     = func(_ *Context) {}
 		)
 
 		if verbose {
 			lvl = logger.DebugLevel
 		}
-		if loggingConsole {
+		if console {
 			loggingFile = false
 		}
 
@@ -96,7 +104,7 @@ func WithLogger(trafficEnabled bool) InitFunc {
 			logger.WithLoggerLevel(lvl),
 			logger.WithDirectory(logDir),
 			logger.WithFileEnabled(loggingFile),
-			logger.WithConsoleEnabled(loggingConsole),
+			logger.WithConsoleEnabled(console),
 			logger.WithSetAsDefaultLvl(true),
 			logger.WithCallerEnabled(true),
 		)
@@ -114,6 +122,8 @@ func WithLogger(trafficEnabled bool) InitFunc {
 // env. If PORT environment variable is not set, the HTTP server will not be run.
 // Use this if the service don't server any other HTTP traffic
 func WithAdminHTTPServer() InitFunc {
+	commonFlags = append(commonFlags, adminFlag)
+
 	return func(c *Context, confPtr any) (CleanFunc, error) {
 		var (
 			cleanFn = func(_ *Context) {}

@@ -11,14 +11,7 @@ var commands = []*cmd.Command{
 	setCmd,
 }
 
-var flags = []cmd.Flag{
-	&cmd.StringFlag{
-		Name:    "env",
-		Aliases: []string{"e"},
-		Value:   "test",
-		Usage:   "Environment",
-	},
-}
+var flags []cmd.Flag
 
 func main() {
 	app := cmd.App{

@@ -13,90 +13,29 @@ import (
 )
 
 type (
-	Flag    = cli.Flag
 	Command = cli.Command
 	Context = cli.Context
-
-	StringFlag = cli.StringFlag
-	BoolFlag   = cli.BoolFlag
-	IntFlag    = cli.IntFlag
 
 	InitFunc  func(c *Context, confPtr any) (CleanFunc, error)
 	RunFunc   func(c *Context, confPtr any, errC chan<- error)
 	CleanFunc func(c *Context)
 )
 
-const (
-	FlagNameConfig  = "config"
-	FlagNameLog     = "log"
-	FlagNameVerbose = "verbose"
-	FlagNameConsole = "console"
-	FlagNameAdmin   = "admin"
-	FlagNameHelp    = "help"
-)
-
-// commonFlags app common flags
-var (
-	basicFlags = []Flag{
-		&StringFlag{
-			Name:    FlagNameConfig,
-			Aliases: []string{"c"},
-			Usage:   "config file path",
-			Value:   "config/app.yaml",
-		},
-		&BoolFlag{
-			Name:    FlagNameHelp,
-			Aliases: []string{"h"},
-			Usage:   "print help message",
-			Value:   false,
-		},
-	}
-	commonFlags = []Flag{
-		&StringFlag{
-			Name:    FlagNameLog,
-			Aliases: []string{"l"},
-			Usage:   "log directory",
-			Value:   "log",
-		},
-		&BoolFlag{
-			Name:    FlagNameVerbose,
-			Aliases: []string{"vv"},
-			Usage:   "verbose mode",
-			Value:   true,
-		},
-		&BoolFlag{
-			Name:    FlagNameConsole,
-			Aliases: []string{"s"},
-			Usage:   "print log to console",
-			Value:   false,
-		},
-		&IntFlag{
-			Name:    FlagNameAdmin,
-			Aliases: []string{"a"},
-			Usage:   "admin port",
-			Value:   8085,
-		},
-	}
-)
-
 type App struct {
-	Name        string
-	Usage       string
-	CommonFlags bool
-	ConfPtr     any
-	Run         RunFunc
-	Inits       []InitFunc
-	cleans      []CleanFunc
+	Name    string
+	Usage   string
+	ConfPtr any
+	Run     RunFunc
+	Inits   []InitFunc
+	cleans  []CleanFunc
 }
 
 // Run creates a new tool and run
 func Run(app App, extraFlags []Flag, extraCommands ...*Command) error {
 	var (
-		flags = append(basicFlags, extraFlags...)
+		flags = append(commonFlags, extraFlags...)
 	)
-	if app.CommonFlags {
-		flags = append(flags, commonFlags...)
-	}
+
 	sort.Sort(cli.FlagsByName(flags))
 
 	cliApp := cli.App{
@@ -202,24 +141,4 @@ func waitSignal(ctx context.Context, errC <-chan error, hook func()) {
 			os.Exit(0)
 		}
 	}
-}
-
-func GetConfig[Ptr any](c *Context) (Ptr, error) {
-	var (
-		zeroPtr Ptr
-	)
-	cnf, ok := c.App.Metadata[FlagNameConfig]
-	if !ok {
-		return zeroPtr, fmt.Errorf("config not found")
-	}
-
-	if cnf == nil {
-		return zeroPtr, nil
-	}
-
-	if v, ok := cnf.(Ptr); ok {
-		return v, nil
-	}
-
-	return zeroPtr, fmt.Errorf("invalid config type")
 }
