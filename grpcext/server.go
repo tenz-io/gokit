@@ -56,11 +56,13 @@ func newTrafficUnaryServerInterceptor(serverInterceptor grpc.UnaryServerIntercep
 		})
 
 		defer func() {
-			rec.End(&logger.RespEntity{
+			rec.EndWithIgnores(&logger.RespEntity{
 				Code: errCode(err),
 				Msg:  errMsg(err),
 				Resp: resp,
-			}, logger.Fields{})
+			}, logger.Fields{},
+				"state", "sizeCache", "unknownFields",
+			)
 		}()
 
 		return serverInterceptor(ctx, req, info, handler)
