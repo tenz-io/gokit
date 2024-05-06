@@ -71,6 +71,10 @@ func (t *Traffic) headString(sep string) string {
 }
 
 func (t *TrafficRec) End(resp *RespEntity, fields Fields) {
+	t.EndWithIgnores(resp, fields)
+}
+
+func (t *TrafficRec) EndWithIgnores(resp *RespEntity, fields Fields, ignores ...string) {
 	if t == nil || t.te == nil || resp == nil {
 		return
 	}
@@ -80,16 +84,16 @@ func (t *TrafficRec) End(resp *RespEntity, fields Fields) {
 		newFields[k] = v
 	}
 
-	t.te.DataWith(&Traffic{
-		Typ:  t.req.Typ,
-		Cmd:  t.req.Cmd,
-		Code: resp.Code,
-		Msg:  resp.Msg,
-		Cost: time.Since(t.startTime),
-		Req:  t.req.Req,
-		Resp: resp.Resp,
-	}, newFields)
-
+	t.te.WithIgnores(ignores...).
+		DataWith(&Traffic{
+			Typ:  t.req.Typ,
+			Cmd:  t.req.Cmd,
+			Code: resp.Code,
+			Msg:  resp.Msg,
+			Cost: time.Since(t.startTime),
+			Req:  t.req.Req,
+			Resp: resp.Resp,
+		}, newFields)
 }
 
 type TrafficEntry interface {
