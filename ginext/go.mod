@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/gin-gonic/gin v1.9.1
-	github.com/tenz-io/gokit/logger v1.5.1
+	github.com/tenz-io/gokit/logger v1.5.2
 	github.com/tenz-io/gokit/monitor v1.5.0
 	github.com/tenz-io/gokit/tracer v1.0.1
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1

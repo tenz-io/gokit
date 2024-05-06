@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/tenz-io/gokit/grpcext v0.0.0
-	github.com/tenz-io/gokit/logger v1.5.1
+	github.com/tenz-io/gokit/logger v1.5.2
 	google.golang.org/grpc v1.63.2
 )
 

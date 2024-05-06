@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/stretchr/testify v1.8.1
-	github.com/tenz-io/gokit/logger v1.5.1
+	github.com/tenz-io/gokit/logger v1.5.2
 	github.com/tenz-io/gokit/monitor v1.5.0
 	github.com/tenz-io/gokit/tracer v1.0.1
 )
