@@ -86,13 +86,13 @@ func main() {
 	time.Sleep(20 * time.Millisecond)
 
 	defer func() {
-		rec.End(&logger.RespEntity{
+		rec.EndWithIgnores(&logger.RespEntity{
 			Code: "200",
 			Msg:  "success",
 			Resp: []string{"hello"},
 		}, logger.Fields{
 			"resp_header": "some header",
-		})
+		}, "state", "sizeCache", "unknownFields")
 		time.Sleep(100 * time.Millisecond)
 	}()
 
