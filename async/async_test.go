@@ -506,3 +506,60 @@ func TestSubmit(t *testing.T) {
 		})
 	}
 }
+
+func TestRun(t *testing.T) {
+	type args[T any] struct {
+		ctx    context.Context
+		fnList []Fn[T]
+	}
+	type testCase[T any] struct {
+		name        string
+		args        args[T]
+		wantResults []Holder[T]
+		maxDuration time.Duration
+	}
+	tests := []testCase[int]{
+		{
+			name: "when all jobs are successful then return all results",
+			args: args[int]{
+				ctx: context.Background(),
+				fnList: []Fn[int]{
+					func(ctx context.Context) (int, error) {
+						time.Sleep(10 * time.Millisecond)
+						return 1, nil
+					},
+					func(ctx context.Context) (int, error) {
+						time.Sleep(15 * time.Millisecond)
+						return 2, nil
+					},
+					func(ctx context.Context) (int, error) {
+						time.Sleep(14 * time.Millisecond)
+						return 3, nil
+					},
+					func(ctx context.Context) (int, error) {
+						time.Sleep(14 * time.Millisecond)
+						return 0, fmt.Errorf("oops")
+					},
+				},
+			},
+			wantResults: []Holder[int]{
+				{idx: 0, Val: 1, Err: nil},
+				{idx: 1, Val: 2, Err: nil},
+				{idx: 2, Val: 3, Err: nil},
+				{idx: 3, Val: 0, Err: fmt.Errorf("oops")},
+			},
+			maxDuration: 17 * time.Millisecond,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			start := time.Now()
+			gotResults := Run(tt.args.ctx, tt.args.fnList)
+			duration := time.Since(start)
+			t.Logf("duration: %s, gotResults: %v", duration, gotResults)
+			if !reflect.DeepEqual(gotResults, tt.wantResults) {
+				t.Errorf("Run() = %v, want %v", gotResults, tt.wantResults)
+			}
+		})
+	}
+}

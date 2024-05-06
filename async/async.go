@@ -11,6 +11,12 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+type Holder[T any] struct {
+	idx int
+	Val T
+	Err error
+}
+
 type Fn[T any] func(context.Context) (T, error)
 
 // job is an interface that represents a job that can be run concurrently.
@@ -238,4 +244,49 @@ func errorFromPanic(rec any) error {
 	default:
 		return fmt.Errorf("unknown panic")
 	}
+}
+
+// Run runs all jobs concurrently and returns the results.
+// The order of the results is the same as the order of the input functions.
+func Run[T any](ctx context.Context, fnList []Fn[T]) (results []Holder[T]) {
+	var (
+		count = len(fnList)
+	)
+
+	if count == 0 {
+		return []Holder[T]{}
+	}
+
+	resultC := make(chan *Holder[T], count)
+	for idx, fn := range fnList {
+		if fn == nil {
+			var zero T
+			resultC <- &Holder[T]{
+				idx: idx,
+				Val: zero,
+				Err: fmt.Errorf("nil function"),
+			}
+			continue
+		}
+
+		newCtx := context.WithoutCancel(ctx)
+		go func(i int, f Fn[T]) {
+			result, err := withPanicProof(f)(newCtx)
+			resultC <- &Holder[T]{
+				idx: i,
+				Val: result,
+				Err: err,
+			}
+		}(idx, fn)
+	}
+
+	results = make([]Holder[T], count)
+	for i := 0; i < count; i++ {
+		select {
+		case result := <-resultC:
+			results[result.idx] = *result
+		}
+	}
+
+	return results
 }
