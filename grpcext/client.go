@@ -26,13 +26,13 @@ func newTrafficUnaryClientInterceptor(clientInterceptor grpc.UnaryClientIntercep
 		})
 
 		defer func() {
-			rec.End(&logger.RespEntity{
+			rec.EndWithIgnores(&logger.RespEntity{
 				Code: errCode(err),
 				Msg:  errMsg(err),
 				Resp: reply,
 			}, logger.Fields{
 				"peer": pettyPeer(grpcPeer),
-			})
+			}, "state", "sizeCache", "unknownFields")
 		}()
 
 		moreOpts := append(opts, grpc.Peer(grpcPeer))
