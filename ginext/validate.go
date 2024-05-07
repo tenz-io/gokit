@@ -50,13 +50,20 @@ func ShouldBindUri(c *gin.Context, v any) error {
 }
 
 func warpError(c *gin.Context, err error) error {
-	var validationErr ValidateErrors
-	switch {
-	case errors.As(err, &validationErr):
-		return errcode.New(400, validationErr.Error())
-	case errors.Is(err, new(json.UnmarshalTypeError)):
-		return errcode.New(400, err.Error())
-	default:
-		return errcode.New(400, "invalid request")
+	var validationsErr *ValidateErrors
+	if errors.As(err, &validationsErr) {
+		return errcode.New(400, validationsErr.Error())
 	}
+
+	var validationErr *ValidateError
+	if errors.As(err, &validationErr) {
+		return errcode.New(400, validationErr.Error())
+	}
+
+	var unmarshalErr *json.UnmarshalTypeError
+	if errors.As(err, &unmarshalErr) {
+		return errcode.New(400, err.Error())
+	}
+
+	return errcode.New(400, "invalid request")
 }
