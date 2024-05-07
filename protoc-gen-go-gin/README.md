@@ -1,27 +1,32 @@
 # protoc-gen-go-gin
 
-> 修改自 [varluffy/protoc-gen-go-gin](https://github.com/varluffy/protoc-gen-go-gin)
+> Modify from [varluffy/protoc-gen-go-gin](https://github.com/varluffy/protoc-gen-go-gin)
 
-从 protobuf 文件中生成使用 gin 的 http rpc 服务
-## 安装
+generate gin server code from proto file.
 
-请确保安装了以下依赖:
+## Development
+
+### Requirements
 
 - [go 1.21](https://golang.org/dl/)
 - [protoc](https://github.com/protocolbuffers/protobuf)
 - [protoc-gen-go](https://github.com/protocolbuffers/protobuf-go)
+- [protoc-gen-openapiv2](https://github.com/grpc-ecosystem/grpc-gateway/releases/tag/v2.19.1)
+- [protoc-go-inject-tag](https://github.com/favadi/protoc-go-inject-tag)
 
-注意由于使用 embed 特性，Go 版本必须大于 1.16
+Use embed feature in go 1.16, so go 1.16 is required.
 
 ```bash
 make install
+
+go install github.com/favadi/protoc-go-inject-tag@v1.4.0
 ```
 
-## 使用说明
+## Usage
 
-例子见: [example](./example)
+eg: [example](./example)
 
-### proto 文件约定
+### proto pacification
 
 默认情况下 rpc method 命名为 方法+资源，使用驼峰方式命名，生成代码时会进行映射
 
@@ -57,8 +62,8 @@ service BlogService {
 }
 ```
 
-### 文件生成
+### Generate code
 
-```
-make proto-comiple
+```bash
+cd example && make proto-comiple
 ```
