@@ -3,6 +3,7 @@ package ginext
 import (
 	"encoding/json"
 	"errors"
+	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -50,20 +51,17 @@ func ShouldBindUri(c *gin.Context, v any) error {
 }
 
 func warpError(c *gin.Context, err error) error {
-	var validationsErr *ValidateErrors
-	if errors.As(err, &validationsErr) {
-		return errcode.New(400, validationsErr.Error())
+	if e := new(ValidateErrors); errors.As(err, &e) {
+		return errcode.New(http.StatusBadRequest, e.Error())
 	}
 
-	var validationErr *ValidateError
-	if errors.As(err, &validationErr) {
-		return errcode.New(400, validationErr.Error())
+	if e := new(ValidateError); errors.As(err, &e) {
+		return errcode.New(http.StatusBadRequest, e.Error())
 	}
 
-	var unmarshalErr *json.UnmarshalTypeError
-	if errors.As(err, &unmarshalErr) {
-		return errcode.New(400, err.Error())
+	if e := new(json.UnmarshalTypeError); errors.As(err, &e) {
+		return errcode.New(http.StatusBadRequest, e.Error())
 	}
 
-	return errcode.New(400, "invalid request")
+	return errcode.New(http.StatusBadRequest, "invalid request")
 }
