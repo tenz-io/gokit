@@ -28,6 +28,7 @@ use (
 	./logger
 	./logger/example
 	./monitor
+	./protoc-gen-go-gin
 	./retriever
 	./retriever/example
 	./tracer
