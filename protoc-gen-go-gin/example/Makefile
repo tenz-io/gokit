@@ -17,4 +17,6 @@ dep:
 
 .PHONY: send-request
 send-request:
-	curl --verbose  localhost:8888/v1/author/123/articles/
+	curl -X POST "localhost:8888/v1/author/123/articles?foo=bar&foo=baz" \
+	-H "Content-Type: application/json" \
+	-d '{"title":"Hello World","content":"This is a test article"}'

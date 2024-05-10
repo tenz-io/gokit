@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 
-	"cloud.google.com/go/functions/metadata"
 	v1 "example/api/product/app/v1"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/gin-gonic/gin"
 )
@@ -29,10 +29,10 @@ func (s *service) UploadImage(ctx context.Context, req *v1.UploadImageReq) (*v1.
 
 func (s *service) CreateArticle(ctx context.Context, article *v1.Article) (*v1.Article, error) {
 	var (
-		meta, err = metadata.FromContext(ctx)
+		meta, existing = metadata.FromIncomingContext(ctx)
 	)
-	if err != nil {
-		return nil, fmt.Errorf("get metadata failed: %w", err)
+	if !existing {
+		return nil, fmt.Errorf("metadata not found")
 	}
 
 	log.Printf("metadata: %+v", meta)

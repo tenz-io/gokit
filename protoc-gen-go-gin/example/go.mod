@@ -3,7 +3,6 @@ module example
 go 1.21
 
 require (
-	cloud.google.com/go/functions v1.16.2
 	github.com/gin-gonic/gin v1.10.0
 	github.com/tenz-io/gokit/ginext v1.0.6
 	google.golang.org/genproto/googleapis/api v0.0.0-20240506185236-b8a5c65736ae
