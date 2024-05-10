@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 
 	"github.com/tenz-io/gokit/ginext/errcode"
 )
@@ -47,6 +48,14 @@ func (v ValidateErrors) Errors() []string {
 		errs = append(errs, err.Error())
 	}
 	return errs
+}
+
+// ShouldBindQuery binds the passed struct pointer using the specified binding engine.
+func ShouldBindQuery(c *gin.Context, v any) error {
+	if err := c.ShouldBindQuery(v); err != nil {
+		return warpError(c, err)
+	}
+	return nil
 }
 
 // ShouldBindUri binds the passed struct pointer using the specified binding engine.
@@ -137,6 +146,10 @@ func warpError(c *gin.Context, err error) error {
 	}
 
 	if e := new(json.UnmarshalTypeError); errors.As(err, &e) {
+		return errcode.New(http.StatusBadRequest, e.Error())
+	}
+
+	if e := new(validator.ValidationErrors); errors.As(err, &e) {
 		return errcode.New(http.StatusBadRequest, e.Error())
 	}
 

@@ -1,3 +1,5 @@
+cloud.google.com/go/functions v1.16.2 h1:83bd2lCgtu2nLbX2jrqsrQhIs7VuVA1N6Op5syeRVIg=
+cloud.google.com/go/functions v1.16.2/go.mod h1:+gMvV5E3nMb9EPqX6XwRb646jTyVz8q4yk3DD6xxHpg=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/bytedance/sonic v1.11.6 h1:oUp34TzMlL+OY1OUWxHqsdkgC/Zfc85zGqw9siXjrc0=
@@ -81,8 +83,8 @@ github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o
 github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
 github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
-github.com/tenz-io/gokit/ginext v1.0.3 h1:yVJi4mtvdnNtKHiA1fYODwfUxOeyLVTfZRmsTnCOU2s=
-github.com/tenz-io/gokit/ginext v1.0.3/go.mod h1:fagjem0kDyPbbm9bZhVa94be0gGNlGEtnhZY9yu9Kgs=
+github.com/tenz-io/gokit/ginext v1.0.5 h1:K1Mz340Zylkay7zDLsQyf5z61ua75zfdyNNQ+g5OV2I=
+github.com/tenz-io/gokit/ginext v1.0.5/go.mod h1:3/aoXmKzhQn1RIQXJxYGZb4Qkq5J9eZrU10JsWywqMM=
 github.com/tenz-io/gokit/logger v1.5.2 h1:2EpNA+g/8RT5+jT+RBPhL9RzhEL2cK9N4kDFfXbZuqM=
 github.com/tenz-io/gokit/logger v1.5.2/go.mod h1:X//3sk2BZe0yPpOleb3Dwlwl8pRlKGs1vZQ+OAFS9Tw=
 github.com/tenz-io/gokit/monitor v1.5.0 h1:qMtAJujc+/66/C8MHgYcDzhlv0E+SfGQ9VIAe82NFqg=

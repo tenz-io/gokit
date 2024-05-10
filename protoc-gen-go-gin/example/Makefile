@@ -13,3 +13,8 @@ protoc-compile:
 .PHONY: dep
 dep:
 	go mod tidy -v
+
+
+.PHONY: send-request
+send-request:
+	curl --verbose  localhost:8888/v1/author/123/articles/

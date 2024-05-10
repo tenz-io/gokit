@@ -50,7 +50,7 @@ type method struct {
 	Request string // SayHelloReq
 	Reply   string // SayHelloResp
 	// http_rule
-	Path         string // 路由
+	Path         string // route path
 	Method       string // HTTP Method
 	Body         string
 	ResponseBody string
@@ -61,7 +61,7 @@ func (m *method) HandlerName() string {
 	return fmt.Sprintf("%s_%d", m.Name, m.Num)
 }
 
-// HasPathParams 是否包含路由参数
+// HasPathParams check if the path has path params
 func (m *method) HasPathParams() bool {
 	paths := strings.Split(m.Path, "/")
 	for _, p := range paths {
@@ -72,7 +72,13 @@ func (m *method) HasPathParams() bool {
 	return false
 }
 
-// initPathParams 转换参数路由 {xx} --> :xx
+// HasQueryParams check if the path has query params
+func (m *method) HasQueryParams() bool {
+	return strings.Contains(m.Path, "?")
+}
+
+// initPathParams convert path params to gin style
+// {xx} --> :xx
 func (m *method) initPathParams() {
 	paths := strings.Split(m.Path, "/")
 	for i, p := range paths {
