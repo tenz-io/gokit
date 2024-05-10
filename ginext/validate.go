@@ -49,14 +49,6 @@ func (v ValidateErrors) Errors() []string {
 	return errs
 }
 
-// ShouldBind binds the passed struct pointer using the specified binding engine.
-func ShouldBind(c *gin.Context, v any) error {
-	if err := c.ShouldBind(v); err != nil {
-		return warpError(c, err)
-	}
-	return nil
-}
-
 // ShouldBindUri binds the passed struct pointer using the specified binding engine.
 func ShouldBindUri(c *gin.Context, v any) error {
 	if err := c.ShouldBindUri(v); err != nil {
@@ -65,13 +57,21 @@ func ShouldBindUri(c *gin.Context, v any) error {
 	return nil
 }
 
-// ShouldBindFile binds the passed struct pointer using the specified binding engine.
-func ShouldBindFile(c *gin.Context, v any) error {
-	// if content type is not multipart/form-data, return nil
-	if !strings.Contains(c.GetHeader("Content-Type"), "multipart/form-data") {
-		return nil
+// ShouldBind binds the passed struct pointer using the specified binding engine.
+func ShouldBind(c *gin.Context, v any) error {
+	// is multipart form
+	if strings.Contains(c.GetHeader("Content-Type"), "multipart/form-data") {
+		return ShouldBindFile(c, v)
 	}
 
+	if err := c.ShouldBind(v); err != nil {
+		return warpError(c, err)
+	}
+	return nil
+}
+
+// ShouldBindFile binds the passed struct pointer using the specified binding engine.
+func ShouldBindFile(c *gin.Context, v any) error {
 	// if method is not POST or PUT, return error
 	if c.Request.Method != http.MethodPost && c.Request.Method != http.MethodPut {
 		return warpError(c, fmt.Errorf("invalid method %s for file upload", c.Request.Method))
@@ -79,6 +79,11 @@ func ShouldBindFile(c *gin.Context, v any) error {
 
 	if v == nil {
 		return errors.New("nil struct pointer passed to ShouldBindFile")
+	}
+
+	// if v is not implemented FileRequest, return error
+	if _, ok := v.(FileRequest); !ok {
+		return errors.New("struct does not implement FileRequest")
 	}
 
 	val := reflect.ValueOf(v)
@@ -96,11 +101,10 @@ func ShouldBindFile(c *gin.Context, v any) error {
 
 	// Check for a File field and set it
 	fileField := structVal.FieldByName("File")
-	filenameField := structVal.FieldByName("Filename")
 	if !fileField.IsValid() || fileField.Kind() != reflect.Slice || fileField.Type().Elem().Kind() != reflect.Uint8 {
 		return errors.New("struct does not have a 'File []byte' field")
 	}
-
+	filenameField := structVal.FieldByName("Filename")
 	if !filenameField.IsValid() || filenameField.Kind() != reflect.String {
 		return errors.New("struct does not have a 'Filename string' field")
 	}

@@ -62,6 +62,14 @@ type TestUpload struct {
 	Filename string `protobuf:"bytes,2,opt,name=filename,proto3" json:"filename,omitempty"`
 }
 
+func (t *TestUpload) GetFile() []byte {
+	return t.File
+}
+
+func (t *TestUpload) GetFilename() string {
+	return t.Filename
+}
+
 // TestShouldBindFile checks if the file binding works correctly
 func TestShouldBindFile(t *testing.T) {
 	// Set up a test file content
