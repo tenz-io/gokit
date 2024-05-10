@@ -9,10 +9,24 @@ import (
 	"github.com/tenz-io/gokit/ginext/errcode"
 )
 
+type FileResponse interface {
+	// GetFile returns the file content
+	GetFile() []byte
+}
+
 func Response(c *gin.Context, data any) {
 	if data == nil {
 		data = gin.H{}
 	}
+
+	// if data is a FileResponse, return file
+	if f, ok := data.(FileResponse); ok {
+		fileContent := f.GetFile()
+		contentType := http.DetectContentType(fileContent)
+		c.Data(http.StatusOK, contentType, fileContent)
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": data})
 }
 

@@ -1,10 +1,14 @@
 package ginext
 
 import (
+	"bytes"
 	"errors"
+	"mime/multipart"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/tenz-io/gokit/ginext/errcode"
 )
@@ -50,4 +54,46 @@ func Test_warpError(t *testing.T) {
 			tt.assert(t, err)
 		})
 	}
+}
+
+// Define a test struct that matches expected usage
+type TestUpload struct {
+	File     []byte `protobuf:"bytes,1,opt,name=file,proto3" json:"file,omitempty" form:"file"`
+	Filename string `protobuf:"bytes,2,opt,name=filename,proto3" json:"filename,omitempty"`
+}
+
+// TestShouldBindFile checks if the file binding works correctly
+func TestShouldBindFile(t *testing.T) {
+	// Set up a test file content
+	fileContents := []byte("test file content")
+	body := new(bytes.Buffer)
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("file", "test.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	part.Write(fileContents)
+	writer.Close()
+
+	// Create a test request and recorder
+	req := httptest.NewRequest("POST", "/upload", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	w := httptest.NewRecorder()
+
+	// Create a new Gin context from the http request
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+
+	// Create an instance of the struct that ShouldBindFile will populate
+	var testUpload TestUpload
+
+	// Call the function under test
+	err = ShouldBindFile(c, &testUpload)
+	assert.NoError(t, err, "ShouldBindFile should not return an error")
+
+	// Check if the file was correctly bound
+	assert.Equal(t, fileContents, testUpload.File, "The file contents should match the uploaded file")
+
+	// Optionally, test other parts of the response or additional conditions
+	assert.Equal(t, "test.txt", testUpload.Filename, "The filename should match the uploaded filename")
 }

@@ -167,6 +167,44 @@
           "BlogService"
         ]
       }
+    },
+    "/v1/images": {
+      "post": {
+        "operationId": "BlogService_UploadImage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UploadImageResp"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "file",
+            "description": "@inject_tag: form:\"file\"",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "byte"
+          },
+          {
+            "name": "filename",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "BlogService"
+        ]
+      }
     }
   },
   "definitions": {
@@ -227,6 +265,14 @@
             "type": "object",
             "$ref": "#/definitions/v1Article"
           }
+        }
+      }
+    },
+    "v1UploadImageResp": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
         }
       }
     }
