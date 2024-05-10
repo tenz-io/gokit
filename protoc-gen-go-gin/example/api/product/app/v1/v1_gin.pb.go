@@ -48,10 +48,11 @@ func (s *BlogService) GetArticles_0(ctx *gin.Context) {
 		return
 	}
 	md := metadata.New(nil)
-	md.Set("url", ctx.Request.URL.String())
 	md.Set("path", ctx.Request.URL.Path)
-	md.Set("query", ctx.Request.URL.Query().Encode())
 	md.Set("raw_query", ctx.Request.URL.RawQuery)
+	for k, v := range ctx.Request.URL.Query() {
+		md.Set(k, v...)
+	}
 	for k, v := range ctx.Request.Header {
 		md.Set(k, v...)
 	}
@@ -73,10 +74,11 @@ func (s *BlogService) GetArticles_1(ctx *gin.Context) {
 		return
 	}
 	md := metadata.New(nil)
-	md.Set("url", ctx.Request.URL.String())
 	md.Set("path", ctx.Request.URL.Path)
-	md.Set("query", ctx.Request.URL.Query().Encode())
 	md.Set("raw_query", ctx.Request.URL.RawQuery)
+	for k, v := range ctx.Request.URL.Query() {
+		md.Set(k, v...)
+	}
 	for k, v := range ctx.Request.Header {
 		md.Set(k, v...)
 	}
@@ -103,10 +105,11 @@ func (s *BlogService) CreateArticle_0(ctx *gin.Context) {
 		return
 	}
 	md := metadata.New(nil)
-	md.Set("url", ctx.Request.URL.String())
 	md.Set("path", ctx.Request.URL.Path)
-	md.Set("query", ctx.Request.URL.Query().Encode())
 	md.Set("raw_query", ctx.Request.URL.RawQuery)
+	for k, v := range ctx.Request.URL.Query() {
+		md.Set(k, v...)
+	}
 	for k, v := range ctx.Request.Header {
 		md.Set(k, v...)
 	}
@@ -128,10 +131,11 @@ func (s *BlogService) UploadImage_0(ctx *gin.Context) {
 		return
 	}
 	md := metadata.New(nil)
-	md.Set("url", ctx.Request.URL.String())
 	md.Set("path", ctx.Request.URL.Path)
-	md.Set("query", ctx.Request.URL.Query().Encode())
 	md.Set("raw_query", ctx.Request.URL.RawQuery)
+	for k, v := range ctx.Request.URL.Query() {
+		md.Set(k, v...)
+	}
 	for k, v := range ctx.Request.Header {
 		md.Set(k, v...)
 	}
