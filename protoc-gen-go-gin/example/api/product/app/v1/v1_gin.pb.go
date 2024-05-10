@@ -18,6 +18,8 @@ type BlogServiceHTTPServer interface {
 	CreateArticle(context.Context, *Article) (*Article, error)
 
 	GetArticles(context.Context, *GetArticlesReq) (*GetArticlesResp, error)
+
+	UploadImage(context.Context, *UploadImageReq) (*UploadImageResp, error)
 }
 
 func RegisterBlogServiceHTTPServer(r gin.IRouter, srv BlogServiceHTTPServer) {
@@ -106,6 +108,27 @@ func (s *BlogService) CreateArticle_0(ctx *gin.Context) {
 	ginext.Response(ctx, out)
 }
 
+func (s *BlogService) UploadImage_0(ctx *gin.Context) {
+	var in UploadImageReq
+
+	if err := ginext.ShouldBind(ctx, &in); err != nil {
+		ginext.ErrorResponse(ctx, err)
+		return
+	}
+	md := metadata.New(nil)
+	for k, v := range ctx.Request.Header {
+		md.Set(k, v...)
+	}
+	newCtx := metadata.NewIncomingContext(ctx.Request.Context(), md)
+	out, err := s.server.(BlogServiceHTTPServer).UploadImage(newCtx, &in)
+	if err != nil {
+		ginext.ErrorResponse(ctx, err)
+		return
+	}
+
+	ginext.Response(ctx, out)
+}
+
 func (s *BlogService) RegisterService() {
 
 	s.router.Handle("GET", "/v1/author/:author_id/articles", s.GetArticles_0)
@@ -113,5 +136,7 @@ func (s *BlogService) RegisterService() {
 	s.router.Handle("GET", "/v1/articles", s.GetArticles_1)
 
 	s.router.Handle("POST", "/v1/author/:author_id/articles", s.CreateArticle_0)
+
+	s.router.Handle("POST", "/v1/images", s.UploadImage_0)
 
 }
