@@ -149,9 +149,10 @@ func warpError(c *gin.Context, err error) error {
 		return errcode.New(http.StatusBadRequest, e.Error())
 	}
 
-	if e := new(validator.ValidationErrors); errors.As(err, &e) {
+	e := validator.ValidationErrors{}
+	if errors.As(err, &e) {
 		return errcode.New(http.StatusBadRequest, e.Error())
 	}
 
-	return errcode.New(http.StatusBadRequest, "invalid request")
+	return errcode.New(http.StatusBadRequest, fmt.Sprintf("invalid request: %s", err.Error()))
 }
