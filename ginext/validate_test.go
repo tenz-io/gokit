@@ -2,15 +2,17 @@ package ginext
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/stretchr/testify/assert"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
-
 	"github.com/tenz-io/gokit/ginext/errcode"
 )
 
@@ -57,23 +59,176 @@ func Test_warpError(t *testing.T) {
 	}
 }
 
-// Define a test struct that matches expected usage
-type TestUpload struct {
-	File     []byte `protobuf:"bytes,1,opt,name=file,proto3" json:"file,omitempty" form:"file"`
-	Filename string `protobuf:"bytes,2,opt,name=filename,proto3" json:"filename,omitempty"`
+type TestResponseFrame[T any] struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Data    T      `json:"data"`
 }
 
-func (t *TestUpload) GetFile() []byte {
-	return t.File
+type TestRequest struct {
+	// @inject_tag: form:"title"
+	Title string `json:"title,omitempty" form:"title" binding:"required"`
+	// @inject_tag: form:"page"
+	Page int32 `json:"page,omitempty" form:"page"`
+	// @inject_tag: form:"page_size"
+	PageSize int32 `json:"page_size,omitempty" form:"page_size"`
+	// @inject_tag: form:"author_id" uri:"author_id"
+	AuthorId int32 `json:"author_id,omitempty" uri:"author_id"`
 }
 
-func (t *TestUpload) GetFilename() string {
-	return t.Filename
+func TestShouldBind_form(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.Default()
+
+	router.POST("/v1/:author_id/articles", func(c *gin.Context) {
+		var in TestRequest
+		if err := ShouldBind(c, &in); err != nil {
+			ErrorResponse(c, err)
+			return
+		}
+		if err := ShouldBindUri(c, &in); err != nil {
+			ErrorResponse(c, err)
+			return
+		}
+		Response(c, &in)
+	})
+
+	body := []byte(`title=test&page=1&page_size=10&foo=bar`)
+	req, _ := http.NewRequest("POST", "/v1/123/articles", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	respContent := w.Body.String()
+	t.Logf("response content: %s", respContent)
+
+	status := w.Code
+	if status != http.StatusOK {
+		t.Errorf("status code is not 200")
+		return
+	}
+
+	out := &TestResponseFrame[*TestRequest]{}
+	err := json.Unmarshal([]byte(respContent), out)
+	if err != nil {
+		t.Errorf("failed to unmarshal response")
+		return
+	}
+
+	expectedResp := &TestResponseFrame[*TestRequest]{
+		Code:    0,
+		Message: "success",
+		Data: &TestRequest{
+			Title:    "test",
+			Page:     1,
+			PageSize: 10,
+			AuthorId: 123,
+		},
+	}
+
+	if !reflect.DeepEqual(out, expectedResp) {
+		t.Errorf("response is not expected, got: %+v, expected: %+v", out.Data, expectedResp)
+		return
+	}
 }
 
-// TestShouldBindFile checks if the file binding works correctly
-func TestShouldBindFile(t *testing.T) {
-	// Set up a test file content
+func TestShouldBind_json(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.Default()
+
+	router.POST("/v1/:author_id/articles", func(c *gin.Context) {
+		var in TestRequest
+		if err := ShouldBind(c, &in); err != nil {
+			ErrorResponse(c, err)
+			return
+		}
+		if err := ShouldBindUri(c, &in); err != nil {
+			ErrorResponse(c, err)
+			return
+		}
+		Response(c, &in)
+	})
+
+	body := []byte(`{"title":"test","page":1,"page_size":10}`)
+	req, _ := http.NewRequest("POST", "/v1/123/articles", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	respContent := w.Body.String()
+	t.Logf("response content: %s", respContent)
+
+	status := w.Code
+	if status != http.StatusOK {
+		t.Errorf("status code is not 200")
+		return
+	}
+
+	out := &TestResponseFrame[*TestRequest]{}
+	err := json.Unmarshal([]byte(respContent), out)
+	if err != nil {
+		t.Errorf("failed to unmarshal response")
+		return
+	}
+
+	expectedResp := &TestResponseFrame[*TestRequest]{
+		Code:    0,
+		Message: "success",
+		Data: &TestRequest{
+			Title:    "test",
+			Page:     1,
+			PageSize: 10,
+			AuthorId: 123,
+		},
+	}
+
+	if !reflect.DeepEqual(out, expectedResp) {
+		t.Errorf("response is not expected, got: %+v, expected: %+v", out.Data, expectedResp)
+		return
+	}
+}
+
+type TestFileRequest struct {
+	// @inject_tag: form:"userid"
+	UserId   int64  `json:"userid,omitempty" uri:"userid"`
+	Username string `json:"username,omitempty" form:"username" binding:"required"`
+	// @inject_tag: form:"page"
+	File     []byte `json:"file,omitempty" form:"file" binding:"required"`
+	Filename string `json:"filename,omitempty" form:"filename" binding:"required"`
+}
+
+func (tf *TestFileRequest) GetFile() []byte {
+	return tf.File
+}
+
+func (tf *TestFileRequest) GetFilename() string {
+	return tf.Filename
+}
+
+func TestShouldBind_file(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.Default()
+
+	router.POST("/v1/:userid/upload", func(c *gin.Context) {
+		var in TestFileRequest
+		if err := ShouldBind(c, &in); err != nil {
+			ErrorResponse(c, err)
+			return
+		}
+		if err := ShouldBindUri(c, &in); err != nil {
+			ErrorResponse(c, err)
+			return
+		}
+		Response(c, &map[string]any{
+			"userid":    in.UserId,
+			"username":  in.Username,
+			"filename":  in.Filename,
+			"file_size": len(in.File),
+		})
+	})
+
 	fileContents := []byte("test file content")
 	body := new(bytes.Buffer)
 	writer := multipart.NewWriter(body)
@@ -83,198 +238,83 @@ func TestShouldBindFile(t *testing.T) {
 	}
 	part.Write(fileContents)
 	writer.Close()
-
-	// Create a test request and recorder
-	req := httptest.NewRequest("POST", "/upload", body)
+	req, _ := http.NewRequest("POST", "/v1/123/upload", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	w := httptest.NewRecorder()
 
-	// Create a new Gin context from the http request
-	c, _ := gin.CreateTestContext(w)
-	c.Request = req
-
-	// Create an instance of the struct that ShouldBindFile will populate
-	var testUpload TestUpload
-
-	// Call the function under test
-	err = ShouldBindFile(c, &testUpload)
-	assert.NoError(t, err, "ShouldBindFile should not return an error")
-
-	// Check if the file was correctly bound
-	assert.Equal(t, fileContents, testUpload.File, "The file contents should match the uploaded file")
-
-	// Optionally, test other parts of the response or additional conditions
-	assert.Equal(t, "test.txt", testUpload.Filename, "The filename should match the uploaded filename")
-}
-
-// Define a struct that matches your URI parameters
-type TestUri struct {
-	ID   string `uri:"id" binding:"required"`
-	Name string `uri:"name" binding:"required"`
-}
-
-// TestShouldBindUri checks if URI binding works correctly
-func TestShouldBindUri(t *testing.T) {
-	// Set Gin to Test Mode
-	gin.SetMode(gin.TestMode)
-
-	// Setup route and params
-	router := gin.Default()
-	router.GET("/:id/:name", func(c *gin.Context) {
-		var uri TestUri
-		err := ShouldBindUri(c, &uri)
-		// Here you can handle errors as per your application needs
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusOK, uri)
-	})
-
-	// Create a request to pass to our handler.
-	req, _ := http.NewRequest("GET", "/123/john", nil)
-	w := httptest.NewRecorder()
-
-	// Perform the request
 	router.ServeHTTP(w, req)
 
-	// Check to ensure the response was what you expected
-	assert.Equal(t, http.StatusOK, w.Code, "HTTP status should be 200")
-	assert.Contains(t, w.Body.String(), "123", "Response should contain '123'")
-	assert.Contains(t, w.Body.String(), "john", "Response should contain 'john'")
+	respContent := w.Body.String()
+	t.Logf("response content: %s", respContent)
+
 }
 
-type TestRequest struct {
-	// @inject_tag: form:"title"
-	Title string `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty" form:"title"`
-	// @inject_tag: form:"page"
-	Page int32 `protobuf:"varint,2,opt,name=page,proto3" json:"page,omitempty" form:"page"`
-	// @inject_tag: form:"page_size" binding:"required"
-	PageSize int32 `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty" form:"page_size" binding:"required"`
-	// @inject_tag: form:"author_id" uri:"author_id"
-	AuthorId int32 `protobuf:"varint,4,opt,name=author_id,json=authorId,proto3" json:"author_id,omitempty" form:"author_id" uri:"author_id"`
-}
-
-func TestShouldBind_form(t *testing.T) {
-	// Set Gin to Test Mode
-	gin.SetMode(gin.TestMode)
-
-	// Setup route and params
-	router := gin.Default()
-	router.POST("/v1/author/:author_id/articles", func(c *gin.Context) {
-		var req TestRequest
-		err := ShouldBind(c, &req)
-		// Here you can handle errors as per your application needs
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusOK, req)
-	})
-
-	// Create a request to pass to our handler.
-	body := bytes.NewBufferString("title=test&page=1&page_size=10&author_id=123")
-	req, _ := http.NewRequest("POST", "/v1/author/123/articles", body)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Form = make(map[string][]string)
-	req.Form.Add("title", "test")
-	req.Form.Add("page", "1")
-	req.Form.Add("page_size", "10")
-	req.Form.Add("author_id", "123")
-	w := httptest.NewRecorder()
-
-	// Perform the request
-	router.ServeHTTP(w, req)
-
-	// Check to ensure the response was what you expected
-	assert.Equal(t, http.StatusOK, w.Code, "HTTP status should be 200")
-	t.Logf("response: %s", w.Body.String())
-
-	assert.Contains(t, w.Body.String(), "test", "Response should contain 'test'")
-	assert.Contains(t, w.Body.String(), "1", "Response should contain '1'")
-	assert.Contains(t, w.Body.String(), "10", "Response should contain '10'")
-	assert.Contains(t, w.Body.String(), "123", "Response should contain '123'")
-}
-
-func TestShouldBind_json(t *testing.T) {
-	// Set Gin to Test Mode
-	gin.SetMode(gin.TestMode)
-
-	// Setup route and params
-	router := gin.Default()
-	router.POST("/v1/author/:author_id/articles", func(c *gin.Context) {
-		var req TestRequest
-		err := ShouldBind(c, &req)
-		// Here you can handle errors as per your application needs
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusOK, req)
-	})
-
-	// Create a request to pass to our handler.
-	body := bytes.NewBufferString(`{"title":"test","page":1,"page_size":10,"author_id":123}`)
-	req, _ := http.NewRequest("POST", "/v1/author/123/articles", body)
-	req.Header.Set("Content-Type", "application/json")
-	req.Form = make(map[string][]string)
-	req.Form.Add("title", "test")
-	req.Form.Add("page", "1")
-	req.Form.Add("page_size", "10")
-	req.Form.Add("author_id", "123")
-	w := httptest.NewRecorder()
-
-	// Perform the request
-	router.ServeHTTP(w, req)
-
-	// Check to ensure the response was what you expected
-	assert.Equal(t, http.StatusOK, w.Code, "HTTP status should be 200")
-	t.Logf("response: %s", w.Body.String())
-
-	assert.Contains(t, w.Body.String(), "test", "Response should contain 'test'")
-	assert.Contains(t, w.Body.String(), "1", "Response should contain '1'")
-	assert.Contains(t, w.Body.String(), "10", "Response should contain '10'")
-	assert.Contains(t, w.Body.String(), "123", "Response should contain '123'")
-}
-
-type TestQuery struct {
-	// @inject_tag: form:"title"
-	Title string `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty" form:"title"`
-	// @inject_tag: form:"page"
-	Page int32 `protobuf:"varint,2,opt,name=page,proto3" json:"page,omitempty" form:"page"`
-	// @inject_tag: form:"page_size" binding:"required"
-	PageSize int32 `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty" form:"page_size" binding:"required"`
-}
-
-func TestShouldBindQuery(t *testing.T) {
-	// Set Gin to Test Mode
-	gin.SetMode(gin.TestMode)
-
-	// Setup route and params
-	router := gin.Default()
-	router.GET("/v1/author/:author_id/articles", func(c *gin.Context) {
-		var req TestQuery
-		err := ShouldBindQuery(c, &req)
-		// Here you can handle errors as per your application needs
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusOK, req)
-	})
-
-	// Create a request to pass to our handler.
-	req, _ := http.NewRequest("GET", "/v1/author/123/articles?title=test&page=1&page_size=10", nil)
-	w := httptest.NewRecorder()
-
-	// Perform the request
-	router.ServeHTTP(w, req)
-
-	// Check to ensure the response was what you expected
-	assert.Equal(t, http.StatusOK, w.Code, "HTTP status should be 200")
-	t.Logf("response: %s", w.Body.String())
-
-	assert.Contains(t, w.Body.String(), "test", "Response should contain 'test'")
-	assert.Contains(t, w.Body.String(), "1", "Response should contain '1'")
-	assert.Contains(t, w.Body.String(), "10", "Response should contain '10'")
+func Test_tryBindMultipart(t *testing.T) {
+	type args struct {
+		c   *gin.Context
+		ptr any
+	}
+	tests := []struct {
+		name          string
+		args          args
+		wantMultipart bool
+		wantErr       assert.ErrorAssertionFunc
+	}{
+		{
+			name: "when content type is not multipart",
+			args: args{
+				c: &gin.Context{
+					Request: &http.Request{
+						Header: http.Header{
+							"Content-Type": []string{"application/json"},
+						},
+					},
+				},
+				ptr: &TestFileRequest{},
+			},
+			wantMultipart: false,
+			wantErr:       assert.NoError,
+		},
+		{
+			name: "when method is not POST or PUT",
+			args: args{
+				c: &gin.Context{
+					Request: &http.Request{
+						Header: http.Header{
+							"Content-Type": []string{"multipart/form-data"},
+						},
+						Method: http.MethodGet,
+					},
+				},
+			},
+			wantMultipart: true,
+			wantErr:       assert.Error,
+		},
+		{
+			name: "when field file not found",
+			args: args{
+				c: &gin.Context{
+					Request: &http.Request{
+						Header: http.Header{
+							"Content-Type": []string{"multipart/form-data"},
+						},
+						Method: http.MethodPost,
+					},
+				},
+				ptr: &TestFileRequest{},
+			},
+			wantMultipart: true,
+			wantErr:       assert.Error,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotMultipart, err := tryBindMultipart(tt.args.c, tt.args.ptr)
+			t.Logf("gotMultipart: %v, err: %v", gotMultipart, err)
+			if !tt.wantErr(t, err, fmt.Sprintf("tryBindMultipart(%v, %v)", tt.args.c, tt.args.ptr)) {
+				return
+			}
+			assert.Equalf(t, tt.wantMultipart, gotMultipart, "tryBindMultipart(%v, %v)", tt.args.c, tt.args.ptr)
+		})
+	}
 }

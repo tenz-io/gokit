@@ -9,7 +9,7 @@ import (
 var _ error = (*Error)(nil)
 
 type Error struct {
-	Code    int    `json:"code"`
+	Code    int    `json:"code"` // custom error code
 	Message string `json:"message"`
 	Status  int    `json:"status"` // httpStatus
 }

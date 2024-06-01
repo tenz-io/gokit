@@ -17,6 +17,7 @@ use (
 	./functional
 	./ginext
 	./ginext/example
+	./ginext/example-bind
 	./gormext
 	./gormext/example
 	./grpcetcd

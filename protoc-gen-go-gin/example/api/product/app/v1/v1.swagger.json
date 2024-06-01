@@ -36,14 +36,14 @@
         "parameters": [
           {
             "name": "title",
-            "description": "@inject_tag: form:\"title\"",
+            "description": "@inject_tag: form:\"title\" binding:\"required\"",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "page",
-            "description": "@inject_tag: form:\"page\"",
+            "description": "@inject_tag: query:\"page\" default:\"1\"",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -51,7 +51,7 @@
           },
           {
             "name": "page_size",
-            "description": "@inject_tag: form:\"page_size\" binding:\"required\"",
+            "description": "@inject_tag: query:\"page_size\" default:\"10\"",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -59,7 +59,7 @@
           },
           {
             "name": "author_id",
-            "description": "@inject_tag: form:\"author_id\" uri:\"author_id\"",
+            "description": "@inject_tag: uri:\"author_id\" binding:\"required\"",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -91,7 +91,7 @@
         "parameters": [
           {
             "name": "author_id",
-            "description": "@inject_tag: form:\"author_id\" uri:\"author_id\"",
+            "description": "@inject_tag: uri:\"author_id\" binding:\"required\"",
             "in": "path",
             "required": true,
             "type": "integer",
@@ -99,14 +99,14 @@
           },
           {
             "name": "title",
-            "description": "@inject_tag: form:\"title\"",
+            "description": "@inject_tag: form:\"title\" binding:\"required\"",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "page",
-            "description": "@inject_tag: form:\"page\"",
+            "description": "@inject_tag: query:\"page\" default:\"1\"",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -114,7 +114,7 @@
           },
           {
             "name": "page_size",
-            "description": "@inject_tag: form:\"page_size\" binding:\"required\"",
+            "description": "@inject_tag: query:\"page_size\" default:\"10\"",
             "in": "query",
             "required": false,
             "type": "integer",

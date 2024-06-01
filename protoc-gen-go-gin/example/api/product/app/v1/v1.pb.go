@@ -26,14 +26,14 @@ type GetArticlesReq struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// @inject_tag: form:"title"
-	Title string `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty" form:"title"`
-	// @inject_tag: form:"page"
-	Page int32 `protobuf:"varint,2,opt,name=page,proto3" json:"page,omitempty" form:"page"`
-	// @inject_tag: form:"page_size" binding:"required"
-	PageSize int32 `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty" form:"page_size" binding:"required"`
-	// @inject_tag: form:"author_id" uri:"author_id"
-	AuthorId int32 `protobuf:"varint,4,opt,name=author_id,json=authorId,proto3" json:"author_id,omitempty" form:"author_id" uri:"author_id"`
+	// @inject_tag: form:"title" binding:"required"
+	Title string `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty" form:"title" binding:"required"`
+	// @inject_tag: query:"page" default:"1"
+	Page int32 `protobuf:"varint,2,opt,name=page,proto3" json:"page,omitempty" query:"page" default:"1"`
+	// @inject_tag: query:"page_size" default:"10"
+	PageSize int32 `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty" query:"page_size" default:"10"`
+	// @inject_tag: uri:"author_id" binding:"required"
+	AuthorId int32 `protobuf:"varint,4,opt,name=author_id,json=authorId,proto3" json:"author_id,omitempty" uri:"author_id" binding:"required"`
 }
 
 func (x *GetArticlesReq) Reset() {
