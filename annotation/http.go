@@ -3,6 +3,7 @@ package annotation
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -112,6 +113,141 @@ func (r RequestField) Set(value any) error {
 				return fmt.Errorf("cannot convert %s to %s", val.Type(), r.FieldVal.Type())
 			}
 		}
+	}
+
+	return nil
+}
+
+// SetString sets the value of the request field.
+// converts the string value to the field type.
+func (r RequestField) SetString(value string) error {
+	if err := r.Validate(); err != nil {
+		return err
+	}
+
+	switch r.FieldVal.Kind() {
+	case reflect.String:
+		r.FieldVal.SetString(value)
+	case reflect.Int,
+		reflect.Int8,
+		reflect.Int16,
+		reflect.Int32,
+		reflect.Int64:
+		v, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return err
+		}
+		r.FieldVal.SetInt(v)
+	case reflect.Uint,
+		reflect.Uint8,
+		reflect.Uint16,
+		reflect.Uint32,
+		reflect.Uint64:
+		v, err := strconv.ParseUint(value, 10, 64)
+		if err != nil {
+			return err
+		}
+		r.FieldVal.SetUint(v)
+	case reflect.Float32,
+		reflect.Float64:
+		v, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return err
+		}
+		r.FieldVal.SetFloat(v)
+	case reflect.Bool:
+		v, err := strconv.ParseBool(value)
+		if err != nil {
+			return err
+		}
+		r.FieldVal.SetBool(v)
+	case reflect.Ptr:
+		switch r.FieldVal.Type().Elem().Kind() {
+		case reflect.String:
+			r.FieldVal.Set(reflect.ValueOf(&value))
+		case reflect.Int:
+			v, err := convertInt[int](value)
+			if err != nil {
+				return err
+			}
+			r.FieldVal.Set(reflect.ValueOf(&v))
+		case reflect.Int8:
+			v, err := convertInt[int8](value)
+			if err != nil {
+				return err
+			}
+			r.FieldVal.Set(reflect.ValueOf(&v))
+		case reflect.Int16:
+			v, err := convertInt[int64](value)
+			if err != nil {
+				return err
+			}
+			r.FieldVal.Set(reflect.ValueOf(&v))
+		case reflect.Int32:
+			v, err := convertInt[int32](value)
+			if err != nil {
+				return err
+			}
+			r.FieldVal.Set(reflect.ValueOf(&v))
+		case reflect.Int64:
+			v, err := convertInt[int64](value)
+			if err != nil {
+				return err
+			}
+			r.FieldVal.Set(reflect.ValueOf(&v))
+		case reflect.Uint:
+			v, err := convertUint[uint](value)
+			if err != nil {
+				return err
+			}
+			r.FieldVal.Set(reflect.ValueOf(&v))
+		case reflect.Uint8:
+			v, err := convertUint[uint8](value)
+			if err != nil {
+				return err
+			}
+			r.FieldVal.Set(reflect.ValueOf(&v))
+		case reflect.Uint16:
+			v, err := convertUint[uint16](value)
+			if err != nil {
+				return err
+			}
+			r.FieldVal.Set(reflect.ValueOf(&v))
+		case reflect.Uint32:
+			v, err := convertUint[uint32](value)
+			if err != nil {
+				return err
+			}
+			r.FieldVal.Set(reflect.ValueOf(&v))
+		case reflect.Uint64:
+			v, err := convertUint[uint64](value)
+			if err != nil {
+				return err
+			}
+			r.FieldVal.Set(reflect.ValueOf(&v))
+		case reflect.Float32:
+			v, err := convertFloatPtr[float32](value)
+			if err != nil {
+				return err
+			}
+			r.FieldVal.Set(reflect.ValueOf(&v))
+		case reflect.Float64:
+			v, err := convertFloatPtr[float64](value)
+			if err != nil {
+				return err
+			}
+			r.FieldVal.Set(reflect.ValueOf(&v))
+		case reflect.Bool:
+			v, err := strconv.ParseBool(value)
+			if err != nil {
+				return err
+			}
+			r.FieldVal.Set(reflect.ValueOf(&v))
+		default:
+			return fmt.Errorf("unsupported field type: %s", r.FieldVal.Kind())
+		}
+	default:
+		return fmt.Errorf("unsupported field type: %s", r.FieldVal.Kind())
 	}
 
 	return nil
@@ -276,4 +412,43 @@ func getBindingType(tagMap map[string]string) (BindingType, bool) {
 		}
 	}
 	return None, false
+}
+
+type (
+	intType interface {
+		int | int8 | int16 | int32 | int64
+	}
+	uintType interface {
+		uint | uint8 | uint16 | uint32 | uint64
+	}
+	floatType interface {
+		float32 | float64
+	}
+)
+
+func convertInt[T intType](s string) (T, error) {
+	var zero T
+	v, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return zero, err
+	}
+	return T(v), nil
+}
+
+func convertUint[T uintType](s string) (T, error) {
+	var zero T
+	v, err := strconv.ParseUint(s, 10, 64)
+	if err != nil {
+		return zero, err
+	}
+	return T(v), nil
+}
+
+func convertFloatPtr[T floatType](s string) (T, error) {
+	var zero T
+	v, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return zero, err
+	}
+	return T(v), nil
 }

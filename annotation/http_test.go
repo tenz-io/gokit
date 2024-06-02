@@ -372,3 +372,71 @@ func TestRequestField_Set2(t *testing.T) {
 	assert.Equal(t, "new_notag_value", *testStruct.NoTagPtrField)
 
 }
+
+func TestRequestField_SetString(t *testing.T) {
+	testStruct := &TestTagStruct2{}
+	requestFields := GetRequestFields(testStruct)
+	for key, field := range requestFields {
+		switch key {
+		case "uri_field":
+			err := field.SetString("12")
+			assert.NoError(t, err)
+		case "uri_ptr_field":
+			err := field.SetString("34")
+			assert.NoError(t, err)
+		case "header_field":
+			err := field.SetString("true")
+			assert.NoError(t, err)
+		case "header_ptr_field":
+			err := field.SetString("false")
+			assert.NoError(t, err)
+		case "query_field":
+			err := field.SetString("456")
+			assert.NoError(t, err)
+		case "query_ptr_field":
+			err := field.SetString("123")
+			assert.NoError(t, err)
+		case "form_field":
+			err := field.SetString("new_form_value")
+			assert.NoError(t, err)
+		case "form_ptr_field":
+			err := field.SetString("new_form_ptr_value")
+			assert.NoError(t, err)
+		case "json_field":
+			err := field.SetString("new_json_value")
+			assert.NoError(t, err)
+		case "json_ptr_field":
+			err := field.SetString("new_json_ptr_value")
+			assert.NoError(t, err)
+		case "proto_field":
+			err := field.SetString("new_proto_value")
+			assert.NoError(t, err)
+		case "proto_ptr_field":
+			err := field.SetString("new_proto_ptr_value")
+			assert.NoError(t, err)
+		case "NoTagField":
+			err := field.SetString("new_notag_value")
+			assert.NoError(t, err)
+		case "NoTagPtrField":
+			err := field.SetString("new_notag_ptr_value")
+			assert.NoError(t, err)
+		}
+	}
+
+	t.Logf("testStruct: %+v", testStruct)
+	assert.Equal(t, int64(12), testStruct.URIField)
+	assert.Equal(t, int64(34), *testStruct.URIPtrField)
+	assert.Equal(t, true, testStruct.HeaderField)
+	assert.Equal(t, false, *testStruct.HeaderPtrField)
+	assert.Equal(t, int32(456), testStruct.QueryField)
+	assert.Equal(t, int32(123), *testStruct.QueryPtrField)
+	assert.Equal(t, "new_form_value", testStruct.FormField)
+	assert.Equal(t, "new_form_ptr_value", *testStruct.FormPtrField)
+	assert.Equal(t, "new_json_value", testStruct.JSONField)
+	assert.Equal(t, "new_json_ptr_value", *testStruct.JSONPtrField)
+	assert.Equal(t, "new_proto_value", testStruct.ProtoField)
+	assert.Equal(t, "new_proto_ptr_value", *testStruct.ProtoPtrField)
+	assert.Equal(t, "new_notag_value", testStruct.NoTagField)
+	assert.Equal(t, "new_notag_ptr_value", *testStruct.NoTagPtrField)
+
+}

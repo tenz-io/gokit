@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"reflect"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -159,47 +158,19 @@ func tryBindMultipart(c *gin.Context, ptr any) (isMultipart bool, err error) {
 	}
 
 	requestFields := annotation.GetRequestFields(ptr)
-	fileFields := function.Filter(requestFields.Values(), func(field annotation.RequestField) bool {
+	var (
+		fileFields []annotation.RequestField
+		formFields []annotation.RequestField
+	)
+	fileFields = function.Filter(requestFields.Values(), func(field annotation.RequestField) bool {
 		return field.IsFile
+	})
+	formFields = function.Filter(requestFields.Values(), func(field annotation.RequestField) bool {
+		return field.IsForm
 	})
 
 	if len(fileFields) == 0 {
-		return true, &ValidateError{
-			Key:     "file",
-			Message: "no file field found in struct",
-		}
-	}
-
-	fieldNames, err := getFieldNames(ptr)
-	if err != nil {
-		return true, err
-	}
-
-	var (
-		fileFieldName     string
-		filenameFieldName string
-	)
-
-	fileFieldName, ok := fieldNames["file"]
-	if !ok {
-		return true, fmt.Errorf("field %s not found in struct", "file")
-	}
-
-	filenameFieldName, ok = fieldNames["filename"]
-	if !ok {
-		return true, fmt.Errorf("field %s not found in struct", "filename")
-	}
-
-	mForm := c.Request.MultipartForm
-	if mForm != nil {
-		for key, _ := range mForm.Value {
-			if _, ok := fieldNames[key]; !ok {
-				return true, &ValidateError{
-					Key:     key,
-					Message: fmt.Sprintf("field %s not found in struct", key),
-				}
-			}
-		}
+		return true, fmt.Errorf("no file field found in struct")
 	}
 
 	// Parse the multipart form
@@ -210,42 +181,79 @@ func tryBindMultipart(c *gin.Context, ptr any) (isMultipart bool, err error) {
 		}
 	}
 
+	// read files
+	for _, field := range fileFields {
+		if err := readAndSetFile(c, &field); err != nil {
+			return true, err
+		}
+	}
+
+	// read form fields
+	for _, field := range formFields {
+		if err := readAndSetForm(c, &field); err != nil {
+			return true, err
+		}
+	}
+
+	return true, nil
+}
+
+func readAndSetFile(c *gin.Context, field *annotation.RequestField) error {
+	if err := (*field).Validate(); err != nil {
+		return &ValidateError{
+			Key:     field.TagName,
+			Message: fmt.Sprintf("error validating file field: %s, err: %s", field.TagName, err.Error()),
+		}
+	}
+
 	// Get the file from the form data
-	file, header, err := c.Request.FormFile("file")
+	file, _, err := c.Request.FormFile(field.TagName)
 	if err != nil {
-		return true, &ValidateError{
-			Key:     "file",
-			Message: fmt.Sprintf("error getting file from form: %s", err.Error()),
+		return &ValidateError{
+			Key:     field.TagName,
+			Message: fmt.Sprintf("error getting file: %s, err: %s", field.TagName, err.Error()),
 		}
 	}
 	defer file.Close()
 
-	var (
-		structVal     = reflect.ValueOf(ptr).Elem()
-		fileField     = structVal.FieldByName(fileFieldName)
-		filenameField = structVal.FieldByName(filenameFieldName)
-	)
-	if fileField.Kind() != reflect.Slice || fileField.Type().Elem().Kind() != reflect.Uint8 {
-		return true, fmt.Errorf("field %s is not a byte slice", fileFieldName)
-	}
-
-	if filenameField.Kind() != reflect.String {
-		return true, fmt.Errorf("field %s is not a string", filenameFieldName)
-	}
-
 	// Read the file into a byte slice
 	fileBytes, err := io.ReadAll(file)
 	if err != nil {
-		return true, &ValidateError{
-			Key:     "file",
-			Message: fmt.Sprintf("error reading file: %s", err.Error()),
+		return &ValidateError{
+			Key:     field.TagName,
+			Message: fmt.Sprintf("error reading file: %s, err: %s", field.TagName, err.Error()),
 		}
 	}
 
-	fileField.SetBytes(fileBytes)
-	filenameField.SetString(header.Filename)
+	err = field.Set(fileBytes)
+	if err != nil {
+		return &ValidateError{
+			Key:     field.TagName,
+			Message: fmt.Sprintf("error setting file: %s, err: %s", field.TagName, err.Error()),
+		}
+	}
+	return nil
+}
 
-	return true, nil
+func readAndSetForm(c *gin.Context, field *annotation.RequestField) error {
+	if err := (*field).Validate(); err != nil {
+		return &ValidateError{
+			Key:     field.TagName,
+			Message: fmt.Sprintf("error validating file field: %s, err: %s", field.TagName, err.Error()),
+		}
+	}
+
+	// Get the form value from the form data
+	value := c.Request.FormValue(field.TagName)
+	err := field.Set(value)
+	if err != nil {
+		return &ValidateError{
+			Key:     field.TagName,
+			Message: fmt.Sprintf("error setting form field: %s, err: %s", field.TagName, err.Error()),
+		}
+
+	}
+	return nil
 }
 
 func warpError(c *gin.Context, err error) error {
