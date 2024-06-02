@@ -52,34 +52,118 @@ func ShouldBindUri(c *gin.Context, v any) error {
 
 // ShouldBind binds the passed struct pointer using the specified binding engine.
 // e.g. body json -> struct { Name string `json:"name"` }
-// e.g. body form -> struct { Name string `form:"name"` }
-// e.g. body multipart -> struct { File []byte `form:"file"` Filename string `form:"filename"` }
-func ShouldBind(c *gin.Context, v any) error {
-	isJson, err := tryBindJSON(c, v)
-	if isJson {
-		if err != nil {
-			return warpError(c, err)
-		}
-		return nil
+// e.g. body form -> struct { Name string `bind:"form,name=username"` }
+// e.g. body multipart -> struct { File []byte `bind:"file,name=file"` }
+func ShouldBind(c *gin.Context, ptr any) error {
+	err := annotation.ParseDefault(ptr)
+	if err != nil {
+		return fmt.Errorf("error parsing default value: %s", err.Error())
 	}
 
-	isForm, err := tryBindForm(c, v)
-	if isForm {
-		if err != nil {
-			return warpError(c, err)
-		}
-		return nil
+	if has, err := tryBindUri(c, ptr); has && err != nil {
+		return warpError(c, err)
 	}
 
-	isMultipart, err := tryBindMultipart(c, v)
-	if isMultipart {
-		if err != nil {
-			return warpError(c, err)
-		}
-		return nil
+	if has, err := tryBindQuery(c, ptr); has && err != nil {
+		return warpError(c, err)
 	}
 
-	return c.ShouldBind(v)
+	if has, err := tryBindHeader(c, ptr); has && err != nil {
+		return warpError(c, err)
+	}
+	if has, err := tryBindMultipart(c, ptr); has && err != nil {
+		return warpError(c, err)
+	}
+
+	if has, err := tryBindForm(c, ptr); has && err != nil {
+		return warpError(c, err)
+	}
+
+	if has, err := tryBindJSON(c, ptr); has && err != nil {
+		return warpError(c, err)
+	}
+
+	err = annotation.ValidateStruct(ptr)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// tryBindUri tries to bind a uri request to a struct
+// e.g: /path/:id -> struct { ID int64 `bind:"uri,name=id"` }
+func tryBindUri(c *gin.Context, ptr any) (isUri bool, err error) {
+	requestFields := annotation.GetRequestFields(ptr)
+	if len(requestFields.Values()) == 0 {
+		return false, nil
+	}
+
+	uriFields := function.Filter(requestFields.Values(), func(field annotation.RequestField) bool {
+		return field.IsUri
+	})
+
+	if len(uriFields) == 0 {
+		return false, nil
+	}
+
+	if err = c.BindUri(ptr); err != nil {
+		return true, err
+	}
+	return true, nil
+}
+
+// tryBindQuery tries to bind a query request to a struct
+// e.g: /path?offset=1 -> struct { Offset int `bind:"query:name=offset"` }
+func tryBindQuery(c *gin.Context, ptr any) (isQuery bool, err error) {
+	requestFields := annotation.GetRequestFields(ptr)
+	if len(requestFields.Values()) == 0 {
+		return false, nil
+	}
+
+	queryFields := function.Filter(requestFields.Values(), func(field annotation.RequestField) bool {
+		return field.IsQuery
+	})
+
+	if len(queryFields) == 0 {
+		return false, nil
+	}
+
+	for _, field := range queryFields {
+		value := c.Query(field.TagName)
+		if value == "" {
+			continue
+		}
+		_ = field.SetString(value)
+	}
+	return true, nil
+}
+
+// tryBindHeader tries to bind a header request to a struct
+// e.g: header: Authorization: Bearer token -> struct { Authorization string `bind:"header,name=Authorization"` }
+func tryBindHeader(c *gin.Context, ptr any) (isHeader bool, err error) {
+	requestFields := annotation.GetRequestFields(ptr)
+	if len(requestFields.Values()) == 0 {
+		return false, nil
+	}
+
+	headerFields := function.Filter(requestFields.Values(), func(field annotation.RequestField) bool {
+		return field.IsHeader
+	})
+
+	if len(headerFields) == 0 {
+		return false, nil
+	}
+
+	for _, field := range headerFields {
+		// get header value
+		value := c.GetHeader(field.TagName)
+		if value == "" {
+			continue
+		}
+		_ = field.SetString(value)
+	}
+	return true, nil
 }
 
 // tryBindForm tries to bind a form request to a struct
@@ -95,11 +179,6 @@ func tryBindForm(c *gin.Context, ptr any) (isForm bool, err error) {
 			Key:     "method",
 			Message: fmt.Sprintf("invalid method %s for form request, should be POST or PUT", c.Request.Method),
 		}
-	}
-
-	_, err = getPtrElem(ptr)
-	if err != nil {
-		return true, err
 	}
 
 	if err = c.ShouldBind(ptr); err != nil {
@@ -125,13 +204,21 @@ func tryBindJSON(c *gin.Context, ptr any) (isJson bool, err error) {
 		}
 	}
 
-	_, err = getPtrElem(ptr)
+	// read request body into byte slice
+	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		return true, err
+		return true, &ValidateError{
+			Key:     "body",
+			Message: fmt.Sprintf("error reading request body: %s", err.Error()),
+		}
 	}
 
-	if err = c.ShouldBind(ptr); err != nil {
-		return true, err
+	err = json.Unmarshal(body, ptr)
+	if err != nil {
+		return true, &ValidateError{
+			Key:     "json_format",
+			Message: fmt.Sprintf("error unmarshalling request body: %s", err.Error()),
+		}
 	}
 
 	return true, nil
@@ -139,10 +226,6 @@ func tryBindJSON(c *gin.Context, ptr any) (isJson bool, err error) {
 
 // TryBindMultipart tries to bind a multipart request to a struct,
 // content-type: multipart/form-data
-//
-// The struct should have two fields:
-// 1) has a `File []byte` field;
-// 2) and a `Filename string` field;
 func tryBindMultipart(c *gin.Context, ptr any) (isMultipart bool, err error) {
 	if !strings.HasPrefix(c.Request.Header.Get("Content-Type"), "multipart/form-data") {
 		// is not multipart form
@@ -190,9 +273,7 @@ func tryBindMultipart(c *gin.Context, ptr any) (isMultipart bool, err error) {
 
 	// read form fields
 	for _, field := range formFields {
-		if err := readAndSetForm(c, &field); err != nil {
-			return true, err
-		}
+		_ = readAndSetForm(c, &field)
 	}
 
 	return true, nil
@@ -214,7 +295,9 @@ func readAndSetFile(c *gin.Context, field *annotation.RequestField) error {
 			Message: fmt.Sprintf("error getting file: %s, err: %s", field.TagName, err.Error()),
 		}
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	// Read the file into a byte slice
 	fileBytes, err := io.ReadAll(file)
@@ -245,7 +328,7 @@ func readAndSetForm(c *gin.Context, field *annotation.RequestField) error {
 
 	// Get the form value from the form data
 	value := c.Request.FormValue(field.TagName)
-	err := field.Set(value)
+	err := field.SetString(value)
 	if err != nil {
 		return &ValidateError{
 			Key:     field.TagName,
@@ -256,7 +339,7 @@ func readAndSetForm(c *gin.Context, field *annotation.RequestField) error {
 	return nil
 }
 
-func warpError(c *gin.Context, err error) error {
+func warpError(_ *gin.Context, err error) error {
 	if e := new(ValidateErrors); errors.As(err, &e) {
 		return errcode.New(http.StatusBadRequest, e.Error())
 	}
