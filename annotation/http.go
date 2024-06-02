@@ -1,6 +1,7 @@
 package annotation
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 )
@@ -29,6 +30,91 @@ func (r RequestFields) Values() []RequestField {
 		values = append(values, v)
 	}
 	return values
+}
+
+// Validate returns true if the request fields contain the name.
+func (r RequestField) Validate() error {
+	if r.IsFile {
+		// file field should have bytes type field
+		if r.Field.Type.Kind() != reflect.Slice || r.Field.Type.Elem().Kind() != reflect.Uint8 {
+			return fmt.Errorf("field %s should be []byte", r.FieldName)
+		}
+	}
+
+	return nil
+}
+
+// Set sets the value of the request field.
+func (r RequestField) Set(value any) error {
+	if err := r.Validate(); err != nil {
+		return err
+	}
+	var (
+		val = reflect.ValueOf(value)
+	)
+
+	if val.Kind() == reflect.Ptr && val.IsNil() {
+		return nil
+	}
+
+	switch {
+	case r.FieldVal.Kind() != reflect.Ptr && val.Kind() == reflect.Ptr:
+		// if types match, set the value
+		if r.FieldVal.Type() == val.Type().Elem() {
+			r.FieldVal.Set(val.Elem())
+		} else {
+			// try to convert the value
+			if val.Type().Elem().ConvertibleTo(r.FieldVal.Type()) {
+				r.FieldVal.Set(val.Elem().Convert(r.FieldVal.Type()))
+			} else {
+				return fmt.Errorf("cannot convert %s to %s", val.Type().Elem(), r.FieldVal.Type())
+			}
+		}
+	case r.FieldVal.Kind() == reflect.Ptr && val.Kind() != reflect.Ptr:
+		// if types match, set the value
+		if r.FieldVal.Type().Elem() == val.Type() {
+			// make a new pointer
+			newVal := reflect.New(val.Type())
+			newVal.Elem().Set(val)
+			r.FieldVal.Set(newVal)
+		} else {
+			// try to convert the value
+			if val.Type().ConvertibleTo(r.FieldVal.Type().Elem()) {
+				// make a new pointer match the type
+				newVal := reflect.New(r.FieldVal.Type().Elem())
+				newVal.Elem().Set(val.Convert(r.FieldVal.Type().Elem()))
+				r.FieldVal.Set(newVal)
+			} else {
+				return fmt.Errorf("cannot convert %s to %s", val.Type(), r.FieldVal.Type().Elem())
+			}
+		}
+	case r.FieldVal.Kind() == reflect.Ptr && val.Kind() == reflect.Ptr:
+		// if types match, set the value
+		if r.FieldVal.Type().Elem() == val.Type().Elem() {
+			r.FieldVal.Set(val)
+		} else {
+			// try to convert the value
+			if val.Type().Elem().ConvertibleTo(r.FieldVal.Type().Elem()) {
+				r.FieldVal.Set(val.Elem().Convert(r.FieldVal.Type().Elem()))
+			} else {
+				return fmt.Errorf("cannot convert %s to %s", val.Type().Elem(), r.FieldVal.Type().Elem())
+			}
+		}
+	case r.FieldVal.Kind() != reflect.Ptr && val.Kind() != reflect.Ptr:
+		// if types match, set the value
+		if r.FieldVal.Type() == val.Type() {
+			r.FieldVal.Set(val)
+		} else {
+			// try to convert the value
+			if val.Type().ConvertibleTo(r.FieldVal.Type()) {
+				r.FieldVal.Set(val.Convert(r.FieldVal.Type()))
+			} else {
+				return fmt.Errorf("cannot convert %s to %s", val.Type(), r.FieldVal.Type())
+			}
+		}
+	}
+
+	return nil
 }
 
 // Contains returns true if the request fields contain the name.

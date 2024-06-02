@@ -12,6 +12,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 
+	"github.com/tenz-io/gokit/annotation"
+	function "github.com/tenz-io/gokit/functional"
 	"github.com/tenz-io/gokit/ginext/errcode"
 )
 
@@ -153,6 +155,18 @@ func tryBindMultipart(c *gin.Context, ptr any) (isMultipart bool, err error) {
 		return true, &ValidateError{
 			Key:     "method",
 			Message: fmt.Sprintf("invalid method %s for file upload, should be POST or PUT", c.Request.Method),
+		}
+	}
+
+	requestFields := annotation.GetRequestFields(ptr)
+	fileFields := function.Filter(requestFields.Values(), func(field annotation.RequestField) bool {
+		return field.IsFile
+	})
+
+	if len(fileFields) == 0 {
+		return true, &ValidateError{
+			Key:     "file",
+			Message: "no file field found in struct",
 		}
 	}
 

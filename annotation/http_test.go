@@ -194,3 +194,181 @@ func TestGetTagMap(t *testing.T) {
 		})
 	}
 }
+
+type TestTagStruct2 struct {
+	URIField       int64   `bind:"uri,name=uri_field"`
+	URIPtrField    *int64  `bind:"uri,name=uri_ptr_field"`
+	HeaderField    bool    `bind:"header,name=header_field"`
+	HeaderPtrField *bool   `bind:"header,name=header_ptr_field"`
+	QueryField     int32   `bind:"query,name=query_field"`
+	QueryPtrField  *int32  `bind:"query,name=query_ptr_field"`
+	FormField      string  `bind:"form,name=form_field"`
+	FormPtrField   *string `bind:"form,name=form_ptr_field"`
+	FileField      []byte  `bind:"file,name=file_field"`
+	JSONField      string  `json:"json_field"`
+	JSONPtrField   *string `json:"json_ptr_field"`
+	ProtoField     string  `protobuf:"bytes,1,opt,name=proto_field,proto3"`
+	ProtoPtrField  *string `protobuf:"bytes,1,opt,name=proto_ptr_field,proto3"`
+	NoTagField     string
+	NoTagPtrField  *string
+}
+
+func TestRequestField_Set(t *testing.T) {
+	testStruct := &TestTagStruct2{}
+	requestFields := GetRequestFields(testStruct)
+	for key, field := range requestFields {
+		switch key {
+		case "uri_field":
+			err := field.Set(int64(12))
+			assert.NoError(t, err)
+		case "uri_ptr_field":
+			i := int64(34)
+			err := field.Set(&i)
+			assert.NoError(t, err)
+		case "header_field":
+			err := field.Set(true)
+			assert.NoError(t, err)
+		case "header_ptr_field":
+			b := true
+			err := field.Set(&b)
+			assert.NoError(t, err)
+		case "query_field":
+			err := field.Set(123)
+			assert.NoError(t, err)
+		case "query_ptr_field":
+			i := int32(456)
+			err := field.Set(&i)
+			assert.NoError(t, err)
+		case "form_field":
+			err := field.Set("new_form_value")
+			assert.NoError(t, err)
+		case "form_ptr_field":
+			s := "new_form_ptr_value"
+			err := field.Set(&s)
+			assert.NoError(t, err)
+		case "file_field":
+			err := field.Set([]byte("new_file_value"))
+			assert.NoError(t, err)
+		case "json_field":
+			err := field.Set("new_json_value")
+			assert.NoError(t, err)
+		case "json_ptr_field":
+			s := "new_json_ptr_value"
+			err := field.Set(&s)
+			assert.NoError(t, err)
+		case "proto_field":
+			err := field.Set("new_proto_value")
+			assert.NoError(t, err)
+		case "proto_ptr_field":
+			s := "new_proto_ptr_value"
+			err := field.Set(&s)
+			assert.NoError(t, err)
+		case "NoTagField":
+			err := field.Set("new_notag_value")
+			assert.NoError(t, err)
+		case "NoTagPtrField":
+			s := "new_notag_ptr_value"
+			err := field.Set(&s)
+			assert.NoError(t, err)
+		}
+	}
+
+	t.Logf("testStruct: %+v", testStruct)
+	assert.Equal(t, int64(12), testStruct.URIField)
+	assert.Equal(t, int64(34), *testStruct.URIPtrField)
+	assert.Equal(t, true, testStruct.HeaderField)
+	assert.Equal(t, true, *testStruct.HeaderPtrField)
+	assert.Equal(t, int32(123), testStruct.QueryField)
+	assert.Equal(t, int32(456), *testStruct.QueryPtrField)
+	assert.Equal(t, "new_form_value", testStruct.FormField)
+	assert.Equal(t, "new_form_ptr_value", *testStruct.FormPtrField)
+	assert.Equal(t, []byte("new_file_value"), testStruct.FileField)
+	assert.Equal(t, "new_json_value", testStruct.JSONField)
+	assert.Equal(t, "new_json_ptr_value", *testStruct.JSONPtrField)
+	assert.Equal(t, "new_proto_value", testStruct.ProtoField)
+	assert.Equal(t, "new_proto_ptr_value", *testStruct.ProtoPtrField)
+	assert.Equal(t, "new_notag_value", testStruct.NoTagField)
+	assert.Equal(t, "new_notag_ptr_value", *testStruct.NoTagPtrField)
+
+}
+
+func TestRequestField_Set2(t *testing.T) {
+	testStruct := &TestTagStruct2{}
+	requestFields := GetRequestFields(testStruct)
+	for key, field := range requestFields {
+		switch key {
+		case "uri_field":
+			i := int64(34)
+			err := field.Set(&i)
+			assert.NoError(t, err)
+		case "uri_ptr_field":
+			err := field.Set(int64(12))
+			assert.NoError(t, err)
+		case "header_field":
+			b := true
+			err := field.Set(&b)
+			assert.NoError(t, err)
+		case "header_ptr_field":
+			err := field.Set(true)
+			assert.NoError(t, err)
+		case "query_field":
+			i := int32(456)
+			err := field.Set(&i)
+			assert.NoError(t, err)
+		case "query_ptr_field":
+			err := field.Set(123)
+			assert.NoError(t, err)
+		case "form_field":
+			s := "new_form_ptr_value"
+			err := field.Set(&s)
+			assert.NoError(t, err)
+
+		case "form_ptr_field":
+			err := field.Set("new_form_value")
+			assert.NoError(t, err)
+		case "file_field":
+			err := field.Set([]byte("new_file_value"))
+			assert.NoError(t, err)
+		case "json_field":
+			s := "new_json_ptr_value"
+			err := field.Set(&s)
+			assert.NoError(t, err)
+		case "json_ptr_field":
+			err := field.Set("new_json_value")
+			assert.NoError(t, err)
+		case "proto_field":
+			s := "new_proto_ptr_value"
+			err := field.Set(&s)
+			assert.NoError(t, err)
+		case "proto_ptr_field":
+			err := field.Set("new_proto_value")
+			assert.NoError(t, err)
+		case "NoTagField":
+			s := "new_notag_ptr_value"
+			err := field.Set(&s)
+			assert.NoError(t, err)
+		case "NoTagPtrField":
+			err := field.Set("new_notag_value")
+			assert.NoError(t, err)
+
+		}
+	}
+
+	t.Logf("testStruct: %+v", testStruct)
+	assert.Equal(t, int64(34), testStruct.URIField)
+	assert.Equal(t, int64(12), *testStruct.URIPtrField)
+	assert.Equal(t, true, testStruct.HeaderField)
+	assert.Equal(t, true, *testStruct.HeaderPtrField)
+	assert.Equal(t, int32(456), testStruct.QueryField)
+	assert.Equal(t, int32(123), *testStruct.QueryPtrField)
+	assert.Equal(t, "new_form_ptr_value", testStruct.FormField)
+	assert.Equal(t, "new_form_value", *testStruct.FormPtrField)
+	assert.Equal(t, []byte("new_file_value"), testStruct.FileField)
+	assert.Equal(t, "new_json_ptr_value", testStruct.JSONField)
+	assert.Equal(t, "new_json_value", *testStruct.JSONPtrField)
+	assert.Equal(t, "new_proto_ptr_value", testStruct.ProtoField)
+	assert.Equal(t, "new_proto_value", *testStruct.ProtoPtrField)
+	assert.Equal(t, "new_notag_ptr_value", testStruct.NoTagField)
+	assert.Equal(t, "new_notag_value", *testStruct.NoTagPtrField)
+
+}
