@@ -2,15 +2,18 @@ package collection
 
 import "fmt"
 
-// Stack is a stack data structure with capacity
+// Stack is a stack data structure
 type Stack[T any] struct {
 	data []T
 }
 
-// NewStack creates a new stack with capacity
-func NewStack[T any](capacity int) *Stack[T] {
+// NewStack creates a new stack
+func NewStack[T any](initSize int) *Stack[T] {
+	if initSize <= 0 {
+		initSize = 16
+	}
 	return &Stack[T]{
-		data: make([]T, 0, capacity),
+		data: make([]T, 0, initSize),
 	}
 }
 
