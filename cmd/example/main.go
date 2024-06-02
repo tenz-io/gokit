@@ -66,5 +66,6 @@ func run() cmd.RunFunc {
 }
 
 type MyConfig struct {
-	Foo string `yaml:"foo" json:"foo"`
+	Foo      string `yaml:"foo" json:"foo"`
+	PageSize int    `yaml:"page_size" json:"page_size" default:"20" validate:"required,gt=0,lte=100"`
 }
