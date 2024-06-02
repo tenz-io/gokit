@@ -25,10 +25,10 @@ func TestGetAnnotations(t *testing.T) {
 			name: "when field has annotations",
 			args: args{
 				field: reflect.StructField{
-					Tag: `json:"name" form:"name" validate:"required"`,
+					Tag: `json:"name" bind:"form,name=name" validate:"required"`,
 				},
 			},
-			want: []Annotation{Form, JSON, Validate},
+			want: []Annotation{Bind, JSON, Validate},
 		},
 	}
 	for _, tt := range tests {

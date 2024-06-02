@@ -5,26 +5,27 @@ import (
 	"sort"
 )
 
-type Annotation string
+type (
+	Annotation  string
+	BindingType string
+)
 
 const (
-	// Query annotation used for binding query parameters.
-	// e.g. /users?name=foo -> struct { Name string `query:"name"` }
-	Query Annotation = "query"
-	// URI annotation used for binding uri parameters.
-	// e.g. /users/{id} -> struct { ID int `uri:"id"` }
-	URI Annotation = "uri"
-	// Header annotation used for binding header parameters.
-	// e.g. Authorization -> struct { Authorization string `header:"Authorization"` }
-	Header Annotation = "header"
-	// Form annotation used for binding form parameters.
-	// e.g. name=foo -> struct { Name string `form:"name"` }
-	Form Annotation = "form"
-	// File annotation used for binding file parameters.
-	// e.g. file -> struct { File []byte `file:"file"` }
-	File Annotation = "file"
-	// Default annotation used for marking a field as default.
-	// e.g. struct { Limit int `default:"10"` }
+	// Bind annotation used for binding request.
+	// contains the categories: source, name
+	// binding source including:
+	// - uri: uri parameters
+	// - query: query parameters
+	// - header: header parameters
+	// - form: form parameters
+	// - file: file parameters
+	// e.g: uri -> struct { ID int `bind:"uri,name=id"` }
+	// e.g: query -> struct { Title string `bind:"query,name=title"` }
+	// e.g: header -> struct { Authorization string `bind:"header,name=Authorization"` }
+	// e.g: form -> struct { Username string `bind:"form,name=username"` }
+	// e.g: file -> struct { File []byte `bind:"file,name=file"` }
+	Bind Annotation = "bind"
+	// Default annotation used for setting the default value of a field.
 	Default Annotation = "default"
 	// Protobuf annotation used for marking a field as protobuf.
 	// e.g. struct { Title string `protobuf:"bytes,1,opt,name=title,proto3" }
@@ -55,13 +56,28 @@ const (
 	Validate Annotation = "validate"
 )
 
+const (
+	// URI binding type.
+	URI BindingType = "uri"
+	// Query binding type.
+	Query BindingType = "query"
+	// Header binding type.
+	Header BindingType = "header"
+	// Form binding type.
+	Form BindingType = "form"
+	// File binding type.
+	File BindingType = "file"
+	// None binding type.
+	None BindingType = ""
+)
+
 // GetAnnotations returns the annotations of fields in a struct.
 func GetAnnotations(field reflect.StructField) []Annotation {
 	var (
 		annotations = []Annotation{}
 	)
 	for _, tag := range []Annotation{
-		Query, URI, Header, Form, File, Default, Protobuf, JSON, YAML, Validate,
+		Bind, Default, Protobuf, JSON, YAML, Validate,
 	} {
 		if _, ok := field.Tag.Lookup(string(tag)); ok {
 			annotations = append(annotations, tag)
