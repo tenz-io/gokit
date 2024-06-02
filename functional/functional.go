@@ -23,6 +23,22 @@ func Map[T, U any](list []T, mapper func(T) U) []U {
 	return results
 }
 
+// Reduce is a function that reduces a list of items to a single value based on a reducer function.
+// The function takes an initial value as the starting accumulator.
+// e.g. sum all elements in a list.
+func Reduce[T, U any](list []T, reducer func(U, T) U, initial U) U {
+	if list == nil {
+		return initial
+	}
+
+	accumulator := initial
+	for _, item := range list {
+		accumulator = reducer(accumulator, item)
+	}
+	return accumulator
+
+}
+
 // Filter is a function that filters a list based on a predicate function.
 func Filter[T any](list []T, predicate func(T) bool) []T {
 	if list == nil {
@@ -63,6 +79,18 @@ func Flatten[T any](list [][]T) []T {
 		results = append(results, subList...)
 	}
 	return results
+}
+
+// ForEach is a function that applies a function to each element in a slice.
+// e.g. print all elements in a list.
+func ForEach[T any](list []T, apply func(T)) {
+	if list == nil {
+		return
+	}
+
+	for _, elem := range list {
+		apply(elem)
+	}
 }
 
 // If is a function that returns a value if the condition is true, otherwise returns another value.

@@ -3,6 +3,7 @@ go 1.21
 toolchain go1.21
 
 use (
+	./annotation
 	./app
 	./app/example
 	./async
@@ -12,6 +13,7 @@ use (
 	./cmd
 	./cmd/example
 	./cmd/example-tool
+	./collection
 	./functional
 	./ginext
 	./ginext/example
