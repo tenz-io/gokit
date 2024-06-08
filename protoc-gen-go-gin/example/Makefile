@@ -37,7 +37,7 @@ get-image:
 
 .PHONY: upload-image
 upload-image:
-	curl -X POST localhost:8888/v1/images/xyz123?region=uk \
-	-H "Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW" \
-	-F "image=@./go.mod" \
-	-F "filename=go.mod"
+	curl --location 'localhost:8888/v1/images/xyz123?region=uk' \
+    --header 'Authorization: Bearer 123' \
+    --form 'image=@"/path/to/file"' \
+    --form 'filename="cat.jpg"'
