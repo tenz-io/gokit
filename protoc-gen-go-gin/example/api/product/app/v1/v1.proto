@@ -79,14 +79,16 @@ message Article {
 }
 
 message UploadImageReq {
-  // @inject_tag: bind:"uri,name=key" validate:"required,lt=128,pattern=#abc123"
+  // @inject_tag: bind:"uri,name=key" validate:"required,max_len=128,pattern=#abc123"
   string key = 1;
+  // @inject_tag: bind:"query,name=region" validate:"required,non_blank,len=2,pattern=#abc" default:"sg"
+  string region = 2;
   // @inject_tag: bind:"header,name=Authorization" validate:"required"
-  string authorization = 2;
-  // @inject_tag: bind:"file,name=image" validate:"gt=0,lte=102400"
-  bytes image = 3;
+  string authorization = 3;
+  // @inject_tag: bind:"file,name=image" validate:"min_len=1,max_len=102400"
+  bytes image = 4;
   // @inject_tag: bind:"form,name=filename"
-  string filename = 4;
+  string filename = 5;
 }
 
 message UploadImageResp {
@@ -94,8 +96,10 @@ message UploadImageResp {
 }
 
 message GetImageReq {
-  // @inject_tag: bind:"uri,name=key" validate:"required,lt=128,pattern=#abc123"
+  // @inject_tag: bind:"uri,name=key" validate:"required,max_len=128,pattern=#abc123"
   string key = 1;
+  // @inject_tag: bind:"query,name=region" validate:"required,non_blank,len=2,pattern=#abc" default:"sg"
+  string region = 2;
 }
 
 message GetImageResp {

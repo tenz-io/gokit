@@ -142,9 +142,16 @@
         "parameters": [
           {
             "name": "key",
-            "description": "@inject_tag: bind:\"uri,name=key\" validate:\"required,lt=128,pattern=#abc123\"",
+            "description": "@inject_tag: bind:\"uri,name=key\" validate:\"required,max_len=128,pattern=#abc123\"",
             "in": "path",
             "required": true,
+            "type": "string"
+          },
+          {
+            "name": "region",
+            "description": "@inject_tag: bind:\"query,name=region\" validate:\"required,non_blank,len=2,pattern=#abc\" default:\"sg\"",
+            "in": "query",
+            "required": false,
             "type": "string"
           }
         ],
@@ -171,9 +178,16 @@
         "parameters": [
           {
             "name": "key",
-            "description": "@inject_tag: bind:\"uri,name=key\" validate:\"required,lt=128,pattern=#abc123\"",
+            "description": "@inject_tag: bind:\"uri,name=key\" validate:\"required,max_len=128,pattern=#abc123\"",
             "in": "path",
             "required": true,
+            "type": "string"
+          },
+          {
+            "name": "region",
+            "description": "@inject_tag: bind:\"query,name=region\" validate:\"required,non_blank,len=2,pattern=#abc\" default:\"sg\"",
+            "in": "query",
+            "required": false,
             "type": "string"
           },
           {
@@ -185,7 +199,7 @@
           },
           {
             "name": "image",
-            "description": "@inject_tag: bind:\"file,name=image\" validate:\"gt=0,lte=102400\"",
+            "description": "@inject_tag: bind:\"file,name=image\" validate:\"min_len=1,max_len=102400\"",
             "in": "query",
             "required": false,
             "type": "string",

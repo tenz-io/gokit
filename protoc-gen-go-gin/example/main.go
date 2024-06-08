@@ -2,13 +2,15 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
+	"net/http"
 	"strings"
 
 	v1 "example/api/product/app/v1"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/tenz-io/gokit/ginext/errcode"
 )
 
 var (
@@ -22,7 +24,7 @@ func (s service) CreateArticle(ctx context.Context, req *v1.CreateArticleReq) (*
 	log.Printf("CreateArticle: %+v\n", req)
 
 	if !strings.HasPrefix(req.GetAuthorization(), "Bearer ") {
-		return &v1.CreateArticleResp{}, fmt.Errorf("no permission")
+		return &v1.CreateArticleResp{}, errcode.Forbidden(http.StatusForbidden, "no permission")
 	}
 
 	return &v1.CreateArticleResp{
@@ -57,10 +59,11 @@ func (s service) GetImage(ctx context.Context, req *v1.GetImageReq) (*v1.GetImag
 }
 
 func (s service) UploadImage(ctx context.Context, req *v1.UploadImageReq) (*v1.UploadImageResp, error) {
-	log.Printf("UploadImage, key=%s, file size: %d\n", req.GetKey(), len(req.GetImage()))
+	log.Printf("UploadImage, key=%s, region: %s, file size: %d\n",
+		req.GetKey(), req.GetRegion(), len(req.GetImage()))
 
 	if !strings.HasPrefix(req.GetAuthorization(), "Bearer ") {
-		return &v1.UploadImageResp{}, fmt.Errorf("no permission")
+		return &v1.UploadImageResp{}, errcode.Forbidden(http.StatusForbidden, "no permission")
 	}
 
 	return &v1.UploadImageResp{

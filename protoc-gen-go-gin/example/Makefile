@@ -20,12 +20,24 @@ dep:
 
 .PHONY: get-articles
 get-articles:
-	curl -X GET "localhost:8888/v1/author/123/articles?title=hello&page=1&page_size=10"
+	curl -X GET "localhost:8888/v1/author/123/articles?title=hello&page=1"
 
 
 .PHONY: create-article
-send-request:
+create-article:
 	curl -X POST localhost:8888/v1/author/123/articles \
 	-H "Content-Type: application/json" \
 	-H "Authorization: Bearer abc123" \
 	-d '{"title":"Hello World","content":"This is a test article"}'
+
+
+.PHONY: get-image
+get-image:
+	curl -X GET "localhost:8888/v1/images/xyz123?region=uk"
+
+.PHONY: upload-image
+upload-image:
+	curl -X POST localhost:8888/v1/images/xyz123?region=uk \
+	-H "Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW" \
+	-F "image=@./go.mod" \
+	-F "filename=go.mod"
