@@ -15,14 +15,14 @@ var (
 )
 
 type ValidationError struct {
-	InvalidField string
-	Message      string
+	Key     string
+	Message string
 }
 
-func NewValidationError(invalidField, message string) *ValidationError {
+func NewValidationError(key, message string) *ValidationError {
 	return &ValidationError{
-		InvalidField: invalidField,
-		Message:      message,
+		Key:     key,
+		Message: message,
 	}
 }
 
@@ -53,7 +53,7 @@ func (v ValidationErrors) Error() string {
 }
 
 func (v *ValidationError) Error() string {
-	return fmt.Sprintf("field %s %s", v.InvalidField, v.Message)
+	return fmt.Sprintf("%s: %s", v.Key, v.Message)
 }
 
 // ValidateStruct validates the struct fields based on their validate tag values.

@@ -26,6 +26,7 @@ const (
 	// e.g: file -> struct { File []byte `bind:"file,name=file"` }
 	Bind Annotation = "bind"
 	// Default annotation used for setting the default value of a field.
+	// e.g. struct { Title string `default:"default title"` }
 	Default Annotation = "default"
 	// Protobuf annotation used for marking a field as protobuf.
 	// e.g. struct { Title string `protobuf:"bytes,1,opt,name=title,proto3" }

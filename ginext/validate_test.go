@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/tenz-io/gokit/annotation"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -31,7 +32,7 @@ func Test_warpError(t *testing.T) {
 			name: "when error is validation error",
 			args: args{
 				c: &gin.Context{},
-				err: &ValidateError{
+				err: &annotation.ValidationError{
 					Key:     "test",
 					Message: "oops",
 				},
@@ -67,14 +68,23 @@ type TestResponseFrame[T any] struct {
 }
 
 type TestRequest struct {
-	// @inject_tag: form:"title"
-	Title string `json:"title,omitempty" form:"title" binding:"required"`
-	// @inject_tag: form:"page"
-	Page int32 `json:"page,omitempty" form:"page"`
-	// @inject_tag: form:"page_size"
-	PageSize int32 `json:"page_size,omitempty" form:"page_size"`
-	// @inject_tag: form:"author_id" uri:"author_id"
-	AuthorId int32 `json:"author_id,omitempty" uri:"author_id"`
+	// @inject_tag: bind:"uri,name=author_id" validate:"required,gt=0"
+	AuthorId int32 `json:"author_id,omitempty" bind:"uri,name=author_id" validate:"required,gt=0"`
+
+	// @inject_tag: bind:"query,name=page" default:"1" validate:"required,gt=0"
+	Page int32 `json:"page,omitempty" bind:"query,name=page" default:"1" validate:"required,gt=0"`
+
+	// @inject_tag: bind:"query,name=page_size" default:"10" validate:"required,gt=0,lte=100"
+	PageSize int32 `json:"page_size,omitempty" bind:"query,name=page_size" default:"10" validate:"required,gt=0,lte=100"`
+
+	// @inject_tag: bind:"header,name=X-Request-ID"
+	RequestID string `json:"request_id,omitempty" bind:"header,name=request_id"`
+
+	// @inject_tag: bind:"file,name=image" validate:"required"
+	Image []byte `json:"image,omitempty" bind:"file,name=image" validate:"required,min_len=0,max_len=102400"`
+
+	// @inject_tag: bind:"form,name=title" validate:"required,min_len=1,max_len=100"
+	Title string `json:"title,omitempty" bind:"form,name=title" validate:"required,min_len=1,max_len=100"`
 }
 
 func TestShouldBind_form(t *testing.T) {
@@ -87,10 +97,7 @@ func TestShouldBind_form(t *testing.T) {
 			ErrorResponse(c, err)
 			return
 		}
-		if err := ShouldBindUri(c, &in); err != nil {
-			ErrorResponse(c, err)
-			return
-		}
+
 		Response(c, &in)
 	})
 
@@ -144,10 +151,7 @@ func TestShouldBind_json(t *testing.T) {
 			ErrorResponse(c, err)
 			return
 		}
-		if err := ShouldBindUri(c, &in); err != nil {
-			ErrorResponse(c, err)
-			return
-		}
+
 		Response(c, &in)
 	})
 
@@ -218,10 +222,7 @@ func TestShouldBind_file(t *testing.T) {
 			ErrorResponse(c, err)
 			return
 		}
-		if err := ShouldBindUri(c, &in); err != nil {
-			ErrorResponse(c, err)
-			return
-		}
+
 		Response(c, &map[string]any{
 			"userid":    in.UserId,
 			"username":  in.Username,
