@@ -39,7 +39,7 @@ func main() {
 
 	engine.POST("/user/:id", func(c *gin.Context) {
 		req := RestRequestEntity{}
-		err := ginext.ShouldBind(c, &req)
+		err := ginext.BindAndValidate(c, &req)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -50,7 +50,7 @@ func main() {
 
 	engine.PUT("/search", func(c *gin.Context) {
 		req := FileRequestEntity{}
-		if err := ginext.ShouldBind(c, &req); err != nil {
+		if err := ginext.BindAndValidate(c, &req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}

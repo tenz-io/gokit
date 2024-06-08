@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/stretchr/testify v1.9.0
-	github.com/tenz-io/gokit/annotation v1.0.7
+	github.com/tenz-io/gokit/annotation v1.0.8
 	github.com/tenz-io/gokit/functional v1.0.0
 	github.com/tenz-io/gokit/logger v1.5.2
 	github.com/tenz-io/gokit/monitor v1.5.0
