@@ -93,7 +93,7 @@ func tryBindUri(c *gin.Context, ptr any) (isUri bool, err error) {
 		if value == "" {
 			continue
 		}
-		if err = field.SetString(value); err != nil {
+		if err := field.SetString(value); field.IsRequired && err != nil {
 			return true, err
 		}
 
@@ -123,7 +123,7 @@ func tryBindQuery(c *gin.Context, ptr any) (isQuery bool, err error) {
 		if value == "" {
 			continue
 		}
-		if err = field.SetString(value); err != nil {
+		if err := field.SetString(value); field.IsRequired && err != nil {
 			return true, err
 		}
 	}
@@ -152,7 +152,7 @@ func tryBindHeader(c *gin.Context, ptr any) (isHeader bool, err error) {
 		if value == "" {
 			continue
 		}
-		if err = field.SetString(value); err != nil {
+		if err := field.SetString(value); field.IsRequired && err != nil {
 			return true, err
 		}
 	}
@@ -188,7 +188,9 @@ func tryBindForm(c *gin.Context, ptr any) (isForm bool, err error) {
 
 	for _, field := range formFields {
 		// ignore because the field maybe is optional
-		_ = readAndSetForm(c, &field)
+		if err := readFormAndSetField(c, &field); field.IsRequired && err != nil {
+			return true, err
+		}
 	}
 
 	return true, nil
@@ -271,14 +273,14 @@ func tryBindMultipart(c *gin.Context, ptr any) (isMultipart bool, err error) {
 
 	// read files
 	for _, field := range fileFields {
-		if err = readAndSetFile(c, &field); err != nil {
+		if err = readFileAndSetField(c, &field); field.IsRequired && err != nil {
 			return true, err
 		}
 	}
 
 	// read form fields
 	for _, field := range formFields {
-		if err = readAndSetForm(c, &field); err != nil {
+		if err = readFormAndSetField(c, &field); field.IsRequired && err != nil {
 			return true, err
 		}
 	}
@@ -286,7 +288,7 @@ func tryBindMultipart(c *gin.Context, ptr any) (isMultipart bool, err error) {
 	return true, nil
 }
 
-func readAndSetFile(c *gin.Context, field *annotation.RequestField) error {
+func readFileAndSetField(c *gin.Context, field *annotation.RequestField) error {
 	if err := (*field).Validate(); err != nil {
 		return err
 	}
@@ -312,6 +314,10 @@ func readAndSetFile(c *gin.Context, field *annotation.RequestField) error {
 		)
 	}
 
+	if len(fileBytes) == 0 {
+		return nil
+	}
+
 	err = field.Set(fileBytes)
 	if err != nil {
 		return err
@@ -319,13 +325,16 @@ func readAndSetFile(c *gin.Context, field *annotation.RequestField) error {
 	return nil
 }
 
-func readAndSetForm(c *gin.Context, field *annotation.RequestField) error {
+func readFormAndSetField(c *gin.Context, field *annotation.RequestField) error {
 	if err := (*field).Validate(); err != nil {
 		return err
 	}
 
 	// Get the form value from the form data
 	value := c.Request.FormValue(field.TagName)
+	if value == "" {
+		return nil
+	}
 
 	if err := field.SetString(value); err != nil {
 		return err
