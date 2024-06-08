@@ -13,13 +13,13 @@ import (
 	function "github.com/tenz-io/gokit/functional"
 )
 
-// ShouldBind binds the passed struct pointer using the specified binding engine.
+// BindAndValidate binds the passed struct pointer using the specified binding engine.
 // e.g: /path/:id -> struct { ID int64 `bind:"uri,name=id"` }
-// e.g: /path?offset=1 -> struct { Offset int `bind:"query,name=offset"` }
+// e.g: /path?offset=1 -> struct { Offset int `bind:"query,name=offset" validate:"gt=0"` }
 // e.g. body json -> struct { Name string `json:"name"` }
 // e.g. body form -> struct { Name string `bind:"form,name=username"` }
 // e.g. body multipart -> struct { File []byte `bind:"file,name=file"` }
-func ShouldBind(c *gin.Context, ptr any) (err error) {
+func BindAndValidate(c *gin.Context, ptr any) (err error) {
 	defer func() {
 		if err != nil {
 			err = warpError(c, err)
@@ -60,6 +60,16 @@ func ShouldBind(c *gin.Context, ptr any) (err error) {
 	}
 
 	return nil
+}
+
+// Validate the struct pointer using the specified binding engine.
+func Validate(c *gin.Context, ptr any) (err error) {
+	err = annotation.ValidateStruct(ptr)
+	if err != nil {
+		return warpError(c, err)
+	}
+	return nil
+
 }
 
 // tryBindUri tries to bind a uri request to a struct
@@ -138,7 +148,14 @@ func tryBindHeader(c *gin.Context, ptr any) (isHeader bool, err error) {
 		if value == "" {
 			continue
 		}
-		_ = field.SetString(value)
+		err = field.SetString(value)
+		if err != nil {
+			return true, annotation.NewValidationError(
+				field.TagName,
+				fmt.Sprintf("error setting header field: %s, err: %s", field.TagName, err.Error()),
+			)
+
+		}
 	}
 	return true, nil
 }

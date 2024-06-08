@@ -10,9 +10,26 @@ import (
 )
 
 var (
+	_ error = (*ProtoError)(nil)
 	_ error = (*ValidationError)(nil)
 	_ error = (*ValidationErrors)(nil)
 )
+
+type ProtoError struct {
+	Field   string
+	Message string
+}
+
+func NewProtoError(field, message string) ProtoError {
+	return ProtoError{
+		Field:   field,
+		Message: message,
+	}
+}
+
+func (p ProtoError) Error() string {
+	return fmt.Sprintf("%s: %s", p.Field, p.Message)
+}
 
 type ValidationError struct {
 	Key     string

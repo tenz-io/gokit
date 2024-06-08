@@ -38,7 +38,7 @@ func (r RequestField) Validate() error {
 	if r.IsFile {
 		// file field should have bytes type field
 		if r.Field.Type.Kind() != reflect.Slice || r.Field.Type.Elem().Kind() != reflect.Uint8 {
-			return fmt.Errorf("field %s should be []byte", r.FieldName)
+			return NewProtoError(r.FieldName, "file field should have bytes type")
 		}
 	}
 
@@ -68,7 +68,7 @@ func (r RequestField) Set(value any) error {
 			if val.Type().Elem().ConvertibleTo(r.FieldVal.Type()) {
 				r.FieldVal.Set(val.Elem().Convert(r.FieldVal.Type()))
 			} else {
-				return fmt.Errorf("cannot convert %s to %s", val.Type().Elem(), r.FieldVal.Type())
+				return NewValidationError(r.TagName, fmt.Sprintf("cannot convert %s to %s", val.Type().Elem(), r.FieldVal.Type()))
 			}
 		}
 	case r.FieldVal.Kind() == reflect.Ptr && val.Kind() != reflect.Ptr:
@@ -86,7 +86,7 @@ func (r RequestField) Set(value any) error {
 				newVal.Elem().Set(val.Convert(r.FieldVal.Type().Elem()))
 				r.FieldVal.Set(newVal)
 			} else {
-				return fmt.Errorf("cannot convert %s to %s", val.Type(), r.FieldVal.Type().Elem())
+				return NewValidationError(r.TagName, fmt.Sprintf("cannot convert %s to %s", val.Type(), r.FieldVal.Type().Elem()))
 			}
 		}
 	case r.FieldVal.Kind() == reflect.Ptr && val.Kind() == reflect.Ptr:
@@ -98,7 +98,7 @@ func (r RequestField) Set(value any) error {
 			if val.Type().Elem().ConvertibleTo(r.FieldVal.Type().Elem()) {
 				r.FieldVal.Set(val.Elem().Convert(r.FieldVal.Type().Elem()))
 			} else {
-				return fmt.Errorf("cannot convert %s to %s", val.Type().Elem(), r.FieldVal.Type().Elem())
+				return NewValidationError(r.TagName, fmt.Sprintf("cannot convert %s to %s", val.Type().Elem(), r.FieldVal.Type().Elem()))
 			}
 		}
 	case r.FieldVal.Kind() != reflect.Ptr && val.Kind() != reflect.Ptr:
@@ -110,7 +110,7 @@ func (r RequestField) Set(value any) error {
 			if val.Type().ConvertibleTo(r.FieldVal.Type()) {
 				r.FieldVal.Set(val.Convert(r.FieldVal.Type()))
 			} else {
-				return fmt.Errorf("cannot convert %s to %s", val.Type(), r.FieldVal.Type())
+				return NewValidationError(r.TagName, fmt.Sprintf("cannot convert %s to %s", val.Type(), r.FieldVal.Type()))
 			}
 		}
 	}
@@ -135,7 +135,7 @@ func (r RequestField) SetString(value string) error {
 		reflect.Int64:
 		v, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
-			return err
+			return NewValidationError(r.TagName, err.Error())
 		}
 		r.FieldVal.SetInt(v)
 	case reflect.Uint,
@@ -145,20 +145,20 @@ func (r RequestField) SetString(value string) error {
 		reflect.Uint64:
 		v, err := strconv.ParseUint(value, 10, 64)
 		if err != nil {
-			return err
+			return NewValidationError(r.TagName, err.Error())
 		}
 		r.FieldVal.SetUint(v)
 	case reflect.Float32,
 		reflect.Float64:
 		v, err := strconv.ParseFloat(value, 64)
 		if err != nil {
-			return err
+			return NewValidationError(r.TagName, err.Error())
 		}
 		r.FieldVal.SetFloat(v)
 	case reflect.Bool:
 		v, err := strconv.ParseBool(value)
 		if err != nil {
-			return err
+			return NewValidationError(r.TagName, err.Error())
 		}
 		r.FieldVal.SetBool(v)
 	case reflect.Ptr:
@@ -168,86 +168,86 @@ func (r RequestField) SetString(value string) error {
 		case reflect.Int:
 			v, err := convertInt[int](value)
 			if err != nil {
-				return err
+				return NewValidationError(r.TagName, err.Error())
 			}
 			r.FieldVal.Set(reflect.ValueOf(&v))
 		case reflect.Int8:
 			v, err := convertInt[int8](value)
 			if err != nil {
-				return err
+				return NewValidationError(r.TagName, err.Error())
 			}
 			r.FieldVal.Set(reflect.ValueOf(&v))
 		case reflect.Int16:
 			v, err := convertInt[int64](value)
 			if err != nil {
-				return err
+				return NewValidationError(r.TagName, err.Error())
 			}
 			r.FieldVal.Set(reflect.ValueOf(&v))
 		case reflect.Int32:
 			v, err := convertInt[int32](value)
 			if err != nil {
-				return err
+				return NewValidationError(r.TagName, err.Error())
 			}
 			r.FieldVal.Set(reflect.ValueOf(&v))
 		case reflect.Int64:
 			v, err := convertInt[int64](value)
 			if err != nil {
-				return err
+				return NewValidationError(r.TagName, err.Error())
 			}
 			r.FieldVal.Set(reflect.ValueOf(&v))
 		case reflect.Uint:
 			v, err := convertUint[uint](value)
 			if err != nil {
-				return err
+				return NewValidationError(r.TagName, err.Error())
 			}
 			r.FieldVal.Set(reflect.ValueOf(&v))
 		case reflect.Uint8:
 			v, err := convertUint[uint8](value)
 			if err != nil {
-				return err
+				return NewValidationError(r.TagName, err.Error())
 			}
 			r.FieldVal.Set(reflect.ValueOf(&v))
 		case reflect.Uint16:
 			v, err := convertUint[uint16](value)
 			if err != nil {
-				return err
+				return NewValidationError(r.TagName, err.Error())
 			}
 			r.FieldVal.Set(reflect.ValueOf(&v))
 		case reflect.Uint32:
 			v, err := convertUint[uint32](value)
 			if err != nil {
-				return err
+				return NewValidationError(r.TagName, err.Error())
 			}
 			r.FieldVal.Set(reflect.ValueOf(&v))
 		case reflect.Uint64:
 			v, err := convertUint[uint64](value)
 			if err != nil {
-				return err
+				return NewValidationError(r.TagName, err.Error())
 			}
 			r.FieldVal.Set(reflect.ValueOf(&v))
 		case reflect.Float32:
 			v, err := convertFloatPtr[float32](value)
 			if err != nil {
-				return err
+				return NewValidationError(r.TagName, err.Error())
 			}
 			r.FieldVal.Set(reflect.ValueOf(&v))
 		case reflect.Float64:
 			v, err := convertFloatPtr[float64](value)
 			if err != nil {
-				return err
+				return NewValidationError(r.TagName, err.Error())
 			}
 			r.FieldVal.Set(reflect.ValueOf(&v))
 		case reflect.Bool:
 			v, err := strconv.ParseBool(value)
 			if err != nil {
-				return err
+				return NewValidationError(r.TagName, err.Error())
 			}
 			r.FieldVal.Set(reflect.ValueOf(&v))
 		default:
-			return fmt.Errorf("unsupported field type: %s", r.FieldVal.Kind())
+			return NewProtoError(r.FieldName, fmt.Sprintf("unsupported field type: %s", r.FieldVal.Kind()))
 		}
 	default:
-		return fmt.Errorf("unsupported field type: %s", r.FieldVal.Kind())
+		return NewProtoError(r.FieldName, fmt.Sprintf("unsupported field type: %s", r.FieldVal.Kind()))
 	}
 
 	return nil

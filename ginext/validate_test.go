@@ -89,7 +89,7 @@ func TestShouldBind_form(t *testing.T) {
 
 	router.POST("/v1/:userid/articles", func(c *gin.Context) {
 		var in TestRequest
-		if err := ShouldBind(c, &in); err != nil {
+		if err := BindAndValidate(c, &in); err != nil {
 			ErrorResponse(c, err)
 			return
 		}
@@ -142,7 +142,7 @@ func TestShouldBind_json(t *testing.T) {
 
 	router.POST("/v1/:userid/articles", func(c *gin.Context) {
 		var in TestRequest
-		if err := ShouldBind(c, &in); err != nil {
+		if err := BindAndValidate(c, &in); err != nil {
 			ErrorResponse(c, err)
 			return
 		}
@@ -220,7 +220,7 @@ func TestShouldBind_file(t *testing.T) {
 
 	router.POST("/v1/:userid/upload", func(c *gin.Context) {
 		var in TestFileRequest
-		if err := ShouldBind(c, &in); err != nil {
+		if err := BindAndValidate(c, &in); err != nil {
 			ErrorResponse(c, err)
 			return
 		}

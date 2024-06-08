@@ -32,8 +32,8 @@ github.com/smarty/assertions v1.15.1 h1:812oFiXI+G55vxsFf+8bIZ1ux30qtkdqzKbEFwyX
 github.com/smarty/assertions v1.15.1/go.mod h1:yABtdzeQs6l1brC900WlRNwj6ZR55d7B+E8C6HtKdec=
 github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
-github.com/tenz-io/gokit/annotation v1.0.4 h1:VQexv3S75/qQXuGvAzu5HFojGucmziTdIUulluxZjss=
-github.com/tenz-io/gokit/annotation v1.0.4/go.mod h1:J4pgK32PQxNdoaitp/MbtgcTVpwQld/dxAB9qaBAcZM=
+github.com/tenz-io/gokit/annotation v1.0.5 h1:ef9a8DWpre0LwxUC6eW65vZiDIvjRO8GMXGslbBBSHM=
+github.com/tenz-io/gokit/annotation v1.0.5/go.mod h1:J4pgK32PQxNdoaitp/MbtgcTVpwQld/dxAB9qaBAcZM=
 github.com/tenz-io/gokit/logger v1.5.2 h1:2EpNA+g/8RT5+jT+RBPhL9RzhEL2cK9N4kDFfXbZuqM=
 github.com/tenz-io/gokit/logger v1.5.2/go.mod h1:X//3sk2BZe0yPpOleb3Dwlwl8pRlKGs1vZQ+OAFS9Tw=
 github.com/urfave/cli/v2 v2.27.2 h1:6e0H+AkS+zDckwPCUrZkKX38mRaau4nL2uipkJpbkcI=
