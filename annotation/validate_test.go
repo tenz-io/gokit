@@ -371,12 +371,12 @@ func Test_matchString(t *testing.T) {
 		// Test digit strings
 		{"^[0-9]+$", "123456", true},
 		{"^[0-9]+$", "123abc", false},
-		{Digits, "123456", true},
+		{Digits, "12345678", true},
 
 		// Test character strings
 		{"^[a-zA-Z]+$", "abcXYZ", true},
 		{"^[a-zA-Z]+$", "abc123", false},
-		{Alphabets, "abc123", false},
+		{Abc, "abc123", false},
 
 		// Test hexadecimal strings
 		{"^[a-fA-F0-9]+$", "1a2B3C", true},
@@ -391,7 +391,7 @@ func Test_matchString(t *testing.T) {
 		// Test alphanumeric strings
 		{"^[a-zA-Z0-9]+$", "abc123XYZ", true},
 		{"^[a-zA-Z0-9]+$", "abc 123", false},
-		{Alphanumeric, "abc 123", false},
+		{Abc123, "abc 123", false},
 
 		// Test pattern with special characters
 		{`^\w+@\w+\.\w+$`, "user@domain.com", true},
@@ -404,7 +404,9 @@ func Test_matchString(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.s, func(t *testing.T) {
-			if got := matchString(tt.pattern, tt.s); got != tt.want {
+			got, msg := matchString(tt.pattern, tt.s)
+			t.Logf("got: %v, msg: %v", got, msg)
+			if got != tt.want {
 				t.Errorf("matchString(%q, %q) = %v, want %v", tt.pattern, tt.s, got, tt.want)
 			}
 		})

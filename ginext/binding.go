@@ -158,8 +158,20 @@ func tryBindForm(c *gin.Context, ptr any) (isForm bool, err error) {
 		)
 	}
 
-	if err = c.ShouldBind(ptr); err != nil {
-		return true, err
+	// read form fields
+	requestFields := annotation.GetRequestFields(ptr)
+	if len(requestFields.Values()) == 0 {
+		return false, nil
+	}
+	formFields := function.Filter(requestFields.Values(), func(field annotation.RequestField) bool {
+		return field.IsForm
+	})
+	if len(formFields) == 0 {
+		return false, nil
+	}
+
+	for _, field := range formFields {
+		_ = readAndSetForm(c, &field)
 	}
 
 	return true, nil

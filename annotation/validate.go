@@ -183,8 +183,9 @@ func applyRule(rule string, field reflect.StructField, fieldVal reflect.Value) e
 		}
 	case strings.HasPrefix(rule, "pattern="):
 		pattern := strings.TrimPrefix(rule, "pattern=")
-		if !matchesPattern(fieldVal, pattern) {
-			return NewValidationError(field.Name, fmt.Sprintf("must match pattern %s", pattern))
+		matched, msg := matchesPattern(fieldVal, pattern)
+		if !matched {
+			return NewValidationError(field.Name, "not match: "+msg)
 		}
 	default:
 		return fmt.Errorf("unknown validation rule: %s", rule)
@@ -336,9 +337,9 @@ func isBlank(v reflect.Value) bool {
 	}
 }
 
-func matchesPattern(v reflect.Value, pattern string) bool {
+func matchesPattern(v reflect.Value, pattern string) (bool, string) {
 	if v.Kind() != reflect.String {
-		return false
+		return false, "is not a string"
 	}
 
 	return matchString(pattern, v.String())
@@ -350,68 +351,86 @@ type (
 )
 
 const (
-	Email        predefinedPatternName = "#email"
-	URL          predefinedPatternName = "#url"
-	Digits       predefinedPatternName = "#digits"
-	Hex          predefinedPatternName = "#hex"
-	Base64       predefinedPatternName = "#base64"
-	Alphabets    predefinedPatternName = "#alphabets"
-	Alphanumeric predefinedPatternName = "#alphanumeric"
+	Email  predefinedPatternName = "#email"
+	URL    predefinedPatternName = "#url"
+	Abc    predefinedPatternName = "#abc"
+	Digits predefinedPatternName = "#123"
+	Abc123 predefinedPatternName = "#abc123"
+	Hex    predefinedPatternName = "#hex"
+	Base64 predefinedPatternName = "#base64"
 )
 
 const (
-	emailPattern        predefinedPattern = "^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$"
-	urlPattern          predefinedPattern = `^(http|https)://[a-zA-Z0-9-.]+.[a-zA-Z]{2,3}(/S*)?$`
-	alphabetsPattern    predefinedPattern = `^[a-zA-Z]+$`
-	digitsPattern       predefinedPattern = `^\d+$`
-	alphanumericPattern predefinedPattern = `^[a-zA-Z0-9]+$`
-	hexPattern          predefinedPattern = `^[0-9a-fA-F]+$`
-	base64Pattern       predefinedPattern = `^[a-zA-Z0-9+/]*={0,2}$`
+	emailPattern  predefinedPattern = "^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$"
+	urlPattern    predefinedPattern = `^(http|https)://[a-zA-Z0-9-.]+.[a-zA-Z]{2,3}(/S*)?$`
+	abcPattern    predefinedPattern = `^[a-zA-Z]+$`
+	digitsPattern predefinedPattern = `^\d+$`
+	abc123Pattern predefinedPattern = `^[a-zA-Z0-9]+$`
+	hexPattern    predefinedPattern = `^[0-9a-fA-F]+$`
+	base64Pattern predefinedPattern = `^[a-zA-Z0-9+/]*={0,2}$`
 )
+
+const (
+	maxMatchString = 256
+)
+
+// getPredefinedPattern returns the predefined pattern based on the pattern name.
+func getPredefinedPattern(name predefinedPatternName) (pattern predefinedPattern, existing bool) {
+	if !strings.HasPrefix(name, "#") {
+		return "", false
+	}
+	switch name {
+	case Email:
+		return emailPattern, true
+	case URL:
+		return urlPattern, true
+	case Digits:
+		return digitsPattern, true
+	case Hex:
+		return hexPattern, true
+	case Base64:
+		return base64Pattern, true
+	case Abc:
+		return abcPattern, true
+	case Abc123:
+		return abc123Pattern, true
+	default:
+		return "", false
+	}
+}
 
 // matchString checks if a string matches a pattern.
 // if s head with #, it will use predefined pattern.
 // otherwise, it will use the pattern as a regular expression, which always starts with ^ and ends with $.
-func matchString(pattern, s string) bool {
-	if strings.HasPrefix(pattern, "#") {
-		return matchPredefinedPattern(pattern, s)
+func matchString(pattern, s string) (matched bool, msg string) {
+	predefined, existing := getPredefinedPattern(pattern)
+	if existing {
+		return matchRegexp(predefined, s)
 	}
+
 	return matchRegexp(pattern, s)
 }
 
 // matchRegexp checks if a string matches a regular expression pattern.
-func matchPredefinedPattern(pattern string, s string) bool {
-	switch pattern {
-	case Email:
-		return matchRegexp(emailPattern, s)
-	case URL:
-		return matchRegexp(urlPattern, s)
-	case Digits:
-		return matchRegexp(digitsPattern, s)
-	case Hex:
-		return matchRegexp(hexPattern, s)
-	case Base64:
-		return matchRegexp(base64Pattern, s)
-	case Alphabets:
-		return matchRegexp(alphabetsPattern, s)
-	case Alphanumeric:
-		return matchRegexp(alphanumericPattern, s)
-	default:
-		return false
+func matchRegexp(pattern string, s string) (matched bool, errMsg string) {
+	if len(s) > maxMatchString {
+		return false, "is too long"
 	}
-}
 
-// matchRegexp checks if a string matches a regular expression pattern.
-func matchRegexp(pattern predefinedPattern, s string) bool {
 	// not start with ^ and end with $, just skip as not match
 	if !strings.HasPrefix(pattern, "^") || !strings.HasSuffix(pattern, "$") {
-		return false
+		return false, fmt.Sprintf("invalid pattern: %s", pattern)
 	}
 
 	matched, err := regexp.MatchString(pattern, s)
 	if err != nil {
-		return false
+		return false, fmt.Sprintf("pattern is not valid: %v", err)
 	}
-	return matched
+
+	if !matched {
+		return false, fmt.Sprintf("not match pattern: %s", pattern)
+	}
+
+	return true, ""
 
 }

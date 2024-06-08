@@ -31,7 +31,7 @@ require (
 	github.com/prometheus/client_model v0.5.0 // indirect
 	github.com/prometheus/common v0.48.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
-	github.com/tenz-io/gokit/annotation v1.0.2 // indirect
+	github.com/tenz-io/gokit/annotation v1.0.4 // indirect
 	github.com/tenz-io/gokit/functional v1.0.0 // indirect
 	github.com/tenz-io/gokit/monitor v1.5.0 // indirect
 	github.com/tenz-io/gokit/tracer v1.0.1 // indirect

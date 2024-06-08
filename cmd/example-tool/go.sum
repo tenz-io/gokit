@@ -30,10 +30,10 @@ github.com/russross/blackfriday/v2 v2.1.0 h1:JIOH55/0cWyOuilr9/qlrm0BSXldqnqwMsf
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/smarty/assertions v1.15.1 h1:812oFiXI+G55vxsFf+8bIZ1ux30qtkdqzKbEFwyX3Tk=
 github.com/smarty/assertions v1.15.1/go.mod h1:yABtdzeQs6l1brC900WlRNwj6ZR55d7B+E8C6HtKdec=
-github.com/stretchr/testify v1.8.1 h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYKsk=
-github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
-github.com/tenz-io/gokit/annotation v1.0.3 h1:FJXHENtHBOvJFPXqid2lonpypfzOX4Af8M+nK/oNVUQ=
-github.com/tenz-io/gokit/annotation v1.0.3/go.mod h1:6XZuMjZ6NWL5PtgZy7OkbcI2k9ZRTzIoTeDpP3ohzTE=
+github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=
+github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
+github.com/tenz-io/gokit/annotation v1.0.4 h1:VQexv3S75/qQXuGvAzu5HFojGucmziTdIUulluxZjss=
+github.com/tenz-io/gokit/annotation v1.0.4/go.mod h1:J4pgK32PQxNdoaitp/MbtgcTVpwQld/dxAB9qaBAcZM=
 github.com/tenz-io/gokit/logger v1.5.2 h1:2EpNA+g/8RT5+jT+RBPhL9RzhEL2cK9N4kDFfXbZuqM=
 github.com/tenz-io/gokit/logger v1.5.2/go.mod h1:X//3sk2BZe0yPpOleb3Dwlwl8pRlKGs1vZQ+OAFS9Tw=
 github.com/urfave/cli/v2 v2.27.2 h1:6e0H+AkS+zDckwPCUrZkKX38mRaau4nL2uipkJpbkcI=
