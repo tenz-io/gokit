@@ -16,7 +16,7 @@
     "application/json"
   ],
   "paths": {
-    "/v1/articles": {
+    "/v1/author/{author_id}/articles": {
       "get": {
         "operationId": "BlogService_GetArticles",
         "responses": {
@@ -35,63 +35,8 @@
         },
         "parameters": [
           {
-            "name": "title",
-            "description": "@inject_tag: form:\"title\" binding:\"required\"",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "page",
-            "description": "@inject_tag: query:\"page\" default:\"1\"",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
-          },
-          {
-            "name": "page_size",
-            "description": "@inject_tag: query:\"page_size\" default:\"10\"",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
-          },
-          {
             "name": "author_id",
-            "description": "@inject_tag: uri:\"author_id\" binding:\"required\"",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
-          }
-        ],
-        "tags": [
-          "BlogService"
-        ]
-      }
-    },
-    "/v1/author/{author_id}/articles": {
-      "get": {
-        "operationId": "BlogService_GetArticles2",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1GetArticlesResp"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "author_id",
-            "description": "@inject_tag: uri:\"author_id\" binding:\"required\"",
+            "description": "@inject_tag: bind:\"uri,name=author_id\" validate:\"required,gt=0\"",
             "in": "path",
             "required": true,
             "type": "integer",
@@ -99,14 +44,14 @@
           },
           {
             "name": "title",
-            "description": "@inject_tag: form:\"title\" binding:\"required\"",
+            "description": "@inject_tag: bind:\"query,name=title\" validate:\"max_len=200\"",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "page",
-            "description": "@inject_tag: query:\"page\" default:\"1\"",
+            "description": "@inject_tag: bind:\"query,name=page\" validate:\"gt=0\" default:\"1\"",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -114,7 +59,7 @@
           },
           {
             "name": "page_size",
-            "description": "@inject_tag: query:\"page_size\" default:\"10\"",
+            "description": "@inject_tag: bind:\"query,name=page_size\" validate:\"gt=0,lte=100\" default:\"20\"",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -131,7 +76,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1Article"
+              "$ref": "#/definitions/v1CreateArticleResp"
             }
           },
           "default": {
@@ -144,20 +89,29 @@
         "parameters": [
           {
             "name": "author_id",
-            "description": "@inject_tag: form:\"author_id\" uri:\"author_id\"",
+            "description": "@inject_tag: bind:\"uri,name=author_id\" validate:\"required,gt=0\"",
             "in": "path",
             "required": true,
             "type": "integer",
             "format": "int32"
           },
           {
+            "name": "authorization",
+            "description": "@inject_tag: bind:\"header,name=Authorization\" validate:\"required\"",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "title",
+            "description": "@inject_tag: bind:\"form,name=title\" validate:\"required,min_len=1,max_len=400\"",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "content",
+            "description": "@inject_tag: bind:\"form,name=content\" validate:\"required,min_len=1,max_len=100000\"",
             "in": "query",
             "required": false,
             "type": "string"
@@ -168,7 +122,36 @@
         ]
       }
     },
-    "/v1/images": {
+    "/v1/images/{key}": {
+      "get": {
+        "operationId": "BlogService_GetImage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetImageResp"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "key",
+            "description": "@inject_tag: bind:\"uri,name=key\" validate:\"required,lt=128,pattern=#abc123\"",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "BlogService"
+        ]
+      },
       "post": {
         "operationId": "BlogService_UploadImage",
         "responses": {
@@ -187,8 +170,22 @@
         },
         "parameters": [
           {
-            "name": "file",
-            "description": "@inject_tag: form:\"file\"",
+            "name": "key",
+            "description": "@inject_tag: bind:\"uri,name=key\" validate:\"required,lt=128,pattern=#abc123\"",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "description": "@inject_tag: bind:\"header,name=Authorization\" validate:\"required\"",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "image",
+            "description": "@inject_tag: bind:\"file,name=image\" validate:\"gt=0,lte=102400\"",
             "in": "query",
             "required": false,
             "type": "string",
@@ -196,6 +193,7 @@
           },
           {
             "name": "filename",
+            "description": "@inject_tag: bind:\"form,name=filename\"",
             "in": "query",
             "required": false,
             "type": "string"
@@ -239,16 +237,34 @@
     "v1Article": {
       "type": "object",
       "properties": {
+        "article_id": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "author_id": {
+          "type": "integer",
+          "format": "int32"
+        },
         "title": {
           "type": "string"
         },
         "content": {
           "type": "string"
-        },
-        "author_id": {
+        }
+      }
+    },
+    "v1CreateArticleResp": {
+      "type": "object",
+      "properties": {
+        "article_id": {
           "type": "integer",
-          "format": "int32",
-          "title": "@inject_tag: form:\"author_id\" uri:\"author_id\""
+          "format": "int32"
+        },
+        "title": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
         }
       }
     },
@@ -265,6 +281,15 @@
             "type": "object",
             "$ref": "#/definitions/v1Article"
           }
+        }
+      }
+    },
+    "v1GetImageResp": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "format": "byte"
         }
       }
     },

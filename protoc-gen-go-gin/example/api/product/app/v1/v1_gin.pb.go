@@ -15,9 +15,11 @@ import (
 // gin.ginext.
 
 type BlogServiceHTTPServer interface {
-	CreateArticle(context.Context, *Article) (*Article, error)
+	CreateArticle(context.Context, *CreateArticleReq) (*CreateArticleResp, error)
 
 	GetArticles(context.Context, *GetArticlesReq) (*GetArticlesResp, error)
+
+	GetImage(context.Context, *GetImageReq) (*GetImageResp, error)
 
 	UploadImage(context.Context, *UploadImageReq) (*UploadImageResp, error)
 }
@@ -37,39 +39,7 @@ type BlogService struct {
 
 func (s *BlogService) GetArticles_0(ctx *gin.Context) {
 	var in GetArticlesReq
-
-	if err := ginext.ShouldBindUri(ctx, &in); err != nil {
-		ginext.ErrorResponse(ctx, err)
-		return
-	}
-
-	if err := ginext.ShouldBind(ctx, &in); err != nil {
-		ginext.ErrorResponse(ctx, err)
-		return
-	}
-	md := metadata.New(nil)
-	md.Set("path", ctx.Request.URL.Path)
-	md.Set("raw_query", ctx.Request.URL.RawQuery)
-	for k, v := range ctx.Request.URL.Query() {
-		md.Set(k, v...)
-	}
-	for k, v := range ctx.Request.Header {
-		md.Set(k, v...)
-	}
-	newCtx := metadata.NewIncomingContext(ctx.Request.Context(), md)
-	out, err := s.server.(BlogServiceHTTPServer).GetArticles(newCtx, &in)
-	if err != nil {
-		ginext.ErrorResponse(ctx, err)
-		return
-	}
-
-	ginext.Response(ctx, out)
-}
-
-func (s *BlogService) GetArticles_1(ctx *gin.Context) {
-	var in GetArticlesReq
-
-	if err := ginext.ShouldBind(ctx, &in); err != nil {
+	if err := ginext.BindAndValidate(ctx, &in); err != nil {
 		ginext.ErrorResponse(ctx, err)
 		return
 	}
@@ -93,14 +63,8 @@ func (s *BlogService) GetArticles_1(ctx *gin.Context) {
 }
 
 func (s *BlogService) CreateArticle_0(ctx *gin.Context) {
-	var in Article
-
-	if err := ginext.ShouldBindUri(ctx, &in); err != nil {
-		ginext.ErrorResponse(ctx, err)
-		return
-	}
-
-	if err := ginext.ShouldBind(ctx, &in); err != nil {
+	var in CreateArticleReq
+	if err := ginext.BindAndValidate(ctx, &in); err != nil {
 		ginext.ErrorResponse(ctx, err)
 		return
 	}
@@ -125,8 +89,7 @@ func (s *BlogService) CreateArticle_0(ctx *gin.Context) {
 
 func (s *BlogService) UploadImage_0(ctx *gin.Context) {
 	var in UploadImageReq
-
-	if err := ginext.ShouldBind(ctx, &in); err != nil {
+	if err := ginext.BindAndValidate(ctx, &in); err != nil {
 		ginext.ErrorResponse(ctx, err)
 		return
 	}
@@ -149,14 +112,39 @@ func (s *BlogService) UploadImage_0(ctx *gin.Context) {
 	ginext.Response(ctx, out)
 }
 
+func (s *BlogService) GetImage_0(ctx *gin.Context) {
+	var in GetImageReq
+	if err := ginext.BindAndValidate(ctx, &in); err != nil {
+		ginext.ErrorResponse(ctx, err)
+		return
+	}
+	md := metadata.New(nil)
+	md.Set("path", ctx.Request.URL.Path)
+	md.Set("raw_query", ctx.Request.URL.RawQuery)
+	for k, v := range ctx.Request.URL.Query() {
+		md.Set(k, v...)
+	}
+	for k, v := range ctx.Request.Header {
+		md.Set(k, v...)
+	}
+	newCtx := metadata.NewIncomingContext(ctx.Request.Context(), md)
+	out, err := s.server.(BlogServiceHTTPServer).GetImage(newCtx, &in)
+	if err != nil {
+		ginext.ErrorResponse(ctx, err)
+		return
+	}
+
+	ginext.Response(ctx, out)
+}
+
 func (s *BlogService) RegisterService() {
 
 	s.router.Handle("GET", "/v1/author/:author_id/articles", s.GetArticles_0)
 
-	s.router.Handle("GET", "/v1/articles", s.GetArticles_1)
-
 	s.router.Handle("POST", "/v1/author/:author_id/articles", s.CreateArticle_0)
 
-	s.router.Handle("POST", "/v1/images", s.UploadImage_0)
+	s.router.Handle("POST", "/v1/images/:key", s.UploadImage_0)
+
+	s.router.Handle("GET", "/v1/images/:key", s.GetImage_0)
 
 }

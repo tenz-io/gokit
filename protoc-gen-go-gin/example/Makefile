@@ -15,8 +15,17 @@ dep:
 	go mod tidy -v
 
 
-.PHONY: send-request
+
+
+
+.PHONY: get-articles
+get-articles:
+	curl -X GET "localhost:8888/v1/author/123/articles?title=hello&page=1&page_size=10"
+
+
+.PHONY: create-article
 send-request:
-	curl -X POST "localhost:8888/v1/author/123/articles?foo=bar&foo=baz" \
+	curl -X POST localhost:8888/v1/author/123/articles \
 	-H "Content-Type: application/json" \
+	-H "Authorization: Bearer abc123" \
 	-d '{"title":"Hello World","content":"This is a test article"}'

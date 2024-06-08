@@ -10,14 +10,11 @@ import "google/api/annotations.proto";
 service BlogService {
   rpc GetArticles(GetArticlesReq) returns (GetArticlesResp) {
     option (google.api.http) = {
-      get: "/v1/articles"
-      additional_bindings {
-        get: "/v1/author/{author_id}/articles"
-      }
+      get: "/v1/author/{author_id}/articles"
     };
   }
 
-  rpc CreateArticle(Article) returns (Article) {
+  rpc CreateArticle(CreateArticleReq) returns (CreateArticleResp) {
     option (google.api.http) = {
       post: "/v1/author/{author_id}/articles"
     };
@@ -25,23 +22,31 @@ service BlogService {
 
   rpc UploadImage(UploadImageReq) returns (UploadImageResp) {
     option (google.api.http) = {
-      post: "/v1/images"
+      post: "/v1/images/{key}"
+    };
+  }
+
+  rpc GetImage(GetImageReq) returns (GetImageResp) {
+    option (google.api.http) = {
+      get: "/v1/images/{key}"
     };
   }
 }
 
 message GetArticlesReq {
-  // @inject_tag: form:"title" binding:"required"
-  string title = 1;
+  // @inject_tag: bind:"uri,name=author_id" validate:"required,gt=0"
+  int32 author_id = 1;
 
-  // @inject_tag: query:"page" default:"1"
-  int32 page = 2;
+  // @inject_tag: bind:"query,name=title" validate:"max_len=200"
+  string title = 2;
 
-  // @inject_tag: query:"page_size" default:"10"
-  int32 page_size = 3;
+  // @inject_tag: bind:"query,name=page" validate:"gt=0" default:"1"
+  int32 page = 3;
 
-  // @inject_tag: uri:"author_id" binding:"required"
-  int32 author_id = 4;
+  // @inject_tag: bind:"query,name=page_size" validate:"gt=0,lte=100" default:"20"
+  int32 page_size = 4;
+
+
 }
 
 message GetArticlesResp {
@@ -49,19 +54,50 @@ message GetArticlesResp {
   repeated Article articles = 2;
 }
 
+message CreateArticleReq {
+  // @inject_tag: bind:"uri,name=author_id" validate:"required,gt=0"
+  int32 author_id = 1;
+  // @inject_tag: bind:"header,name=Authorization" validate:"required"
+  string authorization = 2;
+  // @inject_tag: bind:"form,name=title" validate:"required,min_len=1,max_len=400"
+  string title = 3;
+  // @inject_tag: bind:"form,name=content" validate:"required,min_len=1,max_len=100000"
+  string content = 4;
+}
+
+message CreateArticleResp {
+  int32 article_id = 1;
+  string title = 2;
+  string content = 3;
+}
+
 message Article {
-  string title = 1;
-  string content = 2;
-  // @inject_tag: form:"author_id" uri:"author_id"
-  int32 author_id = 3;
+  int32 article_id = 1;
+  int32 author_id = 2;
+  string title = 3;
+  string content = 4;
 }
 
 message UploadImageReq {
-  // @inject_tag: form:"file"
-  bytes file = 1;
-  string filename = 2;
+  // @inject_tag: bind:"uri,name=key" validate:"required,lt=128,pattern=#abc123"
+  string key = 1;
+  // @inject_tag: bind:"header,name=Authorization" validate:"required"
+  string authorization = 2;
+  // @inject_tag: bind:"file,name=image" validate:"gt=0,lte=102400"
+  bytes image = 3;
+  // @inject_tag: bind:"form,name=filename"
+  string filename = 4;
 }
 
 message UploadImageResp {
-	string key = 1;
+  string key = 1;
+}
+
+message GetImageReq {
+  // @inject_tag: bind:"uri,name=key" validate:"required,lt=128,pattern=#abc123"
+  string key = 1;
+}
+
+message GetImageResp {
+  bytes file = 1;
 }

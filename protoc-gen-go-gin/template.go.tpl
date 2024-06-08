@@ -19,13 +19,7 @@ type {{$.Name}} struct{
 {{range .Methods}}
 func (s *{{$.Name}}) {{ .HandlerName }} (ctx *gin.Context) {
 	var in {{.Request}}
-{{if .HasPathParams }}
-	if err := ginext.ShouldBindUri(ctx, &in); err != nil {
-		ginext.ErrorResponse(ctx, err)
-		return
-	}
-{{end}}
-	if err := ginext.ShouldBind(ctx, &in); err != nil {
+	if err := ginext.BindAndValidate(ctx, &in); err != nil {
 	    ginext.ErrorResponse(ctx, err)
 		return
 	}
