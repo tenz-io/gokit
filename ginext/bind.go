@@ -93,7 +93,9 @@ func tryBindUri(c *gin.Context, ptr any) (isUri bool, err error) {
 		if value == "" {
 			continue
 		}
-		_ = field.SetString(value)
+		if err = field.SetString(value); err != nil {
+			return true, err
+		}
 
 	}
 
@@ -121,7 +123,9 @@ func tryBindQuery(c *gin.Context, ptr any) (isQuery bool, err error) {
 		if value == "" {
 			continue
 		}
-		_ = field.SetString(value)
+		if err = field.SetString(value); err != nil {
+			return true, err
+		}
 	}
 	return true, nil
 }
@@ -148,13 +152,8 @@ func tryBindHeader(c *gin.Context, ptr any) (isHeader bool, err error) {
 		if value == "" {
 			continue
 		}
-		err = field.SetString(value)
-		if err != nil {
-			return true, annotation.NewValidationError(
-				field.TagName,
-				fmt.Sprintf("error setting header field: %s, err: %s", field.TagName, err.Error()),
-			)
-
+		if err = field.SetString(value); err != nil {
+			return true, err
 		}
 	}
 	return true, nil
@@ -188,6 +187,7 @@ func tryBindForm(c *gin.Context, ptr any) (isForm bool, err error) {
 	}
 
 	for _, field := range formFields {
+		// ignore because the field maybe is optional
 		_ = readAndSetForm(c, &field)
 	}
 
@@ -219,8 +219,7 @@ func tryBindJSON(c *gin.Context, ptr any) (isJson bool, err error) {
 		)
 	}
 
-	err = json.Unmarshal(body, ptr)
-	if err != nil {
+	if err = json.Unmarshal(body, ptr); err != nil {
 		return true, annotation.NewValidationError(
 			"json_format",
 			fmt.Sprintf("error unmarshalling request body: %s", err.Error()),
@@ -259,7 +258,7 @@ func tryBindMultipart(c *gin.Context, ptr any) (isMultipart bool, err error) {
 	})
 
 	if len(fileFields) == 0 {
-		return true, fmt.Errorf("no file field found in struct")
+		return true, annotation.NewProtoError("multipart", "no file field found in struct")
 	}
 
 	// Parse the multipart form
@@ -272,14 +271,16 @@ func tryBindMultipart(c *gin.Context, ptr any) (isMultipart bool, err error) {
 
 	// read files
 	for _, field := range fileFields {
-		if err := readAndSetFile(c, &field); err != nil {
+		if err = readAndSetFile(c, &field); err != nil {
 			return true, err
 		}
 	}
 
 	// read form fields
 	for _, field := range formFields {
-		_ = readAndSetForm(c, &field)
+		if err = readAndSetForm(c, &field); err != nil {
+			return true, err
+		}
 	}
 
 	return true, nil
@@ -287,10 +288,7 @@ func tryBindMultipart(c *gin.Context, ptr any) (isMultipart bool, err error) {
 
 func readAndSetFile(c *gin.Context, field *annotation.RequestField) error {
 	if err := (*field).Validate(); err != nil {
-		return annotation.NewValidationError(
-			field.TagName,
-			fmt.Sprintf("error validating file: %s, err: %s", field.TagName, err.Error()),
-		)
+		return err
 	}
 
 	// Get the file from the form data
@@ -316,30 +314,21 @@ func readAndSetFile(c *gin.Context, field *annotation.RequestField) error {
 
 	err = field.Set(fileBytes)
 	if err != nil {
-		return annotation.NewValidationError(
-			"set",
-			fmt.Sprintf("error setting file: %s, err: %s", field.TagName, err.Error()),
-		)
+		return err
 	}
 	return nil
 }
 
 func readAndSetForm(c *gin.Context, field *annotation.RequestField) error {
 	if err := (*field).Validate(); err != nil {
-		return annotation.NewValidationError(
-			"validate",
-			fmt.Sprintf("error validating form field: %s, err: %s", field.TagName, err.Error()),
-		)
+		return err
 	}
 
 	// Get the form value from the form data
 	value := c.Request.FormValue(field.TagName)
-	err := field.SetString(value)
-	if err != nil {
-		return annotation.NewValidationError(
-			"set",
-			fmt.Sprintf("error setting form field: %s, err: %s", field.TagName, err.Error()),
-		)
+
+	if err := field.SetString(value); err != nil {
+		return err
 
 	}
 	return nil

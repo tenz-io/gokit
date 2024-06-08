@@ -8,15 +8,16 @@ import (
 )
 
 type RequestField struct {
-	FieldName string
-	TagName   string
-	Field     reflect.StructField
-	FieldVal  reflect.Value
-	IsUri     bool
-	IsHeader  bool
-	IsQuery   bool
-	IsFile    bool
-	IsForm    bool
+	FieldName  string
+	TagName    string
+	Field      reflect.StructField
+	FieldVal   reflect.Value
+	IsRequired bool
+	IsUri      bool
+	IsHeader   bool
+	IsQuery    bool
+	IsFile     bool
+	IsForm     bool
 }
 
 // RequestFields is a map of request fields.
@@ -286,35 +287,41 @@ func GetRequestFields(structPtr any) RequestFields {
 		field := t.Field(i)
 		fieldVal := v.Field(i)
 		tag := field.Tag
-		name, bindingType, ok := getTagValue(tag,
+		bindingName, bindingType, ok := getBindingValue(tag,
+			// must keep the order
 			string(Bind),
 			string(JSON),
 			string(Protobuf),
 		)
 
-		if !ok || name == "" {
-			name = field.Name
+		if !ok || bindingName == "" {
+			bindingName = field.Name
 		}
 
-		fields[name] = RequestField{
-			FieldName: field.Name,
-			TagName:   name,
-			Field:     field,
-			FieldVal:  fieldVal,
-			IsUri:     bindingType == URI,
-			IsHeader:  bindingType == Header,
-			IsQuery:   bindingType == Query,
-			IsForm:    bindingType == Form,
-			IsFile:    bindingType == File,
+		fields[bindingName] = RequestField{
+			FieldName:  field.Name,
+			TagName:    bindingName,
+			Field:      field,
+			FieldVal:   fieldVal,
+			IsRequired: isRequired(tag),
+			IsUri:      bindingType == URI,
+			IsHeader:   bindingType == Header,
+			IsQuery:    bindingType == Query,
+			IsForm:     bindingType == Form,
+			IsFile:     bindingType == File,
 		}
 	}
 	return fields
 }
 
-// getTagValue returns the value of a tag.
-func getTagValue(tag reflect.StructTag, keys ...string) (string, BindingType, bool) {
+// getBindingValue returns the value of a tag.
+func getBindingValue(tag reflect.StructTag, keys ...string) (string, BindingType, bool) {
 	for _, key := range keys {
 		switch key {
+		case string(Bind):
+			if v, bingType, ok := getBindTagValue(tag); ok {
+				return v, bingType, true
+			}
 		case string(JSON):
 			if v, ok := getJSONTagValue(tag); ok {
 				return v, None, true
@@ -322,10 +329,6 @@ func getTagValue(tag reflect.StructTag, keys ...string) (string, BindingType, bo
 		case string(Protobuf):
 			if v, ok := getProtobufTagValue(tag); ok {
 				return v, None, true
-			}
-		case string(Bind):
-			if v, bingType, ok := getBindTagValue(tag); ok {
-				return v, bingType, true
 			}
 		default:
 			// ignore

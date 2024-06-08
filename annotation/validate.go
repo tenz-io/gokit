@@ -131,6 +131,23 @@ func validateField(field reflect.StructField, fieldVal reflect.Value) error {
 	return nil
 }
 
+// validateField applies the validation rules to the given field.
+func isRequired(tag reflect.StructTag) bool {
+	validateTag := tag.Get(string(Validate))
+	if validateTag == "" {
+		return false
+	}
+
+	rules := strings.Split(validateTag, ",")
+	for _, rule := range rules {
+		if rule == "required" {
+			return true
+		}
+
+	}
+	return false
+}
+
 // applyRule applies a single validation rule to a field.
 func applyRule(rule string, field reflect.StructField, fieldVal reflect.Value) error {
 	switch {
