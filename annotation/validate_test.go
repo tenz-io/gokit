@@ -361,3 +361,52 @@ func TestValidateStruct(t *testing.T) {
 		})
 	}
 }
+
+func Test_matchString(t *testing.T) {
+	tests := []struct {
+		pattern string
+		s       string
+		want    bool
+	}{
+		// Test digit strings
+		{"^[0-9]+$", "123456", true},
+		{"^[0-9]+$", "123abc", false},
+		{Digits, "123456", true},
+
+		// Test character strings
+		{"^[a-zA-Z]+$", "abcXYZ", true},
+		{"^[a-zA-Z]+$", "abc123", false},
+		{Alphabets, "abc123", false},
+
+		// Test hexadecimal strings
+		{"^[a-fA-F0-9]+$", "1a2B3C", true},
+		{"^[a-fA-F0-9]+$", "1a2B3CZ", false},
+		{Hex, "1a2B3CZ", false},
+
+		// Test email strings
+		{`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`, "test.email@example.com", true},
+		{`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`, "test.email@example", false},
+		{Email, "test.email@example", false},
+
+		// Test alphanumeric strings
+		{"^[a-zA-Z0-9]+$", "abc123XYZ", true},
+		{"^[a-zA-Z0-9]+$", "abc 123", false},
+		{Alphanumeric, "abc 123", false},
+
+		// Test pattern with special characters
+		{`^\w+@\w+\.\w+$`, "user@domain.com", true},
+		{`^\w+@\w+\.\w+$`, "user@domain", false},
+
+		// Test empty pattern and string
+		{"", "", false},
+		{"^$", "", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.s, func(t *testing.T) {
+			if got := matchString(tt.pattern, tt.s); got != tt.want {
+				t.Errorf("matchString(%q, %q) = %v, want %v", tt.pattern, tt.s, got, tt.want)
+			}
+		})
+	}
+}

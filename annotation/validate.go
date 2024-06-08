@@ -63,10 +63,10 @@ func ValidateStruct(structPtr any) error {
 		return fmt.Errorf("expected a pointer to a struct")
 	}
 
-	return validateStruct(v.Elem())
+	return validateStructValue(v.Elem())
 }
 
-func validateStruct(v reflect.Value) error {
+func validateStructValue(v reflect.Value) error {
 	t := v.Type()
 
 	for i := 0; i < t.NumField(); i++ {
@@ -78,7 +78,7 @@ func validateStruct(v reflect.Value) error {
 		}
 
 		if fieldVal.Kind() == reflect.Struct {
-			if err := validateStruct(fieldVal); err != nil {
+			if err := validateStructValue(fieldVal); err != nil {
 				return err
 			}
 		}
@@ -101,8 +101,8 @@ func validateField(field reflect.StructField, fieldVal reflect.Value) error {
 	invalidErrors := NewValidationErrors()
 	for _, rule := range rules {
 		if err := applyRule(rule, field, fieldVal); err != nil {
-			if verr := new(ValidationError); errors.As(err, &verr) {
-				invalidErrors = invalidErrors.Append(verr)
+			if vErr := new(ValidationError); errors.As(err, &vErr) {
+				invalidErrors = invalidErrors.Append(vErr)
 				continue
 			}
 			return err
@@ -193,22 +193,22 @@ func applyRule(rule string, field reflect.StructField, fieldVal reflect.Value) e
 }
 
 // isEmptyValue checks if a value is considered empty.
-func isEmptyValue(v reflect.Value) bool {
-	switch v.Kind() {
+// only checks for the following types: string, array, slice, map, ptr, interface
+func isEmptyValue(val reflect.Value) bool {
+	switch val.Kind() {
 	case reflect.String, reflect.Array, reflect.Slice, reflect.Map:
-		return v.Len() == 0
-	case reflect.Bool:
-		return !v.Bool()
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return v.Int() == 0
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return v.Uint() == 0
-	case reflect.Float32, reflect.Float64:
-		return v.Float() == 0
+		return val.Len() == 0
 	case reflect.Ptr, reflect.Interface:
-		return v.IsNil()
+		return val.IsNil()
+	case reflect.Bool,
+		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
+		reflect.Float32, reflect.Float64:
+		return false
+	default:
+		// including struct, complex, chan, func, unsafe.Pointer
+		return false
 	}
-	return reflect.DeepEqual(v.Interface(), reflect.Zero(v.Type()).Interface())
 }
 
 func isLessThan(v reflect.Value, limit float64) bool {
@@ -319,10 +319,12 @@ func hasMaxLength(v reflect.Value, maxLength int) bool {
 }
 
 func isBlank(v reflect.Value) bool {
-	switch v.Kind() {
-	case reflect.String:
+	kind := v.Kind()
+	switch {
+	case kind == reflect.String:
 		return strings.TrimSpace(v.String()) == ""
-	case reflect.Slice:
+	case (kind == reflect.Slice) &&
+		v.Type().Elem().Kind() == reflect.String:
 		for i := 0; i < v.Len(); i++ {
 			if isBlank(v.Index(i)) {
 				return true
@@ -338,9 +340,78 @@ func matchesPattern(v reflect.Value, pattern string) bool {
 	if v.Kind() != reflect.String {
 		return false
 	}
-	matched, err := regexp.MatchString(pattern, v.String())
+
+	return matchString(pattern, v.String())
+}
+
+type (
+	predefinedPatternName = string
+	predefinedPattern     = string
+)
+
+const (
+	Email        predefinedPatternName = "#email"
+	URL          predefinedPatternName = "#url"
+	Digits       predefinedPatternName = "#digits"
+	Hex          predefinedPatternName = "#hex"
+	Base64       predefinedPatternName = "#base64"
+	Alphabets    predefinedPatternName = "#alphabets"
+	Alphanumeric predefinedPatternName = "#alphanumeric"
+)
+
+const (
+	emailPattern        predefinedPattern = "^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$"
+	urlPattern          predefinedPattern = `^(http|https)://[a-zA-Z0-9-.]+.[a-zA-Z]{2,3}(/S*)?$`
+	alphabetsPattern    predefinedPattern = `^[a-zA-Z]+$`
+	digitsPattern       predefinedPattern = `^\d+$`
+	alphanumericPattern predefinedPattern = `^[a-zA-Z0-9]+$`
+	hexPattern          predefinedPattern = `^[0-9a-fA-F]+$`
+	base64Pattern       predefinedPattern = `^[a-zA-Z0-9+/]*={0,2}$`
+)
+
+// matchString checks if a string matches a pattern.
+// if s head with #, it will use predefined pattern.
+// otherwise, it will use the pattern as a regular expression, which always starts with ^ and ends with $.
+func matchString(pattern, s string) bool {
+	if strings.HasPrefix(pattern, "#") {
+		return matchPredefinedPattern(pattern, s)
+	}
+	return matchRegexp(pattern, s)
+}
+
+// matchRegexp checks if a string matches a regular expression pattern.
+func matchPredefinedPattern(pattern string, s string) bool {
+	switch pattern {
+	case Email:
+		return matchRegexp(emailPattern, s)
+	case URL:
+		return matchRegexp(urlPattern, s)
+	case Digits:
+		return matchRegexp(digitsPattern, s)
+	case Hex:
+		return matchRegexp(hexPattern, s)
+	case Base64:
+		return matchRegexp(base64Pattern, s)
+	case Alphabets:
+		return matchRegexp(alphabetsPattern, s)
+	case Alphanumeric:
+		return matchRegexp(alphanumericPattern, s)
+	default:
+		return false
+	}
+}
+
+// matchRegexp checks if a string matches a regular expression pattern.
+func matchRegexp(pattern predefinedPattern, s string) bool {
+	// not start with ^ and end with $, just skip as not match
+	if !strings.HasPrefix(pattern, "^") || !strings.HasSuffix(pattern, "$") {
+		return false
+	}
+
+	matched, err := regexp.MatchString(pattern, s)
 	if err != nil {
 		return false
 	}
 	return matched
+
 }

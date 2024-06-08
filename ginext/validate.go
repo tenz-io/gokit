@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/tenz-io/gokit/annotation"
 	"net/http"
 
+	"github.com/gin-gonic/gin"
+
+	"github.com/tenz-io/gokit/annotation"
 	"github.com/tenz-io/gokit/ginext/errcode"
 )
 

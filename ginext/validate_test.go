@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/tenz-io/gokit/annotation"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -15,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/tenz-io/gokit/annotation"
 	"github.com/tenz-io/gokit/ginext/errcode"
 )
 
