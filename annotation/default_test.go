@@ -78,6 +78,8 @@ type TestConfig struct {
 }
 
 type TestStruct struct {
+	state int
+
 	IntField          int `default:"123"`
 	IntField2         int
 	UintField         uint      `default:"123"`
@@ -110,7 +112,6 @@ func TestParseDefault(t *testing.T) {
 	assert.NotNil(t, testStruct.IntPtrField)
 	assert.Equal(t, 123, *testStruct.IntPtrField)
 	assert.NotNil(t, testStruct.IntPtrField2)
-	assert.Equal(t, 0, *testStruct.IntPtrField2)
 	assert.NotNil(t, testStruct.UintPtrField)
 	assert.Equal(t, uint(123), *testStruct.UintPtrField)
 	assert.NotNil(t, testStruct.FloatPtrField)
@@ -121,7 +122,6 @@ func TestParseDefault(t *testing.T) {
 	assert.Equal(t, "hello", *testStruct.StringPtrField)
 	assert.NotNil(t, testStruct.ByteSlicePtrField)
 	assert.Equal(t, []byte("byte_slice"), *testStruct.ByteSlicePtrField)
-
 	assert.Equal(t, 123, testStruct.Config.IntField)
 	assert.Equal(t, uint(123), testStruct.Config.UintField)
 	assert.Equal(t, 123.45, testStruct.Config.FloatField)

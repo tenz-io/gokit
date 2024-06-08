@@ -18,6 +18,11 @@ func ParseDefault(structPtr any) error {
 
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
+		// skip unexported fields
+		if field.PkgPath != "" {
+			continue
+		}
+
 		if err := updateStructField(v, field); err != nil {
 			return err
 		}
