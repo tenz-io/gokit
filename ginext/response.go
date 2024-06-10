@@ -14,6 +14,12 @@ type FileResponse interface {
 	GetFile() []byte
 }
 
+type ResponseFrame struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Data    any    `json:"data"`
+}
+
 func Response(c *gin.Context, data any) {
 	if data == nil {
 		data = gin.H{}
@@ -27,7 +33,11 @@ func Response(c *gin.Context, data any) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "success", "data": data})
+	c.JSON(http.StatusOK, ResponseFrame{
+		Code:    0,
+		Message: "success",
+		Data:    data,
+	})
 }
 
 func ErrorResponse(c *gin.Context, err error, data ...any) {
@@ -40,10 +50,18 @@ func ErrorResponse(c *gin.Context, err error, data ...any) {
 	}
 	_ = c.Error(err)
 	if e := new(errcode.Error); errors.As(err, &e) {
-		c.JSON(e.Status, gin.H{"code": e.Code, "message": e.Message, "data": data})
+		c.JSON(e.Status, ResponseFrame{
+			Code:    e.Code,
+			Message: e.Message,
+			Data:    d,
+		})
 		c.Abort()
 		return
 	}
-	c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "unknown", "data": gin.H{}})
+	c.JSON(http.StatusInternalServerError, ResponseFrame{
+		Code:    http.StatusInternalServerError,
+		Message: err.Error(),
+		Data:    d,
+	})
 	c.Abort()
 }

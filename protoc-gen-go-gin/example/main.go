@@ -20,7 +20,7 @@ var (
 type service struct {
 }
 
-func (s service) CreateArticle(ctx context.Context, req *v1.CreateArticleReq) (*v1.CreateArticleResp, error) {
+func (s *service) CreateArticle(ctx context.Context, req *v1.CreateArticleReq) (*v1.CreateArticleResp, error) {
 	log.Printf("CreateArticle: %+v\n", req)
 
 	if !strings.HasPrefix(req.GetAuthorization(), "Bearer ") {
@@ -34,7 +34,7 @@ func (s service) CreateArticle(ctx context.Context, req *v1.CreateArticleReq) (*
 	}, nil
 }
 
-func (s service) GetArticles(ctx context.Context, req *v1.GetArticlesReq) (*v1.GetArticlesResp, error) {
+func (s *service) GetArticles(ctx context.Context, req *v1.GetArticlesReq) (*v1.GetArticlesResp, error) {
 	log.Printf("GetArticles: %+v\n", req)
 
 	return &v1.GetArticlesResp{
@@ -50,7 +50,7 @@ func (s service) GetArticles(ctx context.Context, req *v1.GetArticlesReq) (*v1.G
 	}, nil
 }
 
-func (s service) GetImage(ctx context.Context, req *v1.GetImageReq) (*v1.GetImageResp, error) {
+func (s *service) GetImage(ctx context.Context, req *v1.GetImageReq) (*v1.GetImageResp, error) {
 	log.Printf("GetImage: %+v\n", req)
 	fileContent := []byte("image content")
 	return &v1.GetImageResp{
@@ -58,7 +58,7 @@ func (s service) GetImage(ctx context.Context, req *v1.GetImageReq) (*v1.GetImag
 	}, nil
 }
 
-func (s service) UploadImage(ctx context.Context, req *v1.UploadImageReq) (*v1.UploadImageResp, error) {
+func (s *service) UploadImage(ctx context.Context, req *v1.UploadImageReq) (*v1.UploadImageResp, error) {
 	log.Printf("UploadImage, key=%s, region: %s, file size: %d\n",
 		req.GetKey(), req.GetRegion(), len(req.GetImage()))
 

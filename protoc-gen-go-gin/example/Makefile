@@ -15,17 +15,19 @@ dep:
 	go mod tidy -v
 
 
-
+.PHONY: run
+run:
+	go run main.go
 
 
 .PHONY: get-articles
 get-articles:
-	curl -X GET "localhost:8888/v1/author/123/articles?title=hello&page=1"
+	curl -v -X GET "localhost:8888/v1/author/123/articles?title=hello&page=-1"
 
 
 .PHONY: create-article
 create-article:
-	curl -X POST localhost:8888/v1/author/123/articles \
+	curl -v -X POST localhost:8888/v1/author/123/articles \
 	-H "Content-Type: application/json" \
 	-H "Authorization: Bearer abc123" \
 	-d '{"title":"Hello World","content":"This is a test article"}'
@@ -33,11 +35,11 @@ create-article:
 
 .PHONY: get-image
 get-image:
-	curl -X GET "localhost:8888/v1/images/xyz123?region=uk"
+	curl -v -X GET "localhost:8888/v1/images/xyz123?region=uk"
 
 .PHONY: upload-image
 upload-image:
-	curl --location 'localhost:8888/v1/images/xyz123?region=uk' \
+	curl -v -X POST --location 'localhost:8888/v1/images/xyz123?region=uk' \
     --header 'Authorization: Bearer 123' \
     --form 'image=@"/path/to/file"' \
     --form 'filename="cat.jpg"'
