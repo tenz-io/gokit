@@ -23,16 +23,9 @@ func (s *{{$.Name}}) {{ .HandlerName }} (ctx *gin.Context) {
 	    ginext.ErrorResponse(ctx, err)
 		return
 	}
-	md := metadata.New(nil)
-	md.Set("path", ctx.Request.URL.Path)
-	md.Set("raw_query", ctx.Request.URL.RawQuery)
-	for k, v := range ctx.Request.URL.Query() {
-		md.Set(k, v...)
-	}
-	for k, v := range ctx.Request.Header {
-		md.Set(k, v...)
-	}
-	newCtx := metadata.NewIncomingContext(ctx.Request.Context(), md)
+	
+    md := metadata.New(ctx)
+    newCtx := metadata.WithMetadata(ctx.Request.Context(), md)
 	out, err := s.server.({{ $.InterfaceName }}).{{.Name}}(newCtx, &in)
 	if err != nil {
 		ginext.ErrorResponse(ctx, err)

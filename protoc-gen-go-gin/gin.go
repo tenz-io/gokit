@@ -14,7 +14,7 @@ import (
 const (
 	contextPkg         = protogen.GoImportPath("context")
 	ginPkg             = protogen.GoImportPath("github.com/gin-gonic/gin")
-	metadataPkg        = protogen.GoImportPath("google.golang.org/grpc/metadata")
+	metadataPkg        = protogen.GoImportPath("github.com/tenz-io/gokit/ginext/metadata")
 	ginextPkg          = protogen.GoImportPath("github.com/tenz-io/gokit/ginext")
 	deprecationComment = "// Deprecated: Do not use."
 )

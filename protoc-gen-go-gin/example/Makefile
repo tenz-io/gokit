@@ -22,7 +22,7 @@ run:
 
 .PHONY: get-articles
 get-articles:
-	curl -v -X GET "localhost:8888/v1/author/123/articles?title=hello&page=-1"
+	curl -v -X GET "localhost:8888/v1/author/123/articles?title=hello&page=1"
 
 
 .PHONY: create-article
