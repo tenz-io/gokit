@@ -7,7 +7,6 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/tenz-io/gokit/ginext/errcode"
-	"github.com/tenz-io/gokit/ginext/metadata"
 )
 
 type FileResponse interface {
@@ -49,8 +48,6 @@ func ErrorResponse(c *gin.Context, err error, data ...any) {
 	if d == nil {
 		d = gin.H{}
 	}
-
-	meta, ok := metadata.FromContext(c.Request.Context())
 
 	_ = c.Error(err)
 	if e := new(errcode.Error); errors.As(err, &e) {
