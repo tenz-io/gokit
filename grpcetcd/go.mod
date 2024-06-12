@@ -3,7 +3,7 @@ module github.com/tenz-io/gokit/grpcetcd
 go 1.21
 
 require (
-	github.com/tenz-io/gokit/logger v1.5.2
+	github.com/tenz-io/gokit/logger v1.5.3
 	go.etcd.io/etcd/client/v3 v3.5.13
 	google.golang.org/grpc v1.63.2
 )

@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/tenz-io/gokit/ginext v0.0.0
-	github.com/tenz-io/gokit/logger v1.5.2
+	github.com/tenz-io/gokit/logger v1.5.3
 )
 
 require (

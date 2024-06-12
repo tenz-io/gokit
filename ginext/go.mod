@@ -7,7 +7,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/tenz-io/gokit/annotation v1.0.8
 	github.com/tenz-io/gokit/functional v1.0.0
-	github.com/tenz-io/gokit/logger v1.5.2
+	github.com/tenz-io/gokit/logger v1.5.3
 	github.com/tenz-io/gokit/monitor v1.5.0
 	github.com/tenz-io/gokit/tracer v1.0.1
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1

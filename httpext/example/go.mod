@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/tenz-io/gokit/httpext v0.0.0
-	github.com/tenz-io/gokit/logger v1.5.2
+	github.com/tenz-io/gokit/logger v1.5.3
 )
 
 require (

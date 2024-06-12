@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/tenz-io/gokit/cache v0.0.0
-	github.com/tenz-io/gokit/logger v1.5.2
+	github.com/tenz-io/gokit/logger v1.5.3
 )
 
 require (
