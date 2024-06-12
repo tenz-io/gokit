@@ -44,9 +44,13 @@ func (s *BlogService) GetArticles_0(ctx *gin.Context) {
 		return
 	}
 
-	md := metadata.New(ctx)
+	var handler ginext.RpcHandler = func(ctx context.Context, req any) (resp any, err error) {
+		return s.server.(BlogServiceHTTPServer).GetArticles(ctx, req.(*GetArticlesReq))
+	}
+
+	md := metadata.New(ctx, "BlogServiceHTTPServer.GetArticles")
 	newCtx := metadata.WithMetadata(ctx.Request.Context(), md)
-	out, err := s.server.(BlogServiceHTTPServer).GetArticles(newCtx, &in)
+	out, err := ginext.AllRpcInterceptor.Intercept(newCtx, &in, handler)
 	if err != nil {
 		ginext.ErrorResponse(ctx, err)
 		return
@@ -62,9 +66,13 @@ func (s *BlogService) CreateArticle_0(ctx *gin.Context) {
 		return
 	}
 
-	md := metadata.New(ctx)
+	var handler ginext.RpcHandler = func(ctx context.Context, req any) (resp any, err error) {
+		return s.server.(BlogServiceHTTPServer).CreateArticle(ctx, req.(*CreateArticleReq))
+	}
+
+	md := metadata.New(ctx, "BlogServiceHTTPServer.CreateArticle")
 	newCtx := metadata.WithMetadata(ctx.Request.Context(), md)
-	out, err := s.server.(BlogServiceHTTPServer).CreateArticle(newCtx, &in)
+	out, err := ginext.AllRpcInterceptor.Intercept(newCtx, &in, handler)
 	if err != nil {
 		ginext.ErrorResponse(ctx, err)
 		return
@@ -80,23 +88,19 @@ func (s *BlogService) UploadImage_0(ctx *gin.Context) {
 		return
 	}
 
-	md := metadata.New(ctx)
+	var handler ginext.RpcHandler = func(ctx context.Context, req any) (resp any, err error) {
+		return s.server.(BlogServiceHTTPServer).UploadImage(ctx, req.(*UploadImageReq))
+	}
+
+	md := metadata.New(ctx, "BlogServiceHTTPServer.UploadImage")
 	newCtx := metadata.WithMetadata(ctx.Request.Context(), md)
-	out, err := s.server.(BlogServiceHTTPServer).UploadImage(newCtx, &in)
+	out, err := ginext.AllRpcInterceptor.Intercept(newCtx, &in, handler)
 	if err != nil {
 		ginext.ErrorResponse(ctx, err)
 		return
 	}
 
 	ginext.Response(ctx, out)
-}
-
-type Handler func(ctx context.Context, reqPtr any) (respPtr any, err error)
-
-func (s *BlogService) getImage_0(ctx *gin.Context) Handler {
-	return func(ctx context.Context, req any) (any, error) {
-		return s.server.(BlogServiceHTTPServer).GetImage(ctx, req.(*GetImageReq))
-	}
 }
 
 func (s *BlogService) GetImage_0(ctx *gin.Context) {
@@ -106,13 +110,13 @@ func (s *BlogService) GetImage_0(ctx *gin.Context) {
 		return
 	}
 
-	md := metadata.New(ctx)
-	newCtx := metadata.WithMetadata(ctx.Request.Context(), md)
-	var handler Handler
-	handler = func(ctx context.Context, reqPtr any) (respPtr any, err error) {
-		return s.server.(BlogServiceHTTPServer).GetImage(ctx, reqPtr.(*GetImageReq))
+	var handler ginext.RpcHandler = func(ctx context.Context, req any) (resp any, err error) {
+		return s.server.(BlogServiceHTTPServer).GetImage(ctx, req.(*GetImageReq))
 	}
-	out, err := handler(newCtx, &in)
+
+	md := metadata.New(ctx, "BlogServiceHTTPServer.GetImage")
+	newCtx := metadata.WithMetadata(ctx.Request.Context(), md)
+	out, err := ginext.AllRpcInterceptor.Intercept(newCtx, &in, handler)
 	if err != nil {
 		ginext.ErrorResponse(ctx, err)
 		return

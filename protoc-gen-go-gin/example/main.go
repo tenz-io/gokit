@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/tenz-io/gokit/ginext/errcode"
+	"github.com/tenz-io/gokit/logger"
 )
 
 var (
@@ -69,6 +70,12 @@ func (s *service) UploadImage(ctx context.Context, req *v1.UploadImageReq) (*v1.
 	return &v1.UploadImageResp{
 		Key: req.GetKey(),
 	}, nil
+}
+
+func init() {
+	logger.ConfigureTrafficWithOpts(
+		logger.WithTrafficEnabled(true),
+	)
 }
 
 func main() {

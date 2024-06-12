@@ -132,6 +132,11 @@ func (ot *OutputTrimmer) trimStruct(v reflect.Value, deepLmt int) map[string]any
 	for i := 0; i < t.NumField(); i++ {
 		fieldName := t.Field(i).Name
 
+		// ignore unexported field
+		if fieldName[0] < 'A' || fieldName[0] > 'Z' {
+			continue
+		}
+
 		// get json tag
 		if tag := t.Field(i).Tag.Get("json"); tag != "" {
 			if tag == "-" {
