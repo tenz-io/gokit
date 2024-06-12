@@ -91,6 +91,14 @@ func (s *BlogService) UploadImage_0(ctx *gin.Context) {
 	ginext.Response(ctx, out)
 }
 
+type Handler func(ctx context.Context, reqPtr any) (respPtr any, err error)
+
+func (s *BlogService) getImage_0(ctx *gin.Context) Handler {
+	return func(ctx context.Context, req any) (any, error) {
+		return s.server.(BlogServiceHTTPServer).GetImage(ctx, req.(*GetImageReq))
+	}
+}
+
 func (s *BlogService) GetImage_0(ctx *gin.Context) {
 	var in GetImageReq
 	if err := ginext.BindAndValidate(ctx, &in); err != nil {
@@ -100,7 +108,11 @@ func (s *BlogService) GetImage_0(ctx *gin.Context) {
 
 	md := metadata.New(ctx)
 	newCtx := metadata.WithMetadata(ctx.Request.Context(), md)
-	out, err := s.server.(BlogServiceHTTPServer).GetImage(newCtx, &in)
+	var handler Handler
+	handler = func(ctx context.Context, reqPtr any) (respPtr any, err error) {
+		return s.server.(BlogServiceHTTPServer).GetImage(ctx, reqPtr.(*GetImageReq))
+	}
+	out, err := handler(newCtx, &in)
 	if err != nil {
 		ginext.ErrorResponse(ctx, err)
 		return

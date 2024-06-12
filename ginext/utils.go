@@ -2,8 +2,12 @@ package ginext
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
+
+	"github.com/tenz-io/gokit/ginext/errcode"
+	"github.com/tenz-io/gokit/tracer"
 )
 
 // getStructFieldNames returns the field names of a struct
@@ -133,4 +137,44 @@ func getPtrElem(v any) (reflect.Type, error) {
 	}
 
 	return typ, nil
+}
+
+func getErrCode(err error) string {
+	if err == nil {
+		return "0"
+	}
+	if e := new(errcode.Error); errors.As(err, &e) {
+		return fmt.Sprintf("%d", e.Code)
+	}
+	return "1"
+}
+
+func getErrMsg(err error) string {
+	if err == nil {
+		return ""
+	}
+	return err.Error()
+}
+
+func getTracerFlag(requestFlag string) tracer.Flag {
+	if requestFlag == "" {
+		return tracer.FlagNone
+	}
+
+	modes := strings.Split(strings.TrimSpace(requestFlag), "|")
+	flag := tracer.FlagNone
+	for _, mode := range modes {
+		switch mode {
+		case "normal", "":
+		case "debug":
+			flag |= tracer.FlagDebug
+		case "shadow":
+			flag |= tracer.FlagShadow
+		case "stress":
+			flag |= tracer.FlagStress
+		default:
+			//ignore
+		}
+	}
+	return flag
 }

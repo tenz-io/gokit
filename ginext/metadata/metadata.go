@@ -4,6 +4,15 @@ import (
 	"context"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/tenz-io/gokit/tracer"
+)
+
+const (
+	headerAuthorization = "Authorization"
+	headerRequestID     = "RequestID"
+	headerSessionID     = "X-Session-ID"
+	headerRequestFlag   = "X-Request-Flag"
 )
 
 type mdCtxKey struct{}
@@ -25,18 +34,22 @@ type MD struct {
 	RequestID string
 	// SessionID from header X-Session-ID
 	SessionID string
-	// RequestMode from header X-Request-Mode
-	// modes: normal, debug, shadow
-	RequestMode string
+	// RequestFlag from header X-Request-Flag
+	// modes: normal, debug, shadow, stress
+	// or combine of modes: debug|shadow
+	RequestFlag string
+	// Cmd grpc command/service
+	Cmd string
 }
 
-func New(c *gin.Context) *MD {
+func New(c *gin.Context, cmd string) *MD {
 	md := &MD{
 		Path:     c.Request.URL.Path,
 		Method:   c.Request.Method,
 		Host:     c.Request.Host,
 		ClientIP: c.ClientIP(),
 		Header:   make(map[string]string, len(c.Request.Header)),
+		Cmd:      cmd,
 	}
 	for k, val := range c.Request.Header {
 		md.setHeader(k, val...)
@@ -52,16 +65,19 @@ func (md *MD) additional(c *gin.Context) {
 	md.ContentType = c.ContentType()
 
 	// Authorization from header Authorization
-	md.Authorization = c.GetHeader("Authorization")
+	md.Authorization = c.GetHeader(headerAuthorization)
 
 	// RequestID from header X-Request-ID
-	md.RequestID = c.GetHeader("X-Request-ID")
+	md.RequestID = c.GetHeader(headerRequestID)
+	if md.RequestID == "" {
+		md.RequestID = tracer.RequestIdFromCtx(c.Request.Context())
+	}
 
 	// SessionID from header X-Session-ID
-	md.SessionID = c.GetHeader("X-Session-ID")
+	md.SessionID = c.GetHeader(headerSessionID)
 
 	// RequestMode from header X-Request-Mode
-	md.RequestMode = c.GetHeader("X-Request-Mode")
+	md.RequestFlag = c.GetHeader(headerRequestFlag)
 }
 
 func (md *MD) setHeader(k string, vals ...string) {
