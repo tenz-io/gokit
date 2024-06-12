@@ -10,8 +10,8 @@ import (
 
 const (
 	headerAuthorization = "Authorization"
-	headerRequestID     = "RequestID"
-	headerSessionID     = "X-Session-ID"
+	headerRequestID     = "X-Request-Id"
+	headerSessionID     = "X-Session-Id"
 	headerRequestFlag   = "X-Request-Flag"
 )
 
@@ -72,6 +72,8 @@ func (md *MD) additional(c *gin.Context) {
 	if md.RequestID == "" {
 		md.RequestID = tracer.RequestIdFromCtx(c.Request.Context())
 	}
+	c.Request.WithContext(tracer.WithRequestId(c.Request.Context(), md.RequestID))
+	c.Writer.Header().Set(headerRequestID, md.RequestID)
 
 	// SessionID from header X-Session-ID
 	md.SessionID = c.GetHeader(headerSessionID)
