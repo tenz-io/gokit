@@ -6,7 +6,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/prometheus/client_golang v1.19.0
 	github.com/tenz-io/gokit/annotation v1.0.0
-	github.com/tenz-io/gokit/logger v1.5.0
+	github.com/tenz-io/gokit/logger v1.5.3
 	gopkg.in/yaml.v2 v2.4.0
 )
 
