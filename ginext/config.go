@@ -14,6 +14,7 @@ var (
 	}
 )
 
+// deprecated
 type Config struct {
 	// EnableTraffic is a flag to enable traffic interceptor.
 	EnableTraffic bool `yaml:"enable_traffic" json:"enable_traffic"`
@@ -34,6 +35,7 @@ type Config struct {
 	SlowLogFloor time.Duration `yaml:"slow_log_floor" json:"slow_log_floor"`
 }
 
+// deprecated
 type ConfigOption func(*Config)
 
 func NewConfig(opts ...ConfigOption) *Config {

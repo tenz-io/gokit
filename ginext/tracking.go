@@ -22,6 +22,8 @@ const (
 
 type requestIdCtxKeyType string
 
+// deprecated
+// use RpcInterceptor instead
 type trackingApplier struct {
 	enable bool
 }

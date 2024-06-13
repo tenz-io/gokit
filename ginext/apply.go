@@ -18,6 +18,8 @@ import (
 )
 
 var (
+	// deprecated
+	// use NewRpcInterceptors instead
 	newAppliers = []newApplierFunc{
 		newAccessLogApplier,
 		newSlowLogApplier,
@@ -29,6 +31,8 @@ var (
 	}
 )
 
+// deprecated
+// use RpcInterceptor instead
 type applier interface {
 	active() bool
 	apply() gin.HandlerFunc
@@ -36,6 +40,8 @@ type applier interface {
 
 type newApplierFunc func(config Config) applier
 
+// deprecated
+// use MetricsRpcInterceptor instead
 type metricsApplier struct {
 	enable bool
 }
@@ -76,6 +82,8 @@ func (m *metricsApplier) apply() gin.HandlerFunc {
 
 }
 
+// deprecated
+// use RpcInterceptor instead
 type timeoutApplier struct {
 	timeout time.Duration
 }
@@ -122,6 +130,8 @@ func (t *timeoutApplier) apply() gin.HandlerFunc {
 	}
 }
 
+// deprecated
+// use RpcInterceptor instead
 type accessLogApplier struct {
 	enable    bool
 	accessLog string
@@ -166,6 +176,8 @@ func (a *accessLogApplier) apply() gin.HandlerFunc {
 	return gin.LoggerWithWriter(accessLogger)
 }
 
+// deprecated
+// use PanicRecoverRpcInterceptor instead
 type panicRecoveryApplier struct {
 }
 
@@ -197,6 +209,8 @@ func (p *panicRecoveryApplier) apply() gin.HandlerFunc {
 	}
 }
 
+// deprecated
+// use RpcInterceptor instead
 type slowLogApplier struct {
 	slowLogFloor time.Duration
 }

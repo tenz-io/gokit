@@ -4,6 +4,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// deprecated
+// use RpcInterceptor instead
 type Interceptor interface {
 	Apply(engine *gin.Engine)
 }
@@ -30,6 +32,8 @@ func NewInterceptor(config Config) Interceptor {
 	}
 }
 
+// deprecated
+// use RpcInterceptor instead
 type interceptor struct {
 	appliers []applier
 }

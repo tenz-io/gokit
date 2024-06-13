@@ -15,6 +15,8 @@ import (
 	"github.com/tenz-io/gokit/tracer"
 )
 
+// deprecated
+// use TrafficRpcInterceptor instead
 type trafficApplier struct {
 	enable bool
 }
