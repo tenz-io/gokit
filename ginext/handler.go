@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"runtime/debug"
+	"time"
 
 	"github.com/tenz-io/gokit/ginext/errcode"
 	"github.com/tenz-io/gokit/ginext/metadata"
@@ -32,6 +33,10 @@ type (
 	TrafficRpcInterceptor struct {
 		interceptor RpcInterceptor
 	}
+	SlogLogRpcInterceptor struct {
+		interceptor RpcInterceptor
+		threshold   time.Duration
+	}
 	PanicRecoverRpcInterceptor struct {
 		interceptor RpcInterceptor
 	}
@@ -48,6 +53,7 @@ var (
 		NewTracerRpcInterceptor,
 		NewMetricsRpcInterceptor,
 		NewTrafficRpcInterceptor,
+		NewSlogLogRpcInterceptor,
 		NewPanicRecoverRpcInterceptor,
 	}
 	AllRpcInterceptor = newHandlerRpcInterceptor()
@@ -87,7 +93,9 @@ func (t *TracerRpcInterceptor) Intercept(ctx context.Context, req any, handler R
 	ctx = logger.WithLogger(ctx,
 		logger.WithTracing(meta.RequestID).
 			WithFields(logger.Fields{
-				"url": meta.Path,
+				"url":          meta.Path,
+				"entry_cmd":    meta.Cmd,
+				"request_flag": meta.RequestFlag,
 			}),
 	)
 
@@ -170,6 +178,46 @@ func (t *TrafficRpcInterceptor) Intercept(ctx context.Context, req any, handler 
 
 	return t.interceptor.Intercept(ctx, req, handler)
 
+}
+
+func NewSlogLogRpcInterceptor(interceptor RpcInterceptor) RpcInterceptor {
+	return &SlogLogRpcInterceptor{
+		interceptor: interceptor,
+		threshold:   5 * time.Second,
+	}
+}
+
+func (s *SlogLogRpcInterceptor) Intercept(ctx context.Context, req any, handler RpcHandler) (resp any, err error) {
+	var (
+		le    = logger.FromContext(ctx)
+		start = time.Now()
+	)
+
+	meta, ok := metadata.FromContext(ctx)
+	if !ok || meta == nil {
+		// should not happen
+		// add here for panic free
+		meta = &metadata.MD{}
+	}
+
+	defer func() {
+		if duration := time.Since(start); s.threshold > 0 && duration > s.threshold {
+			le.WithFields(logger.Fields{
+				"duration":  duration,
+				"threshold": s.threshold,
+				"method":    meta.Method,
+				"client_ip": meta.ClientIP,
+				"command":   meta.Cmd,
+				"err_code":  getErrCode(err),
+				"err_msg":   getErrMsg(err),
+			}).Warn("slow log")
+		}
+	}()
+
+	if s.interceptor == nil {
+		return handler(ctx, req)
+	}
+	return s.interceptor.Intercept(ctx, req, handler)
 }
 
 func NewPanicRecoverRpcInterceptor(interceptor RpcInterceptor) RpcInterceptor {
