@@ -5,11 +5,13 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	v1 "example/api/product/app/v1"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/tenz-io/gokit/ginext"
 	"github.com/tenz-io/gokit/ginext/errcode"
 	"github.com/tenz-io/gokit/logger"
 )
@@ -21,12 +23,25 @@ var (
 type service struct {
 }
 
+func (s *service) Login(ctx context.Context, req *v1.LoginReq) (*v1.LoginResp, error) {
+	// mock login
+	if req.GetUsername() != "admin" || req.GetPassword() != "admin" {
+		return nil, errcode.Unauthorized(http.StatusUnauthorized, "invalid username or password")
+	}
+
+	expiredAt := time.Now().Add(15 * time.Minute)
+	token, err := ginext.GenerateToken(req.GetUsername(), expiredAt)
+	if err != nil {
+		return nil, errcode.InternalServer(http.StatusInternalServerError, "failed to generate token")
+	}
+
+	return &v1.LoginResp{
+		Token: token,
+	}, nil
+}
+
 func (s *service) CreateArticle(ctx context.Context, req *v1.CreateArticleReq) (*v1.CreateArticleResp, error) {
 	log.Printf("CreateArticle: %+v\n", req)
-
-	if !strings.HasPrefix(req.GetAuthorization(), "Bearer ") {
-		return &v1.CreateArticleResp{}, errcode.Forbidden(http.StatusForbidden, "no permission")
-	}
 
 	return &v1.CreateArticleResp{
 		ArticleId: 123,

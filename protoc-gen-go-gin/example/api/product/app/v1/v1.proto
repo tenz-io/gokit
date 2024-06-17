@@ -48,7 +48,7 @@ service BlogService {
 message LoginReq {
   // @inject_tag: bind:"form,name=username" validate:"required,non_blank,min_len=2,pattern=#abc123"
   string username = 1;
-  // @inject_tag: bind:"form,name=password" validate:"required,non_blank,min_len=6"
+  // @inject_tag: bind:"form,name=password" validate:"required,non_blank,min_len=2"
   string password = 2;
 }
 

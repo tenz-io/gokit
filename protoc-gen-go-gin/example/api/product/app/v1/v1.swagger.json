@@ -43,7 +43,7 @@
           },
           {
             "name": "password",
-            "description": "@inject_tag: bind:\"form,name=password\" validate:\"required,non_blank,min_len=6\"",
+            "description": "@inject_tag: bind:\"form,name=password\" validate:\"required,non_blank,min_len=2\"",
             "in": "query",
             "required": false,
             "type": "string"

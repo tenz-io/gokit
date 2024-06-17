@@ -7,7 +7,7 @@
 package v1
 
 import (
-	_ "go/custom/options"
+	_ "github.com/tenz-io/gokit/genproto/go/custom/options"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -29,8 +29,8 @@ type LoginReq struct {
 
 	// @inject_tag: bind:"form,name=username" validate:"required,non_blank,min_len=2,pattern=#abc123"
 	Username string `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty" bind:"form,name=username" validate:"required,non_blank,min_len=2,pattern=#abc123"`
-	// @inject_tag: bind:"form,name=password" validate:"required,non_blank,min_len=6"
-	Password string `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty" bind:"form,name=password" validate:"required,non_blank,min_len=6"`
+	// @inject_tag: bind:"form,name=password" validate:"required,non_blank,min_len=2"
+	Password string `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty" bind:"form,name=password" validate:"required,non_blank,min_len=2"`
 }
 
 func (x *LoginReq) Reset() {

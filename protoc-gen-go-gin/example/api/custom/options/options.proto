@@ -4,7 +4,7 @@ package custom.options;
 
 import "google/protobuf/descriptor.proto";
 
-option go_package = "go/custom/options;options";
+option go_package = "github.com/tenz-io/gokit/genproto/go/custom/options;options";
 
 // Define a custom option "needs_auth"
 extend google.protobuf.MethodOptions {
