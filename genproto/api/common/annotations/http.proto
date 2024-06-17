@@ -272,6 +272,9 @@ message HttpRule {
   // present at the top-level of request message type.
   string body = 7;
 
+  // need auth or not
+  bool needs_auth = 9;
+
   // Additional HTTP bindings for the selector. Nested bindings must
   // not contain an `additional_bindings` field themselves (that is,
   // the nesting may only be one level deep).
