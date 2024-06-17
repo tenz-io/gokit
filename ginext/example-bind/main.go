@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -26,17 +25,7 @@ func init() {
 }
 
 func main() {
-	interceptor := ginext.NewInterceptorWithOpts(
-		ginext.WithTracking(true),
-		ginext.WithTraffic(true),
-		ginext.WithMetrics(true),
-		ginext.WithEnableAccessLog(true),
-		ginext.WithTimeout(20*time.Millisecond),
-	)
-
 	engine := gin.New()
-	interceptor.Apply(engine)
-
 	engine.POST("/user/:id", func(c *gin.Context) {
 		req := RestRequestEntity{}
 		err := ginext.BindAndValidate(c, &req)

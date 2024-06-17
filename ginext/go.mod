@@ -10,7 +10,6 @@ require (
 	github.com/tenz-io/gokit/logger v1.5.3
 	github.com/tenz-io/gokit/monitor v1.5.0
 	github.com/tenz-io/gokit/tracer v1.0.1
-	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
 require (
@@ -49,5 +48,6 @@ require (
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/protobuf v1.32.0 // indirect
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
