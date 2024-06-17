@@ -42,6 +42,10 @@ func (s *{{$.Name}}) {{ .HandlerName }} (ctx *gin.Context) {
 
 func (s *{{$.Name}}) RegisterService() {
 {{range .Methods}}
-		s.router.Handle("{{.Method}}", "{{.Path}}", s.{{ .HandlerName }})
+    {{if .NeedsAuth}}
+        s.router.Handle("{{.Method}}", "{{.Path}}", auth, s.{{ .HandlerName }})
+    {{else}}
+        s.router.Handle("{{.Method}}", "{{.Path}}", s.{{ .HandlerName }})
+    {{end}}
 {{end}}
 }

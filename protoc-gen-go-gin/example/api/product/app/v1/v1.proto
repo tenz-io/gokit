@@ -5,6 +5,7 @@ option go_package = "example/api/product/app/v1;v1";
 package product.app.v1;
 
 import "google/api/annotations.proto";
+import "custom/options/options.proto";
 
 // blog service is a blog demo
 service BlogService {
@@ -12,6 +13,7 @@ service BlogService {
     option (google.api.http) = {
       get: "/v1/author/{author_id}/articles"
     };
+    option (custom.options.needs_auth) = true;
   }
 
   rpc CreateArticle(CreateArticleReq) returns (CreateArticleResp) {

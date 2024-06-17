@@ -1,109 +1,98 @@
 package ginext
 
 import (
-	"context"
+	"errors"
 	"net/http"
-	"strings"
+	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+
+	"github.com/tenz-io/gokit/logger"
 )
 
-// Auth is the interface that wraps the Auth method.
-//
-//go:generate mockery --name Auth --filename auth_mock.go --inpackage
-type Auth interface {
-	// VerifyUser returns true if the username and password are valid
-	VerifyUser(ctx context.Context, username, password string) (bool, error)
-	// VerifyToken returns true if the token is valid
-	// token is a jwt token
-	VerifyToken(ctx context.Context, token string) (bool, error)
-	// VerifyAuthentication returns true if the token is valid
-	// authentication is Authentication header
-	VerifyAuthentication(ctx context.Context, authentication string) (bool, error)
-	// VerifyCookie returns true if the cookie is valid
-	VerifyCookie(ctx context.Context, cookie string) (bool, error)
-	// RefreshToken refreshes the token
-	RefreshToken(ctx context.Context, token string) (string, error)
-	// RefreshCookie refreshes the cookie
-	RefreshCookie(ctx context.Context, cookie string) (string, error)
+var (
+	jwtKey = []byte("my_secret_key")
+)
+
+type Claims struct {
+	Username string `json:"username"`
+	jwt.StandardClaims
 }
 
-type UserExtractor func(c *gin.Context) (username, password string)
-
-type GinAuth struct {
-	auth             Auth
-	whitelist        map[string]struct{}
-	prefixWhitelist  []string
-	loginUriHandlers map[string]UserExtractor
+func InitJWT(secretKey string) {
+	jwtKey = []byte(secretKey)
 }
 
-func NewGinAuth(
-	auth Auth,
-	whitelist []string,
-	prefixWhitelist []string,
-) *GinAuth {
-	whitelistMap := make(map[string]struct{}, len(whitelist))
-	for _, v := range whitelist {
-		whitelistMap[v] = struct{}{}
+func Authenticate(c *gin.Context) {
+	var (
+		le = logger.FromContext(c.Request.Context())
+	)
+	tokenString := c.GetHeader("Authorization")
+	if tokenString == "" {
+		le.Warnf("missing token")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing token"})
+		c.Abort()
+		return
 	}
 
-	return &GinAuth{
-		auth:            auth,
-		whitelist:       whitelistMap,
-		prefixWhitelist: prefixWhitelist,
-	}
-}
-
-func (ga *GinAuth) Apply() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		var (
-			ctx    = c.Request.Context()
-			reqUrl = c.Request.URL.Path
-			query  = c.Request.URL.RawQuery
-		)
-
-		// if match whitelist, skip auth
-		if _, ok := ga.whitelist[reqUrl]; ok {
-			c.Next()
+	claims := Claims{}
+	token, err := jwt.ParseWithClaims(tokenString, &claims, func(token *jwt.Token) (any, error) {
+		// Ensure the signing method is HMAC and the key is correct
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		return jwtKey, nil
+	})
+	if err != nil {
+		le.Warnf("error parsing token: %v", err)
+		if errors.Is(err, jwt.ErrSignatureInvalid) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			c.Abort()
 			return
 		}
 
-		// if reqUrl start with prefix, skip auth
-		for _, prefix := range ga.prefixWhitelist {
-			if prefix != "" && strings.HasPrefix(reqUrl, prefix) {
-				c.Next()
-				return
-			}
-		}
-
-		// if reqUrl match loginUriHandlers, extract username and password
-		if extractor, ok := ga.loginUriHandlers[reqUrl]; ok {
-			username, password := extractor(c)
-			if username == "" || password == "" {
-				c.JSON(http.StatusUnauthorized, gin.H{"message": "invalid credentials"})
+		if e := new(jwt.ValidationError); errors.As(err, &e) {
+			if e.Errors&jwt.ValidationErrorMalformed != 0 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Bad token"})
 				c.Abort()
 				return
 			}
-			if _, err := ga.auth.VerifyUser(ctx, username, password); err != nil {
-				c.JSON(http.StatusUnauthorized, gin.H{"message": "invalid credentials"})
+			if e.Errors&(jwt.ValidationErrorExpired|jwt.ValidationErrorNotValidYet) != 0 {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 				c.Abort()
 				return
 			}
-
-			// refresh cookie
-			cookie, err := ga.auth.RefreshCookie(ctx, "")
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})
-				c.Abort()
-				return
-			}
-
-			// set cookie
-			c.SetCookie("token", cookie, 3600, "/", "", false, true)
-
-			c.Next()
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
+			c.Abort()
 			return
 		}
 
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
+		c.Abort()
+		return
 	}
+
+	if !token.Valid {
+		le.Warnf("invalid token")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+		c.Abort()
+		return
+	}
+
+	le.Debugf("authenticated user: %s", claims.Username)
+	c.Set("username", claims.Username)
+	c.Next()
+}
+
+func GenerateToken(username string, expiredAt time.Time) (string, error) {
+	claims := &Claims{
+		Username: username,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: expiredAt.Unix(),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(jwtKey)
 }

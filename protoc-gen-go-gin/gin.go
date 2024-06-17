@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/tenz-io/gokit/genproto/go/custom/options"
 	"google.golang.org/genproto/googleapis/api/annotations"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
@@ -56,26 +57,32 @@ func genService(gen *protogen.Plugin, file *protogen.File, g *protogen.Generated
 		FilePath: file.Desc.Path(),
 	}
 
-	for _, method := range s.Methods {
-		sd.Methods = append(sd.Methods, genMethod(method)...)
+	for _, m := range s.Methods {
+		sd.Methods = append(sd.Methods, genMethod(m)...)
 	}
 	g.P(sd.execute())
 }
 
 func genMethod(m *protogen.Method) []*method {
-	var methods []*method
+	var (
+		methods   []*method
+		needsAuth bool
+	)
 
-	// 存在 http rule 配置
+	if auth, ok := proto.GetExtension(m.Desc.Options(), options.E_NeedsAuth).(bool); ok {
+		needsAuth = auth
+	}
+
 	rule, ok := proto.GetExtension(m.Desc.Options(), annotations.E_Http).(*annotations.HttpRule)
 	if rule != nil && ok {
 		for _, bind := range rule.AdditionalBindings {
-			methods = append(methods, buildHTTPRule(m, bind))
+			methods = append(methods, buildHTTPRule(m, bind, needsAuth))
 		}
-		methods = append(methods, buildHTTPRule(m, rule))
+		methods = append(methods, buildHTTPRule(m, rule, needsAuth))
 		return methods
 	}
 
-	// 不存在走默认流程
+	// default method
 	methods = append(methods, defaultMethod(m))
 	return methods
 }
@@ -115,49 +122,50 @@ func defaultMethod(m *protogen.Method) *method {
 		path = strings.Join(names[1:], "/")
 	}
 
-	md := buildMethodDesc(m, httpMethod, path)
+	md := buildMethodDesc(m, httpMethod, path, false)
 	md.Body = "*"
 	return md
 }
 
-func buildHTTPRule(m *protogen.Method, rule *annotations.HttpRule) *method {
+func buildHTTPRule(m *protogen.Method, rule *annotations.HttpRule, needAuth bool) *method {
 	var (
-		path   string
-		method string
+		path       string
+		httpMethod string
 	)
 	switch pattern := rule.Pattern.(type) {
 	case *annotations.HttpRule_Get:
 		path = pattern.Get
-		method = "GET"
+		httpMethod = "GET"
 	case *annotations.HttpRule_Put:
 		path = pattern.Put
-		method = "PUT"
+		httpMethod = "PUT"
 	case *annotations.HttpRule_Post:
 		path = pattern.Post
-		method = "POST"
+		httpMethod = "POST"
 	case *annotations.HttpRule_Delete:
 		path = pattern.Delete
-		method = "DELETE"
+		httpMethod = "DELETE"
 	case *annotations.HttpRule_Patch:
 		path = pattern.Patch
-		method = "PATCH"
+		httpMethod = "PATCH"
 	case *annotations.HttpRule_Custom:
 		path = pattern.Custom.Path
-		method = pattern.Custom.Kind
+		httpMethod = pattern.Custom.Kind
 	}
-	md := buildMethodDesc(m, method, path)
+	md := buildMethodDesc(m, httpMethod, path, needAuth)
 	return md
 }
 
-func buildMethodDesc(m *protogen.Method, httpMethod, path string) *method {
+func buildMethodDesc(m *protogen.Method, httpMethod, path string, needAuth bool) *method {
 	defer func() { methodSets[m.GoName]++ }()
 	md := &method{
-		Name:    m.GoName,
-		Num:     methodSets[m.GoName],
-		Request: m.Input.GoIdent.GoName,
-		Reply:   m.Output.GoIdent.GoName,
-		Path:    path,
-		Method:  httpMethod,
+		Name:      m.GoName,
+		Num:       methodSets[m.GoName],
+		Request:   m.Input.GoIdent.GoName,
+		Reply:     m.Output.GoIdent.GoName,
+		Path:      path,
+		Method:    httpMethod,
+		NeedsAuth: needAuth,
 	}
 	md.initPathParams()
 	return md

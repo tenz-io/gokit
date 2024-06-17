@@ -3,6 +3,7 @@ module github.com/tenz-io/gokit/ginext
 go 1.21
 
 require (
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-gonic/gin v1.9.1
 	github.com/stretchr/testify v1.9.0
 	github.com/tenz-io/gokit/annotation v1.0.8

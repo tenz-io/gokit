@@ -127,7 +127,7 @@ func (s *BlogService) GetImage_0(ctx *gin.Context) {
 
 func (s *BlogService) RegisterService() {
 
-	s.router.Handle("GET", "/v1/author/:author_id/articles", s.GetArticles_0)
+	s.router.Handle("GET", "/v1/author/:author_id/articles", auth, s.GetArticles_0)
 
 	s.router.Handle("POST", "/v1/author/:author_id/articles", s.CreateArticle_0)
 
