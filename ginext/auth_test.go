@@ -32,13 +32,13 @@ func TestAuthenticate(t *testing.T) {
 			name:         "Missing Token",
 			token:        "",
 			expectedCode: http.StatusUnauthorized,
-			expectedBody: `{"error":"Missing token"}`,
+			expectedBody: `{"code":401,"message":"missing token","data":{}}`,
 		},
 		{
 			name:         "Invalid Token",
 			token:        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InRlc3R1c2VyIiwiZXhwIjoxNzE4NjM4NjIzfQ.3jkMyPp2j7-3EFsLBmMRmTY15JVqmMo8kZGySd7gr-U",
 			expectedCode: http.StatusUnauthorized,
-			expectedBody: `{"error":"Invalid token"}`,
+			expectedBody: `{"code":401,"message":"invalid token","data":{}}`,
 		},
 		{
 			name:         "Valid Token",
@@ -60,6 +60,7 @@ func TestAuthenticate(t *testing.T) {
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, tt.expectedCode, w.Code)
+			t.Logf("body: %s", w.Body.String())
 			assert.JSONEq(t, tt.expectedBody, w.Body.String())
 		})
 	}

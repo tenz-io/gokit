@@ -9,6 +9,13 @@ import "custom/options/options.proto";
 
 // blog service is a blog demo
 service BlogService {
+  rpc Login(LoginReq) returns (LoginResp) {
+    option (google.api.http) = {
+      post: "/login"
+    };
+    option (custom.options.needs_auth) = false;
+  }
+
   rpc GetArticles(GetArticlesReq) returns (GetArticlesResp) {
     option (google.api.http) = {
       get: "/v1/author/{author_id}/articles"
@@ -20,19 +27,33 @@ service BlogService {
     option (google.api.http) = {
       post: "/v1/author/{author_id}/articles"
     };
+    option (custom.options.needs_auth) = true;
   }
 
   rpc UploadImage(UploadImageReq) returns (UploadImageResp) {
     option (google.api.http) = {
       post: "/v1/images/{key}"
     };
+    option (custom.options.needs_auth) = true;
   }
 
   rpc GetImage(GetImageReq) returns (GetImageResp) {
     option (google.api.http) = {
       get: "/v1/images/{key}"
     };
+    option (custom.options.needs_auth) = true;
   }
+}
+
+message LoginReq {
+  // @inject_tag: bind:"form,name=username" validate:"required,non_blank,min_len=2,pattern=#abc123"
+  string username = 1;
+  // @inject_tag: bind:"form,name=password" validate:"required,non_blank,min_len=6"
+  string password = 2;
+}
+
+message LoginResp {
+  string token = 1;
 }
 
 message GetArticlesReq {

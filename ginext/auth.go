@@ -8,6 +8,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 
+	"github.com/tenz-io/gokit/ginext/errcode"
 	"github.com/tenz-io/gokit/logger"
 )
 
@@ -31,8 +32,7 @@ func Authenticate(c *gin.Context) {
 	tokenString := c.GetHeader("Authorization")
 	if tokenString == "" {
 		le.Warnf("missing token")
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing token"})
-		c.Abort()
+		ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "missing token"))
 		return
 	}
 
@@ -47,36 +47,30 @@ func Authenticate(c *gin.Context) {
 	if err != nil {
 		le.Warnf("error parsing token: %v", err)
 		if errors.Is(err, jwt.ErrSignatureInvalid) {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
-			c.Abort()
+			ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "invalid token"))
 			return
 		}
 
 		if e := new(jwt.ValidationError); errors.As(err, &e) {
 			if e.Errors&jwt.ValidationErrorMalformed != 0 {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Bad token"})
-				c.Abort()
+				ErrorResponse(c, errcode.BadRequest(http.StatusBadRequest, "bad token"))
 				return
 			}
 			if e.Errors&(jwt.ValidationErrorExpired|jwt.ValidationErrorNotValidYet) != 0 {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
-				c.Abort()
+				ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "invalid token"))
 				return
 			}
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
-			c.Abort()
+			ErrorResponse(c, errcode.BadRequest(http.StatusBadRequest, "bad request"))
 			return
 		}
 
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
-		c.Abort()
+		ErrorResponse(c, errcode.BadRequest(http.StatusBadRequest, "bad request"))
 		return
 	}
 
 	if !token.Valid {
 		le.Warnf("invalid token")
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
-		c.Abort()
+		ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "invalid token"))
 		return
 	}
 
