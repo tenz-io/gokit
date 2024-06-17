@@ -15,6 +15,7 @@ use (
 	./cmd/example-tool
 	./collection
 	./functional
+	./genproto
 	./ginext
 	./ginext/example
 	./ginext/example-bind
