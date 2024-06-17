@@ -15,6 +15,11 @@ const (
 	headerRequestFlag   = "X-Request-Flag"
 )
 
+const (
+	usernameKey = "username"
+	roleKey     = "role"
+)
+
 type mdCtxKey struct{}
 
 type MD struct {
@@ -40,6 +45,9 @@ type MD struct {
 	RequestFlag string
 	// Cmd grpc command/service
 	Cmd string
+
+	Username string
+	Role     string
 }
 
 func New(c *gin.Context, cmd string) *MD {
@@ -80,6 +88,10 @@ func (md *MD) additional(c *gin.Context) {
 
 	// RequestMode from header X-Request-Mode
 	md.RequestFlag = c.GetHeader(headerRequestFlag)
+
+	// Username from context
+	md.Username = c.GetString(usernameKey)
+	md.Role = c.GetString(roleKey)
 }
 
 func (md *MD) setHeader(k string, vals ...string) {

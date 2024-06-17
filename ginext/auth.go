@@ -18,6 +18,7 @@ var (
 
 type Claims struct {
 	Username string `json:"username"`
+	Role     string `json:"role"`
 	jwt.StandardClaims
 }
 
@@ -76,12 +77,14 @@ func Authenticate(c *gin.Context) {
 
 	le.Debugf("authenticated user: %s", claims.Username)
 	c.Set("username", claims.Username)
+	c.Set("role", claims.Role)
 	c.Next()
 }
 
-func GenerateToken(username string, expiredAt time.Time) (string, error) {
+func GenerateToken(username, role string, expiredAt time.Time) (string, error) {
 	claims := &Claims{
 		Username: username,
+		Role:     role,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expiredAt.Unix(),
 		},

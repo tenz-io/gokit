@@ -1,6 +1,7 @@
 package ginext
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -15,11 +16,12 @@ func TestAuthenticate(t *testing.T) {
 
 	router := gin.New()
 	router.GET("/protected", Authenticate, func(c *gin.Context) {
-		username, _ := c.Get("username")
-		c.JSON(http.StatusOK, gin.H{"message": "Hello " + username.(string)})
+		username := c.GetString("username")
+		role := c.GetString("role")
+		c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("Hello %s, you are %s", username, role)})
 	})
 
-	validToken, err := GenerateToken("testuser", time.Now().Add(5*time.Minute))
+	validToken, err := GenerateToken("testuser", "admin", time.Now().Add(5*time.Minute))
 	assert.NoError(t, err)
 
 	tests := []struct {
@@ -44,7 +46,7 @@ func TestAuthenticate(t *testing.T) {
 			name:         "Valid Token",
 			token:        validToken,
 			expectedCode: http.StatusOK,
-			expectedBody: `{"message":"Hello testuser"}`,
+			expectedBody: `{"message":"Hello testuser, you are admin"}`,
 		},
 	}
 
