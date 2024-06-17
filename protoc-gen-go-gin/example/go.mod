@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/tenz-io/gokit/genproto v1.0.2
-	github.com/tenz-io/gokit/ginext v1.0.15
+	github.com/tenz-io/gokit/ginext v1.0.17
 	github.com/tenz-io/gokit/logger v1.5.3
 	google.golang.org/genproto/googleapis/api v0.0.0-20240506185236-b8a5c65736ae
 	google.golang.org/protobuf v1.34.2

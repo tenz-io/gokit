@@ -13,6 +13,7 @@ import (
 
 	"github.com/tenz-io/gokit/ginext"
 	"github.com/tenz-io/gokit/ginext/errcode"
+	"github.com/tenz-io/gokit/ginext/metadata"
 	"github.com/tenz-io/gokit/logger"
 )
 
@@ -42,6 +43,12 @@ func (s *service) Login(ctx context.Context, req *v1.LoginReq) (*v1.LoginResp, e
 
 func (s *service) CreateArticle(ctx context.Context, req *v1.CreateArticleReq) (*v1.CreateArticleResp, error) {
 	log.Printf("CreateArticle: %+v\n", req)
+
+	var (
+		meta, existing = metadata.FromContext(ctx)
+	)
+
+	log.Printf("existing: %t, username: %s, role: %s\n", existing, meta.Username, meta.Role)
 
 	return &v1.CreateArticleResp{
 		ArticleId: 123,
