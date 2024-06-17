@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package custom.options;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "google.golang.org/genproto/googleapis/api/annotations;options";
+
+// Define a custom option "needs_auth"
+extend google.protobuf.MethodOptions {
+  bool needs_auth = 50001;
+}
