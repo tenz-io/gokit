@@ -5,7 +5,7 @@ option go_package = "example/api/product/app/v1;v1";
 package product.app.v1;
 
 import "google/api/annotations.proto";
-import "custom/options/options.proto";
+import "custom/options/authz.proto";
 
 // blog service is a blog demo
 service BlogService {
@@ -13,35 +13,45 @@ service BlogService {
     option (google.api.http) = {
       post: "/login"
     };
-    option (custom.options.needs_auth) = false;
+    option (custom.options.auth) = {
+      anonymous: 1
+    };
   }
 
   rpc GetArticles(GetArticlesReq) returns (GetArticlesResp) {
     option (google.api.http) = {
       get: "/v1/author/{author_id}/articles"
     };
-    option (custom.options.needs_auth) = true;
+    option (custom.options.auth) = {
+      user: 2
+    };
   }
 
   rpc CreateArticle(CreateArticleReq) returns (CreateArticleResp) {
     option (google.api.http) = {
       post: "/v1/author/{author_id}/articles"
     };
-    option (custom.options.needs_auth) = true;
+    option (custom.options.auth) = {
+      admin: 4
+    };
   }
 
   rpc UploadImage(UploadImageReq) returns (UploadImageResp) {
     option (google.api.http) = {
       post: "/v1/images/{key}"
     };
-    option (custom.options.needs_auth) = true;
+    option (custom.options.auth) = {
+      admin: 4
+    };
   }
 
   rpc GetImage(GetImageReq) returns (GetImageResp) {
     option (google.api.http) = {
       get: "/v1/images/{key}"
     };
-    option (custom.options.needs_auth) = true;
+    option (custom.options.auth) = {
+      user: 2
+    };
   }
 }
 

@@ -31,7 +31,7 @@ func (s *service) Login(ctx context.Context, req *v1.LoginReq) (*v1.LoginResp, e
 	}
 
 	expiredAt := time.Now().Add(15 * time.Minute)
-	token, err := ginext.GenerateToken(req.GetUsername(), "admin", expiredAt)
+	token, err := ginext.GenerateToken(123, ginext.RoleAdmin, expiredAt)
 	if err != nil {
 		return nil, errcode.InternalServer(http.StatusInternalServerError, "failed to generate token")
 	}
