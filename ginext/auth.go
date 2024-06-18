@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/tenz-io/gokit/ginext/errcode"
 	"github.com/tenz-io/gokit/logger"
@@ -26,7 +26,7 @@ const (
 type Claims struct {
 	Userid int64 `json:"userid"`
 	Role   int32 `json:"role"`
-	jwt.StandardClaims
+	jwt.RegisteredClaims
 }
 
 func InitJWT(secretKey string) {
@@ -72,20 +72,7 @@ func Authenticate(role int32) func(c *gin.Context) {
 				return
 			}
 
-			if e := new(jwt.ValidationError); errors.As(err, &e) {
-				if e.Errors&jwt.ValidationErrorMalformed != 0 {
-					ErrorResponse(c, errcode.BadRequest(http.StatusBadRequest, "bad token"))
-					return
-				}
-				if e.Errors&(jwt.ValidationErrorExpired|jwt.ValidationErrorNotValidYet) != 0 {
-					ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "invalid token"))
-					return
-				}
-				ErrorResponse(c, errcode.BadRequest(http.StatusBadRequest, "bad request"))
-				return
-			}
-
-			ErrorResponse(c, errcode.BadRequest(http.StatusBadRequest, "bad request"))
+			ErrorResponse(c, errcode.BadRequest(http.StatusBadRequest, "bad token in request"))
 			return
 		}
 
@@ -130,8 +117,8 @@ func GenerateToken(userid int64, role int32, expiredAt time.Time) (string, error
 	claims := &Claims{
 		Userid: userid,
 		Role:   role,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: expiredAt.Unix(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expiredAt),
 		},
 	}
 
