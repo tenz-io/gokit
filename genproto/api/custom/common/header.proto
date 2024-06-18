@@ -1,22 +1,19 @@
 syntax = "proto3";
 
-package custom.options;
+package custom.common;
 
 import "google/protobuf/descriptor.proto";
+import "custom/common/authz.proto";
 
 option go_package = "github.com/tenz-io/gokit/genproto/go/custom/common;common";
 
 
 message RequestHeader {
-  oneof role {
-    int32 anonymous = 1;
-    int32 user = 2;
-    int32 admin = 4;
-  }
-  int64 userid = 10;
-  string request_id = 11;
-  string session_id = 12;
-  string request_flag = 13;
+  Role role = 1;
+  int64 userid = 2;
+  string request_id = 3;
+  string session_id = 4;
+  string request_flag = 5;
 }
 
 message ResponseHeader {
