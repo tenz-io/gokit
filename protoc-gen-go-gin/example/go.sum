@@ -13,8 +13,6 @@ github.com/cloudwego/iasm v0.2.0/go.mod h1:8rXZaNYT2n95jn+zTI1sDr+IgcD2GVs0nlbbQ
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/dgrijalva/jwt-go v3.2.0+incompatible h1:7qlOGliEKZXTDg6OTjfoBKDXWrumCAMpl/TFQ4/5kLM=
-github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
 github.com/gabriel-vasile/mimetype v1.4.3 h1:in2uUcidCuFcDKtdcBxlR0rJ1+fsokWf+uqxgUFjbI0=
 github.com/gabriel-vasile/mimetype v1.4.3/go.mod h1:d8uq/6HKRL6CGdk+aubisF/M5GcPfT7nKyLpA0lbSSk=
 github.com/gin-contrib/sse v0.1.0 h1:Y/yl/+YNO8GZSjAhjMsSuLt29uWRFHdHYUb5lYOV9qE=
@@ -31,6 +29,8 @@ github.com/go-playground/validator/v10 v10.20.0 h1:K9ISHbSaI0lyB2eWMPJo+kOS/FBEx
 github.com/go-playground/validator/v10 v10.20.0/go.mod h1:dbuPbCMFw/DrkbEynArYaCwl3amGuJotoKCe95atGMM=
 github.com/goccy/go-json v0.10.2 h1:CrxCmQqYDkv1z7lO7Wbh2HN93uovUHgrECaO5ZrCXAU=
 github.com/goccy/go-json v0.10.2/go.mod h1:6MelG93GURQebXPDq3khkgXZkazVtN9CRI+MGFi0w8I=
+github.com/golang-jwt/jwt/v5 v5.2.1 h1:OuVbFODueb089Lh128TAcimifWaLhJwVflnrgM17wHk=
+github.com/golang-jwt/jwt/v5 v5.2.1/go.mod h1:pqrtFR0X4osieyHYxtmOUWsAWrfe1Q5UVIyoH402zdk=
 github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
 github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
 github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
@@ -89,8 +89,8 @@ github.com/tenz-io/gokit/functional v1.0.0 h1:4IKtEhmYZajz2ZYOQjllWdlmvB2qO/xcT4
 github.com/tenz-io/gokit/functional v1.0.0/go.mod h1:HmucrWRa/zOjRtVyiDDB/aPyTJSx6bp2bitjO+9Objw=
 github.com/tenz-io/gokit/genproto v1.0.4 h1:FMbmyKDXg0ungG+diNC8yX6xndofP234Hh1jmATOicQ=
 github.com/tenz-io/gokit/genproto v1.0.4/go.mod h1:eQETxEGP9DrTGaJtQJA2P9suI0xyir3iQHA0BwDKbwU=
-github.com/tenz-io/gokit/ginext v1.0.21 h1:j/rZ9HViQ28/Gmo0fTmsBz4qmXNACZBMMYriA/qHrTQ=
-github.com/tenz-io/gokit/ginext v1.0.21/go.mod h1:6PToFWhI72AxBTr/p7OZo/fhcRi4ka3OZydSSZ431xs=
+github.com/tenz-io/gokit/ginext v1.0.22 h1:wzPTnaiT/j0R7fwpH1xESK3kezYqNYHLwc+iEhsBsJY=
+github.com/tenz-io/gokit/ginext v1.0.22/go.mod h1:IevI+l/3XAt2aWSHPrzKUApwi3I6F5Mt4s3EA3soewY=
 github.com/tenz-io/gokit/logger v1.5.3 h1:2z9qgYlfsIi1Y4qvY+ibX9uDWGInOKvHmJJbh7yJSRY=
 github.com/tenz-io/gokit/logger v1.5.3/go.mod h1:X//3sk2BZe0yPpOleb3Dwlwl8pRlKGs1vZQ+OAFS9Tw=
 github.com/tenz-io/gokit/monitor v1.5.0 h1:qMtAJujc+/66/C8MHgYcDzhlv0E+SfGQ9VIAe82NFqg=
