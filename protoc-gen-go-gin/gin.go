@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/tenz-io/gokit/ginext"
 	"net/http"
 	"regexp"
 	"strings"
@@ -18,12 +19,6 @@ const (
 	metadataPkg        = protogen.GoImportPath("github.com/tenz-io/gokit/ginext/metadata")
 	ginextPkg          = protogen.GoImportPath("github.com/tenz-io/gokit/ginext")
 	deprecationComment = "// Deprecated: Do not use."
-)
-
-const (
-	roleAnonymous = 0
-	roleAdmin     = 1
-	roleUser      = 2
 )
 
 var methodSets = make(map[string]int)
@@ -76,16 +71,7 @@ func genMethod(m *protogen.Method) []*method {
 	)
 
 	if auth, ok := proto.GetExtension(m.Desc.Options(), common.E_Auth).(*common.Auth); ok {
-		switch auth.GetRole() {
-		case *common.Auth_Anonymous:
-			role = roleAnonymous
-		case *common.Auth_User:
-			role = roleUser
-		case *common.Auth_Admin:
-			role = roleAdmin
-		default:
-			role = roleAnonymous
-		}
+		role = int32(auth.GetRole())
 	}
 
 	rule, ok := proto.GetExtension(m.Desc.Options(), annotations.E_Http).(*annotations.HttpRule)
@@ -137,7 +123,7 @@ func defaultMethod(m *protogen.Method) *method {
 		path = strings.Join(names[1:], "/")
 	}
 
-	md := buildMethodDesc(m, httpMethod, path, roleAnonymous)
+	md := buildMethodDesc(m, httpMethod, path, ginext.RoleAnonymous)
 	md.Body = "*"
 	return md
 }

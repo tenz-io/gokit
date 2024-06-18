@@ -16,8 +16,8 @@ const (
 )
 
 const (
-	usernameKey = "username"
-	roleKey     = "role"
+	useridKey = "userid"
+	roleKey   = "role"
 )
 
 type mdCtxKey struct{}
@@ -46,8 +46,8 @@ type MD struct {
 	// Cmd grpc command/service
 	Cmd string
 
-	Username string
-	Role     string
+	Userid int64
+	Role   int32
 }
 
 func New(c *gin.Context, cmd string) *MD {
@@ -90,8 +90,10 @@ func (md *MD) additional(c *gin.Context) {
 	md.RequestFlag = c.GetHeader(headerRequestFlag)
 
 	// Username from context
-	md.Username = c.GetString(usernameKey)
-	md.Role = c.GetString(roleKey)
+	md.Userid = c.GetInt64(useridKey)
+	if role, ok := c.Get(roleKey); ok && role != nil {
+		md.Role = role.(int32)
+	}
 }
 
 func (md *MD) setHeader(k string, vals ...string) {
@@ -112,4 +114,12 @@ func FromContext(ctx context.Context) (*MD, bool) {
 	}
 
 	return md, true
+}
+
+func SafeFromContext(ctx context.Context) MD {
+	if md, ok := ctx.Value(mdCtxKey{}).(*MD); ok && md != nil {
+		return *md
+	}
+
+	return MD{}
 }

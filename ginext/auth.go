@@ -3,6 +3,7 @@ package ginext
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -49,6 +50,11 @@ func Authenticate(role int32) func(c *gin.Context) {
 			le.Warnf("missing token")
 			ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "missing token"))
 			return
+		}
+
+		// remove "Bearer " prefix
+		if strings.HasPrefix(tokenString, "Bearer ") {
+			tokenString = strings.TrimSpace(tokenString[7:])
 		}
 
 		claims := Claims{}

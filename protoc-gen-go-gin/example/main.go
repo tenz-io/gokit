@@ -48,7 +48,7 @@ func (s *service) CreateArticle(ctx context.Context, req *v1.CreateArticleReq) (
 		meta, existing = metadata.FromContext(ctx)
 	)
 
-	log.Printf("existing: %t, username: %s, role: %s\n", existing, meta.Username, meta.Role)
+	log.Printf("existing: %t, userid: %d, role: %d\n", existing, meta.Userid, meta.Role)
 
 	return &v1.CreateArticleResp{
 		ArticleId: 123,
