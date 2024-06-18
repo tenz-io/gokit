@@ -27,31 +27,31 @@ login:
 	-H "Content-Type: application/json" \
 	-d '{"username":"admin","password":"admin"}'
 
-# eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOjEyMywicm9sZSI6MSwiZXhwIjoxNzE4NzI0Mzk1fQ.xegtSO0UFYfKfkDS1K6-6D0ZPMMCPbu7UkTrTJSFsmQ
+# eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOjEyMywicm9sZSI6MSwiZXhwIjoxNzE4NzI0OTEyfQ.o3aifyWorDmXmmjryz7Tn-l9kbijn5h0Aq7F9olT3Sg
 
 .PHONY: get-articles
 get-articles:
 	curl -v -X GET "localhost:8888/v1/author/123/articles?title=hello&page=1" \
-	-H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOjEyMywicm9sZSI6MSwiZXhwIjoxNzE4NzI0Mzk1fQ.xegtSO0UFYfKfkDS1K6-6D0ZPMMCPbu7UkTrTJSFsmQ"
+	-H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOjEyMywicm9sZSI6MSwiZXhwIjoxNzE4NzI0OTEyfQ.o3aifyWorDmXmmjryz7Tn-l9kbijn5h0Aq7F9olT3Sg"
 
 
 .PHONY: create-article
 create-article:
 	curl -v -X POST localhost:8888/v1/author/123/articles \
 	-H "Content-Type: application/json" \
-	-H "Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwicm9sZSI6ImFkbWluIiwiZXhwIjoxNzE4NjQ1NDI5fQ.QtqStKv5QjBWQKN1UX0FNvR1k_nhgnHHnlMEQOiEQ6Q" \
+	-H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOjEyMywicm9sZSI6MSwiZXhwIjoxNzE4NzI0OTEyfQ.o3aifyWorDmXmmjryz7Tn-l9kbijn5h0Aq7F9olT3Sg" \
 	-d '{"title":"Hello World","content":"This is a test article"}'
 
 
 .PHONY: get-image
 get-image:
 	curl -v -X GET "localhost:8888/v1/images/xyz123?region=uk" \
-	-H "Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwiZXhwIjoxNzE4NjQzNjE3fQ.hIo3MSoU2yCQPQOoRSYaEf4OCp79K7R7yhUDCYZC0kc"
+	-H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOjEyMywicm9sZSI6MSwiZXhwIjoxNzE4NzI0OTEyfQ.o3aifyWorDmXmmjryz7Tn-l9kbijn5h0Aq7F9olT3Sg"
 
 
 .PHONY: upload-image
 upload-image:
 	curl -v -X POST --location 'localhost:8888/v1/images/xyz123?region=uk' \
-    --header 'Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwiZXhwIjoxNzE4NjQzNjE3fQ.hIo3MSoU2yCQPQOoRSYaEf4OCp79K7R7yhUDCYZC0kc' \
+    --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOjEyMywicm9sZSI6MSwiZXhwIjoxNzE4NzI0OTEyfQ.o3aifyWorDmXmmjryz7Tn-l9kbijn5h0Aq7F9olT3Sg' \
     --form 'image=@"/path/to/file"' \
     --form 'filename="cat.jpg"'
