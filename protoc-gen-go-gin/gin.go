@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/tenz-io/gokit/genproto/go/custom/options"
+	"github.com/tenz-io/gokit/genproto/go/custom/common"
 	"google.golang.org/genproto/googleapis/api/annotations"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
@@ -21,9 +21,9 @@ const (
 )
 
 const (
-	roleAnonymous = 1
+	roleAnonymous = 0
+	roleAdmin     = 1
 	roleUser      = 2
-	roleAdmin     = 4
 )
 
 var methodSets = make(map[string]int)
@@ -75,13 +75,13 @@ func genMethod(m *protogen.Method) []*method {
 		role    int32
 	)
 
-	if auth, ok := proto.GetExtension(m.Desc.Options(), options.E_Auth).(*options.Auth); ok {
-		switch auth.GetRole().(type) {
-		case *options.Auth_Anonymous:
+	if auth, ok := proto.GetExtension(m.Desc.Options(), common.E_Auth).(*common.Auth); ok {
+		switch auth.GetRole() {
+		case *common.Auth_Anonymous:
 			role = roleAnonymous
-		case *options.Auth_User:
+		case *common.Auth_User:
 			role = roleUser
-		case *options.Auth_Admin:
+		case *common.Auth_Admin:
 			role = roleAdmin
 		default:
 			role = roleAnonymous

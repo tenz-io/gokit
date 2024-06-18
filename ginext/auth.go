@@ -17,9 +17,9 @@ var (
 )
 
 const (
-	RoleAnonymous = 1
+	RoleAnonymous = 0
+	RoleAdmin     = 1
 	RoleUser      = 2
-	RoleAdmin     = 4
 )
 
 type Claims struct {
@@ -33,7 +33,7 @@ func InitJWT(secretKey string) {
 }
 
 func Authenticate(role int32) func(c *gin.Context) {
-	if role == 0 || role == RoleAnonymous {
+	if role == RoleAnonymous {
 		// skip authentication
 		return func(c *gin.Context) {
 			c.Next()
@@ -89,7 +89,16 @@ func Authenticate(role int32) func(c *gin.Context) {
 			return
 		}
 
-		// check role
+		// check admin
+		// admin can access all resources
+		if role == RoleAdmin && claims.Role != RoleAdmin {
+			le.Warnf("require admin role")
+			ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "role not match"))
+			return
+		}
+
+		// check other roles
+		// other roles can combine with as a new role
 		if role&claims.Role == 0 {
 			le.Warnf("role not match")
 			ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "role not match"))
