@@ -96,10 +96,18 @@ func Authenticate(role int32) func(c *gin.Context) {
 		}
 
 		// check admin
-		// admin can access all resources
 		if role == RoleAdmin && claims.Role != RoleAdmin {
 			le.Warnf("require admin role")
 			ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "role not match"))
+			return
+		}
+
+		// admin can access all resources
+		if claims.Role == RoleAdmin {
+			le.Debugf("authenticated admin: %d", claims.Userid)
+			c.Set("userid", claims.Userid)
+			c.Set("role", claims.Role)
+			c.Next()
 			return
 		}
 
@@ -111,7 +119,7 @@ func Authenticate(role int32) func(c *gin.Context) {
 			return
 		}
 
-		le.Debugf("authenticated user: %d", claims.Userid)
+		le.Debugf("authenticated userid: %d", claims.Userid)
 		c.Set("userid", claims.Userid)
 		c.Set("role", claims.Role)
 		c.Next()
