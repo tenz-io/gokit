@@ -20,6 +20,12 @@ const (
 	deprecationComment = "// Deprecated: Do not use."
 )
 
+const (
+	roleAnonymous = 1
+	roleUser      = 2
+	roleAdmin     = 4
+)
+
 var methodSets = make(map[string]int)
 
 // generateFile generates a _gin.pb.go file.
@@ -65,20 +71,29 @@ func genService(gen *protogen.Plugin, file *protogen.File, g *protogen.Generated
 
 func genMethod(m *protogen.Method) []*method {
 	var (
-		methods   []*method
-		needsAuth bool
+		methods []*method
+		role    int32
 	)
 
-	if auth, ok := proto.GetExtension(m.Desc.Options(), options.E_NeedsAuth).(bool); ok {
-		needsAuth = auth
+	if auth, ok := proto.GetExtension(m.Desc.Options(), options.E_Auth).(*options.Auth); ok {
+		switch auth.GetRole().(type) {
+		case *options.Auth_Anonymous:
+			role = roleAnonymous
+		case *options.Auth_User:
+			role = roleUser
+		case *options.Auth_Admin:
+			role = roleAdmin
+		default:
+			role = roleAnonymous
+		}
 	}
 
 	rule, ok := proto.GetExtension(m.Desc.Options(), annotations.E_Http).(*annotations.HttpRule)
 	if rule != nil && ok {
 		for _, bind := range rule.AdditionalBindings {
-			methods = append(methods, buildHTTPRule(m, bind, needsAuth))
+			methods = append(methods, buildHTTPRule(m, bind, role))
 		}
-		methods = append(methods, buildHTTPRule(m, rule, needsAuth))
+		methods = append(methods, buildHTTPRule(m, rule, role))
 		return methods
 	}
 
@@ -122,12 +137,12 @@ func defaultMethod(m *protogen.Method) *method {
 		path = strings.Join(names[1:], "/")
 	}
 
-	md := buildMethodDesc(m, httpMethod, path, false)
+	md := buildMethodDesc(m, httpMethod, path, roleAnonymous)
 	md.Body = "*"
 	return md
 }
 
-func buildHTTPRule(m *protogen.Method, rule *annotations.HttpRule, needAuth bool) *method {
+func buildHTTPRule(m *protogen.Method, rule *annotations.HttpRule, role int32) *method {
 	var (
 		path       string
 		httpMethod string
@@ -152,20 +167,20 @@ func buildHTTPRule(m *protogen.Method, rule *annotations.HttpRule, needAuth bool
 		path = pattern.Custom.Path
 		httpMethod = pattern.Custom.Kind
 	}
-	md := buildMethodDesc(m, httpMethod, path, needAuth)
+	md := buildMethodDesc(m, httpMethod, path, role)
 	return md
 }
 
-func buildMethodDesc(m *protogen.Method, httpMethod, path string, needAuth bool) *method {
+func buildMethodDesc(m *protogen.Method, httpMethod, path string, role int32) *method {
 	defer func() { methodSets[m.GoName]++ }()
 	md := &method{
-		Name:      m.GoName,
-		Num:       methodSets[m.GoName],
-		Request:   m.Input.GoIdent.GoName,
-		Reply:     m.Output.GoIdent.GoName,
-		Path:      path,
-		Method:    httpMethod,
-		NeedsAuth: needAuth,
+		Name:    m.GoName,
+		Num:     methodSets[m.GoName],
+		Request: m.Input.GoIdent.GoName,
+		Reply:   m.Output.GoIdent.GoName,
+		Path:    path,
+		Method:  httpMethod,
+		Role:    role,
 	}
 	md.initPathParams()
 	return md

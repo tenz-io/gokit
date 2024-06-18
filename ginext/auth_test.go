@@ -15,13 +15,13 @@ func TestAuthenticate(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	router := gin.New()
-	router.GET("/protected", Authenticate, func(c *gin.Context) {
-		username := c.GetString("username")
-		role := c.GetString("role")
-		c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("Hello %s, you are %s", username, role)})
+	router.GET("/protected", Authenticate(RoleUser), func(c *gin.Context) {
+		userid := c.GetInt64("userid")
+		role, _ := c.Get("role")
+		c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("userid: %d, role: %d", userid, role)})
 	})
 
-	validToken, err := GenerateToken("testuser", "admin", time.Now().Add(5*time.Minute))
+	validToken, err := GenerateToken(123, RoleUser, time.Now().Add(5*time.Minute))
 	assert.NoError(t, err)
 
 	tests := []struct {
@@ -46,7 +46,7 @@ func TestAuthenticate(t *testing.T) {
 			name:         "Valid Token",
 			token:        validToken,
 			expectedCode: http.StatusOK,
-			expectedBody: `{"message":"Hello testuser, you are admin"}`,
+			expectedBody: `{"message":"userid: 123, role: 2"}`,
 		},
 	}
 
