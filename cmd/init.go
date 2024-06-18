@@ -151,6 +151,29 @@ func WithAdminHTTPServer() InitFunc {
 	}
 }
 
+// WithUpdateConfigByEnv will update all config string fields(recursively), which the value has pattern ${ENV_NAME}
+// and use the value from the environment variable
+func WithUpdateConfigByEnv() InitFunc {
+	return func(c *Context, confPtr any) (CleanFunc, error) {
+		var (
+			cleanFn = func(_ *Context) {}
+		)
+
+		if confPtr == nil {
+			// do nothing
+			return cleanFn, nil
+		}
+
+		// update the config string fields
+		if err := UpdateConfig(confPtr); err != nil {
+			return cleanFn, fmt.Errorf("update config fail, err: %w", err)
+		}
+
+		return cleanFn, nil
+	}
+
+}
+
 // ReadConfig will read the config file and unmarshal it to the confPtr
 func ReadConfig(confPath string, confPtr any, unmarshalFn func([]byte, any) error) error {
 	bs, err := os.ReadFile(confPath)
