@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package custom.options;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "github.com/tenz-io/gokit/genproto/go/custom/options;options";
+
+// Define a custom option "auth"
+extend google.protobuf.MethodOptions {
+  Auth auth = 50001;
+}
+
+message Auth {
+  oneof role {
+    int32 anonymous = 1;
+    int32 user = 2;
+    int32 admin = 4;
+  }
+}
