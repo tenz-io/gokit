@@ -393,6 +393,12 @@ func Test_matchString(t *testing.T) {
 		{"^[a-zA-Z0-9]+$", "abc 123", false},
 		{Abc123, "abc 123", false},
 
+		// Test date strings
+		{`^\d{4}-\d{2}-\d{2}$`, "2021-01-01", true},
+		{`^\d{4}-\d{2}-\d{2}$`, "2021-01-01T00:00:00Z", false},
+		{Date, "2021-01-01", true},
+		{Date, "2021-01-01T00:00:00Z", false},
+
 		// Test pattern with special characters
 		{`^\w+@\w+\.\w+$`, "user@domain.com", true},
 		{`^\w+@\w+\.\w+$`, "user@domain", false},

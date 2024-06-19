@@ -15,6 +15,37 @@ var (
 	_ error = (*ValidationErrors)(nil)
 )
 
+type (
+	predefinedPatternName = string
+	predefinedPattern     = string
+)
+
+const (
+	Email  predefinedPatternName = "#email"
+	URL    predefinedPatternName = "#url"
+	Abc    predefinedPatternName = "#abc"
+	Digits predefinedPatternName = "#123"
+	Abc123 predefinedPatternName = "#abc123"
+	Hex    predefinedPatternName = "#hex"
+	Base64 predefinedPatternName = "#base64"
+	Date   predefinedPatternName = "#date"
+)
+
+const (
+	emailPattern  predefinedPattern = "^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$"
+	urlPattern    predefinedPattern = `^(http|https)://[a-zA-Z0-9-.]+.[a-zA-Z]{2,3}(/S*)?$`
+	abcPattern    predefinedPattern = `^[a-zA-Z]+$`
+	digitsPattern predefinedPattern = `^\d+$`
+	abc123Pattern predefinedPattern = `^[a-zA-Z0-9]+$`
+	hexPattern    predefinedPattern = `^[0-9a-fA-F]+$`
+	base64Pattern predefinedPattern = `^[a-zA-Z0-9+/]*={0,2}$`
+	datePattern   predefinedPattern = `^\d{4}-\d{2}-\d{2}$`
+)
+
+const (
+	maxMatchString = 256
+)
+
 type ProtoError struct {
 	Field   string
 	Message string
@@ -379,35 +410,6 @@ func matchesPattern(v reflect.Value, pattern string) (bool, string) {
 	return matchString(pattern, v.String())
 }
 
-type (
-	predefinedPatternName = string
-	predefinedPattern     = string
-)
-
-const (
-	Email  predefinedPatternName = "#email"
-	URL    predefinedPatternName = "#url"
-	Abc    predefinedPatternName = "#abc"
-	Digits predefinedPatternName = "#123"
-	Abc123 predefinedPatternName = "#abc123"
-	Hex    predefinedPatternName = "#hex"
-	Base64 predefinedPatternName = "#base64"
-)
-
-const (
-	emailPattern  predefinedPattern = "^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$"
-	urlPattern    predefinedPattern = `^(http|https)://[a-zA-Z0-9-.]+.[a-zA-Z]{2,3}(/S*)?$`
-	abcPattern    predefinedPattern = `^[a-zA-Z]+$`
-	digitsPattern predefinedPattern = `^\d+$`
-	abc123Pattern predefinedPattern = `^[a-zA-Z0-9]+$`
-	hexPattern    predefinedPattern = `^[0-9a-fA-F]+$`
-	base64Pattern predefinedPattern = `^[a-zA-Z0-9+/]*={0,2}$`
-)
-
-const (
-	maxMatchString = 256
-)
-
 // getPredefinedPattern returns the predefined pattern based on the pattern name.
 func getPredefinedPattern(name predefinedPatternName) (pattern predefinedPattern, existing bool) {
 	if !strings.HasPrefix(name, "#") {
@@ -428,6 +430,8 @@ func getPredefinedPattern(name predefinedPatternName) (pattern predefinedPattern
 		return abcPattern, true
 	case Abc123:
 		return abc123Pattern, true
+	case Date:
+		return datePattern, true
 	default:
 		return "", false
 	}
