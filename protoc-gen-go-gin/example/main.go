@@ -49,6 +49,31 @@ func (s *service) Login(ctx context.Context, req *v1.LoginReq) (*v1.LoginResp, e
 func (s *service) Refresh(ctx context.Context, req *v1.RefreshReq) (*v1.RefreshResp, error) {
 	// verify refresh token
 	claims, err := ginext.VerifyToken(req.GetRefreshToken())
+	if err != nil {
+		return nil, errcode.Unauthorized(http.StatusUnauthorized, "invalid refresh token")
+	}
+
+	// generate new access token
+	expiredAt := time.Now().Add(15 * time.Minute)
+	accessToken, err := ginext.GenerateToken(claims.Userid, claims.Role, ginext.TokenTypeAccess, expiredAt)
+	if err != nil {
+		return nil, errcode.InternalServer(http.StatusInternalServerError, "failed to generate token")
+	}
+
+	resp := &v1.RefreshResp{
+		AccessToken: accessToken,
+	}
+
+	if req.GetRefreshAll() {
+		// generate new refresh token
+		refreshToken, err := ginext.GenerateToken(claims.Userid, claims.Role, ginext.TokenTypeRefresh, time.Now().Add(365*24*time.Hour))
+		if err != nil {
+			return nil, errcode.InternalServer(http.StatusInternalServerError, "failed to generate token")
+		}
+		resp.RefreshToken = refreshToken
+	}
+
+	return resp, nil
 }
 
 func (s *service) CreateArticle(ctx context.Context, req *v1.CreateArticleReq) (*v1.CreateArticleResp, error) {

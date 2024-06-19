@@ -29,6 +29,13 @@ login:
 
 # eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOjEyMywicm9sZSI6MSwiZXhwIjoxNzE4NzI0OTEyfQ.o3aifyWorDmXmmjryz7Tn-l9kbijn5h0Aq7F9olT3Sg
 
+.PHONY: refresh
+refresh:
+	curl -v -X POST localhost:8888/refresh \
+	-H "Content-Type: application/json" \
+	-d '{"refresh_token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOjEyMywicm9sZSI6MSwiZXhwIjoxNzE4NzI0OTEyfQ.o3aifyWorDmXmmjryz7Tn-l9kbijn5h0Aq7F9olT3Sg"}'
+
+
 .PHONY: get-articles
 get-articles:
 	curl -v -X GET "localhost:8888/v1/author/123/articles?title=hello&page=1" \
