@@ -55,7 +55,7 @@ type method struct {
 	Body         string
 	ResponseBody string
 	Role         int32 // auth role: 0 anonymous, 1 admin, 2 user
-	AuthType     int32 // auth by cookie
+	AuthType     int32 // auth type: 0 web, 1 rest
 }
 
 // HandlerName for gin handler name

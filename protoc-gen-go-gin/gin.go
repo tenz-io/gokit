@@ -66,20 +66,22 @@ func genService(gen *protogen.Plugin, file *protogen.File, g *protogen.Generated
 
 func genMethod(m *protogen.Method) []*method {
 	var (
-		methods []*method
-		role    int32
+		methods  []*method
+		role     int32
+		authType int32
 	)
 
 	if auth, ok := proto.GetExtension(m.Desc.Options(), common.E_Auth).(*common.Auth); ok {
 		role = int32(auth.GetRole())
+		authType = int32(auth.GetType())
 	}
 
 	rule, ok := proto.GetExtension(m.Desc.Options(), annotations.E_Http).(*annotations.HttpRule)
 	if rule != nil && ok {
 		for _, bind := range rule.AdditionalBindings {
-			methods = append(methods, buildHTTPRule(m, bind, role))
+			methods = append(methods, buildHTTPRule(m, bind, role, authType))
 		}
-		methods = append(methods, buildHTTPRule(m, rule, role))
+		methods = append(methods, buildHTTPRule(m, rule, role, authType))
 		return methods
 	}
 
@@ -123,12 +125,12 @@ func defaultMethod(m *protogen.Method) *method {
 		path = strings.Join(names[1:], "/")
 	}
 
-	md := buildMethodDesc(m, httpMethod, path, ginext.RoleAnonymous)
+	md := buildMethodDesc(m, httpMethod, path, ginext.RoleAnonymous, ginext.AuthTypeWeb)
 	md.Body = "*"
 	return md
 }
 
-func buildHTTPRule(m *protogen.Method, rule *annotations.HttpRule, role int32) *method {
+func buildHTTPRule(m *protogen.Method, rule *annotations.HttpRule, role, authType int32) *method {
 	var (
 		path       string
 		httpMethod string
@@ -153,20 +155,21 @@ func buildHTTPRule(m *protogen.Method, rule *annotations.HttpRule, role int32) *
 		path = pattern.Custom.Path
 		httpMethod = pattern.Custom.Kind
 	}
-	md := buildMethodDesc(m, httpMethod, path, role)
+	md := buildMethodDesc(m, httpMethod, path, role, authType)
 	return md
 }
 
-func buildMethodDesc(m *protogen.Method, httpMethod, path string, role int32) *method {
+func buildMethodDesc(m *protogen.Method, httpMethod, path string, role, authType int32) *method {
 	defer func() { methodSets[m.GoName]++ }()
 	md := &method{
-		Name:    m.GoName,
-		Num:     methodSets[m.GoName],
-		Request: m.Input.GoIdent.GoName,
-		Reply:   m.Output.GoIdent.GoName,
-		Path:    path,
-		Method:  httpMethod,
-		Role:    role,
+		Name:     m.GoName,
+		Num:      methodSets[m.GoName],
+		Request:  m.Input.GoIdent.GoName,
+		Reply:    m.Output.GoIdent.GoName,
+		Path:     path,
+		Method:   httpMethod,
+		Role:     role,
+		AuthType: authType,
 	}
 	md.initPathParams()
 	return md

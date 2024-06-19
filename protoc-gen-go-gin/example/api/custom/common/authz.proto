@@ -17,6 +17,12 @@ enum Role {
   USER = 2;
 }
 
+enum AuthType {
+  WEB = 0; // web page, verify by cookie
+  REST = 1; // restful api, verify by token
+}
+
 message Auth {
   Role role = 1;
+  AuthType type = 2;
 }

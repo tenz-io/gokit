@@ -89,8 +89,8 @@ github.com/tenz-io/gokit/functional v1.0.0 h1:4IKtEhmYZajz2ZYOQjllWdlmvB2qO/xcT4
 github.com/tenz-io/gokit/functional v1.0.0/go.mod h1:HmucrWRa/zOjRtVyiDDB/aPyTJSx6bp2bitjO+9Objw=
 github.com/tenz-io/gokit/genproto v1.0.4 h1:FMbmyKDXg0ungG+diNC8yX6xndofP234Hh1jmATOicQ=
 github.com/tenz-io/gokit/genproto v1.0.4/go.mod h1:eQETxEGP9DrTGaJtQJA2P9suI0xyir3iQHA0BwDKbwU=
-github.com/tenz-io/gokit/ginext v1.0.23 h1:OCD+3IL8ObEgswcd1H2YV16TzIH8q7Ya71kuQ4gm7T4=
-github.com/tenz-io/gokit/ginext v1.0.23/go.mod h1:IevI+l/3XAt2aWSHPrzKUApwi3I6F5Mt4s3EA3soewY=
+github.com/tenz-io/gokit/ginext v1.0.24 h1:hlDR/RiBrEjU2brLJS6zfFf+e6DXuV+2kuTvVjLFdUU=
+github.com/tenz-io/gokit/ginext v1.0.24/go.mod h1:IevI+l/3XAt2aWSHPrzKUApwi3I6F5Mt4s3EA3soewY=
 github.com/tenz-io/gokit/logger v1.5.3 h1:2z9qgYlfsIi1Y4qvY+ibX9uDWGInOKvHmJJbh7yJSRY=
 github.com/tenz-io/gokit/logger v1.5.3/go.mod h1:X//3sk2BZe0yPpOleb3Dwlwl8pRlKGs1vZQ+OAFS9Tw=
 github.com/tenz-io/gokit/monitor v1.5.0 h1:qMtAJujc+/66/C8MHgYcDzhlv0E+SfGQ9VIAe82NFqg=

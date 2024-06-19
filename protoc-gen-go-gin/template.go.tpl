@@ -42,6 +42,6 @@ func (s *{{$.Name}}) {{ .HandlerName }} (ctx *gin.Context) {
 
 func (s *{{$.Name}}) RegisterService() {
 {{range .Methods}}
-    s.router.Handle("{{.Method}}", "{{.Path}}", ginext.Authenticate({{.Role}}), s.{{ .HandlerName }})
+    s.router.Handle("{{.Method}}", "{{.Path}}", ginext.Authenticate({{.Role}}, {{.AuthType}}), s.{{ .HandlerName }})
 {{end}}
 }

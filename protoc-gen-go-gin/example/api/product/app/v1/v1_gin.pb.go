@@ -151,14 +151,14 @@ func (s *BlogService) GetImage_0(ctx *gin.Context) {
 
 func (s *BlogService) RegisterService() {
 
-	s.router.Handle("POST", "/login", ginext.Authenticate(0), s.Login_0)
+	s.router.Handle("POST", "/login", ginext.Authenticate(0, 0), s.Login_0)
 
-	s.router.Handle("GET", "/v1/author/:author_id/articles", ginext.Authenticate(2), s.GetArticles_0)
+	s.router.Handle("GET", "/v1/author/:author_id/articles", ginext.Authenticate(2, 1), s.GetArticles_0)
 
-	s.router.Handle("POST", "/v1/author/:author_id/articles", ginext.Authenticate(1), s.CreateArticle_0)
+	s.router.Handle("POST", "/v1/author/:author_id/articles", ginext.Authenticate(1, 0), s.CreateArticle_0)
 
-	s.router.Handle("POST", "/v1/images/:key", ginext.Authenticate(1), s.UploadImage_0)
+	s.router.Handle("POST", "/v1/images/:key", ginext.Authenticate(1, 0), s.UploadImage_0)
 
-	s.router.Handle("GET", "/v1/images/:key", ginext.Authenticate(2), s.GetImage_0)
+	s.router.Handle("GET", "/v1/images/:key", ginext.Authenticate(2, 1), s.GetImage_0)
 
 }
