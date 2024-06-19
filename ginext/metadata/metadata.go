@@ -23,6 +23,7 @@ const (
 type mdCtxKey struct{}
 
 type MD struct {
+	Ctx      *gin.Context
 	Header   map[string]string
 	Path     string
 	Method   string
@@ -52,6 +53,7 @@ type MD struct {
 
 func New(c *gin.Context, cmd string) *MD {
 	md := &MD{
+		Ctx:      c,
 		Path:     c.Request.URL.Path,
 		Method:   c.Request.Method,
 		Host:     c.Request.Host,

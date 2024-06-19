@@ -15,7 +15,7 @@ func TestAuthenticate(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	router := gin.New()
-	router.GET("/protected", Authenticate(RoleUser), func(c *gin.Context) {
+	router.GET("/protected", Authenticate(RoleUser, false), func(c *gin.Context) {
 		userid := c.GetInt64("userid")
 		role, _ := c.Get("role")
 		c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("userid: %d, role: %d", userid, role)})
