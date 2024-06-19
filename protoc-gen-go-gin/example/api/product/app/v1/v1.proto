@@ -18,6 +18,15 @@ service BlogService {
     };
   }
 
+  rpc Refresh(RefreshReq) returns (RefreshResp) {
+    option (google.api.http) = {
+      post: "/refresh"
+    };
+    option (custom.common.auth) = {
+      role: ANONYMOUS
+    };
+  }
+
   rpc GetArticles(GetArticlesReq) returns (GetArticlesResp) {
     option (google.api.http) = {
       get: "/v1/author/{author_id}/articles"
@@ -67,6 +76,18 @@ message LoginReq {
 }
 
 message LoginResp {
+  string access_token = 1;
+  string refresh_token = 2;
+}
+
+message RefreshReq {
+  // @inject_tag: bind:"form,name=refresh_token" validate:"required,non_blank,min_len=2"
+  string refresh_token = 1;
+  // @inject_tag: bind:"form,name=refresh_all" default:"false"
+  bool refresh_all = 2; // refresh all tokens, including refresh access_token and refresh_token
+}
+
+message RefreshResp {
   string access_token = 1;
   string refresh_token = 2;
 }

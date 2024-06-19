@@ -55,6 +55,10 @@ const (
 	ExpiresInMinutes = 15
 )
 
+var (
+	ErrInvalidToken = errors.New("invalid token")
+)
+
 type Claims struct {
 	Userid int64 `json:"userid"`
 	Role   int32 `json:"role"` // 0 anonymous, 1 admin, 2 user
@@ -113,14 +117,7 @@ func AuthenticateRest(role RoleType) func(c *gin.Context) {
 			tokenString = strings.TrimSpace(tokenString[7:])
 		}
 
-		claims := Claims{}
-		token, err := jwt.ParseWithClaims(tokenString, &claims, func(token *jwt.Token) (any, error) {
-			// Ensure the signing method is HMAC and the key is correct
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, errors.New("unexpected signing method")
-			}
-			return jwtKey, nil
-		})
+		claims, err := VerifyToken(tokenString)
 		if err != nil {
 			le.Warnf("error parsing token: %v", err)
 			if isUnauthorizedError(err) {
@@ -137,12 +134,6 @@ func AuthenticateRest(role RoleType) func(c *gin.Context) {
 			"user_role":  claims.Role,
 			"token_type": claims.Type,
 		})
-
-		if !token.Valid {
-			le.Warnf("invalid token")
-			ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "invalid token"))
-			return
-		}
 
 		// token type check
 		if claims.Type != TokenTypeAccess {
@@ -197,14 +188,7 @@ func AuthenticateCookie(role RoleType) func(c *gin.Context) {
 			return
 		}
 
-		claims := Claims{}
-		token, err := jwt.ParseWithClaims(tokenString, &claims, func(token *jwt.Token) (any, error) {
-			// Ensure the signing method is HMAC and the key is correct
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, errors.New("unexpected signing method")
-			}
-			return jwtKey, nil
-		})
+		claims, err := VerifyToken(tokenString)
 		if err != nil {
 			le.Warnf("error parsing token: %v", err)
 			if isUnauthorizedError(err) {
@@ -221,12 +205,6 @@ func AuthenticateCookie(role RoleType) func(c *gin.Context) {
 			"user_role":  claims.Role,
 			"token_type": claims.Type,
 		})
-
-		if !token.Valid {
-			le.Warnf("invalid token")
-			ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "invalid token"))
-			return
-		}
 
 		// token type check
 		if claims.Type != TokenTypeAccess {
@@ -268,6 +246,7 @@ func AuthenticateCookie(role RoleType) func(c *gin.Context) {
 	}
 }
 
+// GenerateToken generates a token with userid, role, token type and expired time
 func GenerateToken(userid int64, role RoleType, tokenType TokenType, expiredAt time.Time) (string, error) {
 	claims := &Claims{
 		Userid: userid,
@@ -282,10 +261,29 @@ func GenerateToken(userid int64, role RoleType, tokenType TokenType, expiredAt t
 	return token.SignedString(jwtKey)
 }
 
+// VerifyToken verifies the token and returns the claims and token string
+func VerifyToken(tokenString string) (*Claims, error) {
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (any, error) {
+		return jwtKey, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if !token.Valid {
+		return nil, ErrInvalidToken
+	}
+
+	return claims, nil
+
+}
+
 func isUnauthorizedError(err error) bool {
 	if err == nil {
 		return false
 	}
-	return errors.Is(err, jwt.ErrSignatureInvalid) ||
+	return errors.Is(err, ErrInvalidToken) ||
+		errors.Is(err, jwt.ErrSignatureInvalid) ||
 		errors.Is(err, jwt.ErrTokenExpired)
 }

@@ -46,6 +46,11 @@ func (s *service) Login(ctx context.Context, req *v1.LoginReq) (*v1.LoginResp, e
 	}, nil
 }
 
+func (s *service) Refresh(ctx context.Context, req *v1.RefreshReq) (*v1.RefreshResp, error) {
+	// verify refresh token
+	claims, token, err := ginext.VerifyToken(req.GetRefreshToken())
+}
+
 func (s *service) CreateArticle(ctx context.Context, req *v1.CreateArticleReq) (*v1.CreateArticleResp, error) {
 	log.Printf("CreateArticle: %+v\n", req)
 

@@ -23,6 +23,8 @@ type BlogServiceHTTPServer interface {
 
 	Login(context.Context, *LoginReq) (*LoginResp, error)
 
+	Refresh(context.Context, *RefreshReq) (*RefreshResp, error)
+
 	UploadImage(context.Context, *UploadImageReq) (*UploadImageResp, error)
 }
 
@@ -51,6 +53,28 @@ func (s *BlogService) Login_0(ctx *gin.Context) {
 	}
 
 	md := metadata.New(ctx, "BlogServiceHTTPServer.Login")
+	newCtx := metadata.WithMetadata(ctx.Request.Context(), md)
+	out, err := ginext.AllRpcInterceptor.Intercept(newCtx, &in, handler)
+	if err != nil {
+		ginext.ErrorResponse(ctx, err)
+		return
+	}
+
+	ginext.Response(ctx, out)
+}
+
+func (s *BlogService) Refresh_0(ctx *gin.Context) {
+	var in RefreshReq
+	if err := ginext.BindAndValidate(ctx, &in); err != nil {
+		ginext.ErrorResponse(ctx, err)
+		return
+	}
+
+	var handler ginext.RpcHandler = func(ctx context.Context, req any) (resp any, err error) {
+		return s.server.(BlogServiceHTTPServer).Refresh(ctx, req.(*RefreshReq))
+	}
+
+	md := metadata.New(ctx, "BlogServiceHTTPServer.Refresh")
 	newCtx := metadata.WithMetadata(ctx.Request.Context(), md)
 	out, err := ginext.AllRpcInterceptor.Intercept(newCtx, &in, handler)
 	if err != nil {
@@ -152,6 +176,8 @@ func (s *BlogService) GetImage_0(ctx *gin.Context) {
 func (s *BlogService) RegisterService() {
 
 	s.router.Handle("POST", "/login", ginext.Authenticate(0, 0), s.Login_0)
+
+	s.router.Handle("POST", "/refresh", ginext.Authenticate(0, 0), s.Refresh_0)
 
 	s.router.Handle("GET", "/v1/author/:author_id/articles", ginext.Authenticate(2, 1), s.GetArticles_0)
 

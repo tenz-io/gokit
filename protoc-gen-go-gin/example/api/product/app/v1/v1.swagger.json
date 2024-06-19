@@ -54,6 +54,44 @@
         ]
       }
     },
+    "/refresh": {
+      "post": {
+        "operationId": "BlogService_Refresh",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RefreshResp"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "refresh_token",
+            "description": "@inject_tag: bind:\"form,name=refresh_token\" validate:\"required,non_blank,min_len=2\"",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "refresh_all",
+            "description": "@inject_tag: bind:\"form,name=refresh_all\" default:\"false\"\n\nrefresh all tokens, including refresh access_token and refresh_token",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "BlogService"
+        ]
+      }
+    },
     "/v1/author/{author_id}/articles": {
       "get": {
         "operationId": "BlogService_GetArticles",
@@ -346,6 +384,17 @@
       }
     },
     "v1LoginResp": {
+      "type": "object",
+      "properties": {
+        "access_token": {
+          "type": "string"
+        },
+        "refresh_token": {
+          "type": "string"
+        }
+      }
+    },
+    "v1RefreshResp": {
       "type": "object",
       "properties": {
         "access_token": {
