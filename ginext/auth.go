@@ -17,16 +17,37 @@ var (
 	jwtKey = []byte("my_secret_key")
 )
 
+type (
+	// RoleType is the role type for user, including:
+	// 0: anonymous
+	// 1: admin
+	// 2: user
+	RoleType = int32
+	// AuthType is the auth type, including:
+	// 0: web page
+	// 1: restful api
+	AuthType = int32
+	// TokenType is the token type, including:
+	// 0: access token
+	// 1: refresh token
+	TokenType = int32
+)
+
 const (
-	RoleAnonymous = 0
-	RoleAdmin     = 1
-	RoleUser      = 2
+	RoleAnonymous RoleType = 0
+	RoleAdmin     RoleType = 1
+	RoleUser      RoleType = 2
 )
 
 const (
 	// AuthTypeWeb is the auth type for web page, @see genproto/api/custom/common/authz.proto
-	AuthTypeWeb  = 0
-	AuthTypeRest = 1
+	AuthTypeWeb  AuthType = 0
+	AuthTypeRest AuthType = 1
+)
+
+const (
+	TokenTypeAccess  TokenType = 0
+	TokenTypeRefresh TokenType = 1
 )
 
 const (
@@ -36,7 +57,8 @@ const (
 
 type Claims struct {
 	Userid int64 `json:"userid"`
-	Role   int32 `json:"role"`
+	Role   int32 `json:"role"` // 0 anonymous, 1 admin, 2 user
+	Type   int32 `json:"type"` // 0 access, 1 refresh
 	jwt.RegisteredClaims
 }
 
@@ -44,7 +66,14 @@ func InitJWT(secretKey string) {
 	jwtKey = []byte(secretKey)
 }
 
-func Authenticate(role int32, authType int32) func(c *gin.Context) {
+func Authenticate(role RoleType, authType AuthType) func(c *gin.Context) {
+	if role == RoleAnonymous {
+		// skip authentication
+		return func(c *gin.Context) {
+			c.Next()
+		}
+	}
+
 	switch authType {
 	case AuthTypeWeb:
 		return AuthenticateCookie(role)
@@ -58,7 +87,7 @@ func Authenticate(role int32, authType int32) func(c *gin.Context) {
 }
 
 // AuthenticateRest is a middleware to authenticate user by token in Authorization header
-func AuthenticateRest(role int32) func(c *gin.Context) {
+func AuthenticateRest(role RoleType) func(c *gin.Context) {
 	if role == RoleAnonymous {
 		// skip authentication
 		return func(c *gin.Context) {
@@ -104,13 +133,21 @@ func AuthenticateRest(role int32) func(c *gin.Context) {
 		}
 
 		le = le.WithFields(logger.Fields{
-			"userid":    claims.Userid,
-			"user_role": claims.Role,
+			"userid":     claims.Userid,
+			"user_role":  claims.Role,
+			"token_type": claims.Type,
 		})
 
 		if !token.Valid {
 			le.Warnf("invalid token")
 			ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "invalid token"))
+			return
+		}
+
+		// token type check
+		if claims.Type != TokenTypeAccess {
+			le.Warnf("invalid token type")
+			ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "invalid token type"))
 			return
 		}
 
@@ -137,7 +174,7 @@ func AuthenticateRest(role int32) func(c *gin.Context) {
 }
 
 // AuthenticateCookie is a middleware to authenticate user by token in cookie
-func AuthenticateCookie(role int32) func(c *gin.Context) {
+func AuthenticateCookie(role RoleType) func(c *gin.Context) {
 	if role == RoleAnonymous {
 		// skip authentication
 		return func(c *gin.Context) {
@@ -180,13 +217,21 @@ func AuthenticateCookie(role int32) func(c *gin.Context) {
 		}
 
 		le = le.WithFields(logger.Fields{
-			"userid":    claims.Userid,
-			"user_role": claims.Role,
+			"userid":     claims.Userid,
+			"user_role":  claims.Role,
+			"token_type": claims.Type,
 		})
 
 		if !token.Valid {
 			le.Warnf("invalid token")
 			ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "invalid token"))
+			return
+		}
+
+		// token type check
+		if claims.Type != TokenTypeAccess {
+			le.Warnf("invalid token type")
+			ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "invalid token type"))
 			return
 		}
 
@@ -205,7 +250,7 @@ func AuthenticateCookie(role int32) func(c *gin.Context) {
 
 			// refresh token
 			expiredAt := time.Now().Add(ExpiresInMinutes * time.Minute)
-			newToken, err := GenerateToken(claims.Userid, claims.Role, expiredAt)
+			newToken, err := GenerateToken(claims.Userid, claims.Role, TokenTypeAccess, expiredAt)
 			if err != nil {
 				le.Warnf("failed to generate token: %v", err)
 				ErrorResponse(c, errcode.InternalServer(http.StatusInternalServerError, "failed to generate token"))
@@ -223,10 +268,11 @@ func AuthenticateCookie(role int32) func(c *gin.Context) {
 	}
 }
 
-func GenerateToken(userid int64, role int32, expiredAt time.Time) (string, error) {
+func GenerateToken(userid int64, role RoleType, tokenType TokenType, expiredAt time.Time) (string, error) {
 	claims := &Claims{
 		Userid: userid,
 		Role:   role,
+		Type:   tokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expiredAt),
 		},

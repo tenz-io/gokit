@@ -21,7 +21,7 @@ func TestAuthenticate(t *testing.T) {
 		c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("userid: %d, role: %d", userid, role)})
 	})
 
-	validToken, err := GenerateToken(123, RoleUser, time.Now().Add(5*time.Minute))
+	validToken, err := GenerateToken(123, RoleUser, TokenTypeAccess, time.Now().Add(5*time.Minute))
 	assert.NoError(t, err)
 
 	tests := []struct {
