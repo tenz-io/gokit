@@ -24,6 +24,12 @@ const (
 )
 
 const (
+	// AuthTypeWeb is the auth type for web page, @see genproto/api/custom/common/authz.proto
+	AuthTypeWeb  = 0
+	AuthTypeRest = 1
+)
+
+const (
 	CookieTokenName  = "token"
 	ExpiresInMinutes = 15
 )
@@ -38,11 +44,16 @@ func InitJWT(secretKey string) {
 	jwtKey = []byte(secretKey)
 }
 
-func Authenticate(role int32, cookie bool) func(c *gin.Context) {
-	if cookie {
+func Authenticate(role int32, authType int32) func(c *gin.Context) {
+	switch authType {
+	case AuthTypeWeb:
 		return AuthenticateCookie(role)
-	} else {
+	case AuthTypeRest:
 		return AuthenticateRest(role)
+	default:
+		return func(c *gin.Context) {
+			ErrorResponse(c, errcode.BadRequest(http.StatusInternalServerError, "bad auth type"))
+		}
 	}
 }
 
