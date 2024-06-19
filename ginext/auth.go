@@ -57,6 +57,7 @@ const (
 
 var (
 	ErrInvalidToken = errors.New("invalid token")
+	ErrUnauthorized = errors.New("unauthorized")
 )
 
 type Claims struct {
@@ -120,7 +121,7 @@ func AuthenticateRest(role RoleType) func(c *gin.Context) {
 		claims, err := VerifyToken(tokenString)
 		if err != nil {
 			le.Warnf("error parsing token: %v", err)
-			if isUnauthorizedError(err) {
+			if IsUnauthorizedError(err) {
 				ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "invalid token"))
 				return
 			}
@@ -191,7 +192,7 @@ func AuthenticateCookie(role RoleType) func(c *gin.Context) {
 		claims, err := VerifyToken(tokenString)
 		if err != nil {
 			le.Warnf("error parsing token: %v", err)
-			if isUnauthorizedError(err) {
+			if IsUnauthorizedError(err) {
 				ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "invalid token"))
 				return
 			}
@@ -261,14 +262,15 @@ func GenerateToken(userid int64, role RoleType, tokenType TokenType, expiredAt t
 	return token.SignedString(jwtKey)
 }
 
-// VerifyToken verifies the token and returns the claims and token string
+// VerifyToken verifies the token and returns the claims if valid
+// returns error if the token is invalid
 func VerifyToken(tokenString string) (*Claims, error) {
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (any, error) {
 		return jwtKey, nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, errors.Join(ErrUnauthorized, err)
 	}
 
 	if !token.Valid {
@@ -279,11 +281,10 @@ func VerifyToken(tokenString string) (*Claims, error) {
 
 }
 
-func isUnauthorizedError(err error) bool {
+func IsUnauthorizedError(err error) bool {
 	if err == nil {
 		return false
 	}
-	return errors.Is(err, ErrInvalidToken) ||
-		errors.Is(err, jwt.ErrSignatureInvalid) ||
-		errors.Is(err, jwt.ErrTokenExpired)
+	return errors.Is(err, ErrUnauthorized) ||
+		errors.Is(err, ErrInvalidToken)
 }
