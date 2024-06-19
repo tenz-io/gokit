@@ -15,7 +15,6 @@ service BlogService {
     };
     option (custom.common.auth) = {
       role: ANONYMOUS
-      type: WEB
     };
   }
 
@@ -62,13 +61,14 @@ service BlogService {
 
 message LoginReq {
   // @inject_tag: bind:"form,name=username" validate:"required,non_blank,min_len=2,pattern=#abc123"
-  string username = 2;
+  string username = 1;
   // @inject_tag: bind:"form,name=password" validate:"required,non_blank,min_len=2"
-  string password = 3;
+  string password = 2;
 }
 
 message LoginResp {
-  string token = 2;
+  string access_token = 1;
+  string refresh_token = 2;
 }
 
 message GetArticlesReq {

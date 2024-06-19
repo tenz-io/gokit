@@ -31,13 +31,18 @@ func (s *service) Login(ctx context.Context, req *v1.LoginReq) (*v1.LoginResp, e
 	}
 
 	expiredAt := time.Now().Add(15 * time.Minute)
-	token, err := ginext.GenerateToken(123, ginext.RoleAdmin, expiredAt)
+	accessToken, err := ginext.GenerateToken(123, ginext.RoleAdmin, ginext.TokenTypeAccess, expiredAt)
+	if err != nil {
+		return nil, errcode.InternalServer(http.StatusInternalServerError, "failed to generate token")
+	}
+	refreshToken, err := ginext.GenerateToken(123, ginext.RoleAdmin, ginext.TokenTypeRefresh, time.Now().Add(365*24*time.Hour))
 	if err != nil {
 		return nil, errcode.InternalServer(http.StatusInternalServerError, "failed to generate token")
 	}
 
 	return &v1.LoginResp{
-		Token: token,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 	}, nil
 }
 

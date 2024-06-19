@@ -39,8 +39,8 @@ func TestAuthenticate(t *testing.T) {
 		{
 			name:         "Invalid Token",
 			token:        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InRlc3R1c2VyIiwiZXhwIjoxNzE4NjM4NjIzfQ.3jkMyPp2j7-3EFsLBmMRmTY15JVqmMo8kZGySd7gr-U",
-			expectedCode: http.StatusBadRequest,
-			expectedBody: `{"code":400,"message":"bad token in request","data":{}}`,
+			expectedCode: http.StatusUnauthorized,
+			expectedBody: `{"code":401,"message":"invalid token","data":{}}`,
 		},
 		{
 			name:         "Valid Token",

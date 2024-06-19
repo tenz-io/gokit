@@ -67,8 +67,8 @@ func genService(gen *protogen.Plugin, file *protogen.File, g *protogen.Generated
 func genMethod(m *protogen.Method) []*method {
 	var (
 		methods  []*method
-		role     int32
-		authType int32
+		role     = ginext.RoleAnonymous
+		authType = ginext.AuthTypeWeb
 	)
 
 	if auth, ok := proto.GetExtension(m.Desc.Options(), common.E_Auth).(*common.Auth); ok {

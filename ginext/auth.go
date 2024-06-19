@@ -123,7 +123,7 @@ func AuthenticateRest(role RoleType) func(c *gin.Context) {
 		})
 		if err != nil {
 			le.Warnf("error parsing token: %v", err)
-			if errors.Is(err, jwt.ErrSignatureInvalid) {
+			if isUnauthorizedError(err) {
 				ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "invalid token"))
 				return
 			}
@@ -154,7 +154,7 @@ func AuthenticateRest(role RoleType) func(c *gin.Context) {
 		// check admin
 		if role == RoleAdmin && claims.Role != RoleAdmin {
 			le.Warnf("require admin role")
-			ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "role not match"))
+			ErrorResponse(c, errcode.Unauthorized(http.StatusForbidden, "forbidden"))
 			return
 		}
 
@@ -168,7 +168,7 @@ func AuthenticateRest(role RoleType) func(c *gin.Context) {
 		}
 
 		le.Warnf("role not match")
-		ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "role not match"))
+		ErrorResponse(c, errcode.Unauthorized(http.StatusForbidden, "forbidden"))
 		return
 	}
 }
@@ -207,7 +207,7 @@ func AuthenticateCookie(role RoleType) func(c *gin.Context) {
 		})
 		if err != nil {
 			le.Warnf("error parsing token: %v", err)
-			if errors.Is(err, jwt.ErrSignatureInvalid) {
+			if isUnauthorizedError(err) {
 				ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "invalid token"))
 				return
 			}
@@ -238,7 +238,7 @@ func AuthenticateCookie(role RoleType) func(c *gin.Context) {
 		// check admin
 		if role == RoleAdmin && claims.Role != RoleAdmin {
 			le.Warnf("require admin role")
-			ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "role not match"))
+			ErrorResponse(c, errcode.Unauthorized(http.StatusForbidden, "forbidden"))
 			return
 		}
 
@@ -263,7 +263,7 @@ func AuthenticateCookie(role RoleType) func(c *gin.Context) {
 		}
 
 		le.Warnf("role not match")
-		ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "role not match"))
+		ErrorResponse(c, errcode.Unauthorized(http.StatusForbidden, "forbidden"))
 		return
 	}
 }
@@ -280,4 +280,12 @@ func GenerateToken(userid int64, role RoleType, tokenType TokenType, expiredAt t
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(jwtKey)
+}
+
+func isUnauthorizedError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return errors.Is(err, jwt.ErrSignatureInvalid) ||
+		errors.Is(err, jwt.ErrTokenExpired)
 }
