@@ -69,7 +69,7 @@ message IntField {
 message StringField {
   string default = 1; // default value
   bool required = 2; // required, can not be nil or empty
-  bool non_blank = 3; // non blank, can not be blank string, such as " ", "\t", "\n"
+  bool not_blank = 3; // not blank, can not be blank string, such as " ", "\t", "\n"
   int64 min_len = 4; // min length
   int64 max_len = 5; // max length
   repeated string in = 6; // in list

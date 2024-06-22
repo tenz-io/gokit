@@ -42,7 +42,7 @@ message LoginRequest {
     form: "username"
     str: {
       required: true
-      non_blank: true
+      not_blank: true
       min_len: 2
       max_len: 64
     }
@@ -51,7 +51,7 @@ message LoginRequest {
     form: "password"
     str: {
       required: true
-      non_blank: true
+      not_blank: true
       min_len: 6
       max_len: 64
     }
@@ -69,7 +69,7 @@ message HelloRequest {
     str: {
       default: "goer"
       required: true
-      non_blank: true
+      not_blank: true
       min_len: 2
       max_len: 64
     }
@@ -85,7 +85,7 @@ message GetImageRequest {
     uri: "key"
     str: {
       required: true
-      non_blank: true
+      not_blank: true
       max_len: 64
     }
   }];
@@ -125,7 +125,7 @@ message UploadImageRequest {
     str: {
       default: "post"
       required: true
-      non_blank: true
+      not_blank: true
       in: ["avatar", "background", "post"]
     }
   }];
