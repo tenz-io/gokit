@@ -5,111 +5,115 @@ import (
 	"context"
 	"github.com/tenz-io/gokit/genproto"
 	"github.com/tenz-io/gokit/genproto/go/custom/idl"
+	"google.golang.org/protobuf/proto"
 )
 
 func init(){
 {{range .Messages}}
-    {{.Name}} := &{{.Name}}{}
-	genproto.Register("{{.Name}}", {{.Name}}.ValidateRule())
+    _{{.Name}} := &{{.Name}}{}
+	genproto.Register("{{.Name}}", _{{.Name}}.ValidateRule())
 {{end}}
 }
 
 {{range .Messages}}
-func (x *{{.Name}}) Validate (_ context.Context) error {
+func (x *{{.Name}}) Validate(_ context.Context) error {
 	return genproto.Validate(x)
 }
-{{end}}
 
-{{range .Messages}}
-func (x *{{.Name}}) ValidateRule () genproto.ValidateRule {
-	return genproto.ValidateRule{
+func (x *{{.Name}}) ValidateRule() genproto.FieldRules {
+	return genproto.FieldRules{
         {{range .Fields}}
-        {{.Name}}: &idl.Field{
+        "{{.Name}}": &idl.Field{
             {{- if .IntField}}
             Int: &idl.IntField{
                 {{- if .IntField.Default}}
-                Default: {{.IntField.Default}},
+                Default: proto.Int64({{.IntField.Default}}),
                 {{- end}}
                 {{- if .IntField.Required}}
-                Required: {{.IntField.Required}},
+                Required: proto.Bool({{.IntField.Required}}),
                 {{- end}}
                 {{- if .IntField.Gt}}
-                Gt: {{.IntField.Gt}},
+                Gt: proto.Int64({{.IntField.Gt}}),
                 {{- end}}
                 {{- if .IntField.Gte}}
-                Gte: {{.IntField.Gte}},
+                {{- end}}
+                {{- if .IntField.Gte}}
+                Gte: proto.Int64({{.IntField.Gte}}),
                 {{- end}}
                 {{- if .IntField.Lt}}
-                Lt: {{.IntField.Lt}},
+                Lt: proto.Int64({{.IntField.Lt}}),
                 {{- end}}
                 {{- if .IntField.Lte}}
-                Lte: {{.IntField.Lte}},
+                Lte: proto.Int64({{.IntField.Lte}}),
                 {{- end}}
                 {{- if .IntField.Eq}}
-                Eq: {{.IntField.Eq}},
+                Eq: proto.Int64({{.IntField.Eq}}),
                 {{- end}}
                 {{- if .IntField.Ne}}
-                Ne: {{.IntField.Ne}},
+                Ne: proto.Int64({{.IntField.Ne}}),
                 {{- end}}
                 {{- if .IntField.In}}
-                In: {{.IntField.In}},
+                In: []int64{
+                {{range .IntField.In}}
+                {{.}}, {{end}}
+                },
                 {{- end}}
             },
             {{- end}}
             {{- if .StringField}}
             Str: &idl.StringField{
                 {{- if .StringField.Default}}
-                Default: {{.StringField.Default}},
+                Default: proto.String("{{.StringField.Default}}"),
                 {{- end}}
                 {{- if .StringField.Required}}
-                Required: {{.StringField.Required}},
+                Required: proto.Bool({{.StringField.Required}}),
                 {{- end}}
                 {{- if .StringField.NotBlank}}
-                NotBlank: {{.StringField.NotBlank}},
+                NotBlank: proto.Bool({{.StringField.NotBlank}}),
                 {{- end}}
                 {{- if .StringField.MinLen}}
-                MinLen: {{.StringField.MinLen}},
+                MinLen: proto.Int64({{.StringField.MinLen}}),
                 {{- end}}
                 {{- if .StringField.MaxLen}}
-                MaxLen: {{.StringField.MaxLen}},
+                MaxLen: proto.Int64({{.StringField.MaxLen}}),
                 {{- end}}
                 {{- if .StringField.In}}
-                In: {{.StringField.In}},
+                In: []string{
+                {{range .StringField.In}} "{{.}}",
+                {{end}}
+                },
                 {{- end}}
                 {{- if .StringField.Pattern}}
-                Pattern: {{.StringField.Pattern}},
+                Pattern: proto.String("{{.StringField.Pattern}}"),
                 {{- end}}
             },
             {{- end}}
             {{- if .BytesField}}
             Bytes: &idl.BytesField{
-                {{- if .BytesField.Default}}
-                Default: {{.BytesField.Default}},
-                {{- end}}
                 {{- if .BytesField.Required}}
-                Required: {{.BytesField.Required}},
+                Required: proto.Bool({{.BytesField.Required}}),
                 {{- end}}
                 {{- if .BytesField.MinLen}}
-                MinLen: {{.BytesField.MinLen}},
+                MinLen: proto.Int64({{.BytesField.MinLen}}),
                 {{- end}}
                 {{- if .BytesField.MaxLen}}
-                MaxLen: {{.BytesField.MaxLen}},
+                MaxLen: proto.Int64({{.BytesField.MaxLen}}),
                 {{- end}}
             },
             {{- end}}
             {{- if .ArrayField}}
             Array: &idl.ArrayField{
                 {{- if .ArrayField.Default}}
-                Required: {{.ArrayField.Required}},
+                Required: proto.Bool({{.ArrayField.Required}}),
                 {{- end}}
                 {{- if .ArrayField.MinItems}}
-                MinItems: {{.ArrayField.MinItems}},
+                MinItems: proto.Int64({{.ArrayField.MinItems}})
                 {{- end}}
                 {{- if .ArrayField.MaxItems}}
-                MaxItems: {{.ArrayField.MaxItems}},
+                MaxItems: proto.Int64({{.ArrayField.MaxItems}})
                 {{- end}}
                 {{- if .ArrayField.Len}}
-                Len: {{.Len}},
+                Len: proto.Int64({{.ArrayField.Len}})
                 {{- end}}
             },
             {{- end}}

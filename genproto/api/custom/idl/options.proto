@@ -64,6 +64,7 @@ message IntField {
   optional int64 eq = 7; // equal
   optional int64 ne = 8; // not equal
   repeated int64 in = 9; // in list
+  repeated int64 nin = 10; // not in list
 }
 
 message StringField {
@@ -73,14 +74,14 @@ message StringField {
   optional int64 min_len = 4; // min length
   optional int64 max_len = 5; // max length
   repeated string in = 6; // in list
-  optional string pattern = 7; // regex pattern
+  repeated string nin = 7; // not in list
+  optional string pattern = 8; // regex pattern
 }
 
 message BytesField {
-  optional bytes default = 1; // default value
-  optional bool required = 2; // required, can not be nil or empty
-  optional int64 min_len = 3; // min length
-  optional int64 max_len = 4; // max length
+  optional bool required = 1; // required, can not be nil or empty
+  optional int64 min_len = 2; // min length
+  optional int64 max_len = 3; // max length
 }
 
 message ArrayField {
