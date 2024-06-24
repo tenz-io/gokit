@@ -4,17 +4,119 @@ package {{.Package}}
 import (
 	"context"
 	"github.com/tenz-io/gokit/genproto"
+	"github.com/tenz-io/gokit/genproto/go/custom/idl"
 )
 
 func init(){
 {{range .Messages}}
-	genproto.Register(&{{.Name}}{})
+    {{.Name}} := &{{.Name}}{}
+	genproto.Register("{{.Name}}", {{.Name}}.ValidateRule())
 {{end}}
 }
 
 {{range .Messages}}
-func (x *{{.Name}}) Validate (ctx context.Context) error {
+func (x *{{.Name}}) Validate (_ context.Context) error {
 	return genproto.Validate(x)
 }
 {{end}}
+
+{{range .Messages}}
+func (x *{{.Name}}) ValidateRule () genproto.ValidateRule {
+	return genproto.ValidateRule{
+        {{range .Fields}}
+        {{.Name}}: &idl.Field{
+            {{- if .IntField}}
+            Int: &idl.IntField{
+                {{- if .IntField.Default}}
+                Default: {{.IntField.Default}},
+                {{- end}}
+                {{- if .IntField.Required}}
+                Required: {{.IntField.Required}},
+                {{- end}}
+                {{- if .IntField.Gt}}
+                Gt: {{.IntField.Gt}},
+                {{- end}}
+                {{- if .IntField.Gte}}
+                Gte: {{.IntField.Gte}},
+                {{- end}}
+                {{- if .IntField.Lt}}
+                Lt: {{.IntField.Lt}},
+                {{- end}}
+                {{- if .IntField.Lte}}
+                Lte: {{.IntField.Lte}},
+                {{- end}}
+                {{- if .IntField.Eq}}
+                Eq: {{.IntField.Eq}},
+                {{- end}}
+                {{- if .IntField.Ne}}
+                Ne: {{.IntField.Ne}},
+                {{- end}}
+                {{- if .IntField.In}}
+                In: {{.IntField.In}},
+                {{- end}}
+            },
+            {{- end}}
+            {{- if .StringField}}
+            Str: &idl.StringField{
+                {{- if .StringField.Default}}
+                Default: {{.StringField.Default}},
+                {{- end}}
+                {{- if .StringField.Required}}
+                Required: {{.StringField.Required}},
+                {{- end}}
+                {{- if .StringField.NotBlank}}
+                NotBlank: {{.StringField.NotBlank}},
+                {{- end}}
+                {{- if .StringField.MinLen}}
+                MinLen: {{.StringField.MinLen}},
+                {{- end}}
+                {{- if .StringField.MaxLen}}
+                MaxLen: {{.StringField.MaxLen}},
+                {{- end}}
+                {{- if .StringField.In}}
+                In: {{.StringField.In}},
+                {{- end}}
+                {{- if .StringField.Pattern}}
+                Pattern: {{.StringField.Pattern}},
+                {{- end}}
+            },
+            {{- end}}
+            {{- if .BytesField}}
+            Bytes: &idl.BytesField{
+                {{- if .BytesField.Default}}
+                Default: {{.BytesField.Default}},
+                {{- end}}
+                {{- if .BytesField.Required}}
+                Required: {{.BytesField.Required}},
+                {{- end}}
+                {{- if .BytesField.MinLen}}
+                MinLen: {{.BytesField.MinLen}},
+                {{- end}}
+                {{- if .BytesField.MaxLen}}
+                MaxLen: {{.BytesField.MaxLen}},
+                {{- end}}
+            },
+            {{- end}}
+            {{- if .ArrayField}}
+            Array: &idl.ArrayField{
+                {{- if .ArrayField.Default}}
+                Required: {{.ArrayField.Required}},
+                {{- end}}
+                {{- if .ArrayField.MinItems}}
+                MinItems: {{.ArrayField.MinItems}},
+                {{- end}}
+                {{- if .ArrayField.MaxItems}}
+                MaxItems: {{.ArrayField.MaxItems}},
+                {{- end}}
+                {{- if .ArrayField.Len}}
+                Len: {{.Len}},
+                {{- end}}
+            },
+            {{- end}}
+        },
+        {{end}}
+    }
+}
+{{end}}
+
 

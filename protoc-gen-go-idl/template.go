@@ -8,7 +8,7 @@ import (
 	"strings"
 	"text/template"
 
-	"google.golang.org/protobuf/compiler/protogen"
+	"github.com/tenz-io/gokit/genproto/go/custom/idl"
 )
 
 //go:embed template.go.tpl
@@ -21,8 +21,16 @@ type messageTemplate struct {
 }
 
 type messageData struct {
-	Name         string
-	MessageProto *protogen.Message
+	Name   string
+	Fields []fieldData
+}
+
+type fieldData struct {
+	Name        string
+	IntField    *idl.IntField
+	StringField *idl.StringField
+	BytesField  *idl.BytesField
+	ArrayField  *idl.ArrayField
 }
 
 func (d *messageTemplate) execute() error {

@@ -5,6 +5,9 @@ import (
 	"fmt"
 
 	"google.golang.org/protobuf/compiler/protogen"
+	"google.golang.org/protobuf/proto"
+
+	"github.com/tenz-io/gokit/genproto/go/custom/idl"
 )
 
 func main() {
@@ -35,12 +38,33 @@ func generateValidationMethod(plugin *protogen.Plugin, file *protogen.File) {
 	}
 
 	for _, msg := range file.Messages {
-		msgProto := *msg
-		msgData := messageData{
-			Name:         string(msg.Desc.Name()),
-			MessageProto: &msgProto,
+		mdata := messageData{
+			Name:   string(msg.Desc.Name()),
+			Fields: []fieldData{},
 		}
-		msgTpl.Messages = append(msgTpl.Messages, msgData)
+
+		for _, field := range msg.Fields {
+			options := proto.GetExtension(field.Desc.Options(), idl.E_Field)
+			if options == nil {
+				continue
+			}
+			fieldOpts, ok := options.(*idl.Field)
+			if !ok {
+				continue
+			}
+
+			fdata := fieldData{
+				Name:        field.GoName,
+				IntField:    fieldOpts.GetInt(),
+				StringField: fieldOpts.GetStr(),
+				BytesField:  fieldOpts.GetBytes(),
+				ArrayField:  fieldOpts.GetArray(),
+			}
+
+			mdata.Fields = append(mdata.Fields, fdata)
+		}
+
+		msgTpl.Messages = append(msgTpl.Messages, mdata)
 
 	}
 
