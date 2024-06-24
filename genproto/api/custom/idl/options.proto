@@ -21,8 +21,8 @@ message Method {
     WEB = 0; // web page, verify by cookie
     REST = 1; // restful api, verify by token
   }
-  AuthRole role = 1;
-  AuthType type = 2;
+  optional AuthRole role = 1;
+  optional AuthType type = 2;
   oneof route {
     string get = 21;
     string put = 22;
@@ -47,54 +47,54 @@ message Field {
     string form = 4; // bind form data
     string file = 5; // bind file data
   }
-  IntField int = 11;
-  StringField str = 12;
-  BytesField bytes = 13;
-  ArrayField array = 14;
+  optional IntField int = 11;
+  optional StringField str = 12;
+  optional BytesField bytes = 13;
+  optional ArrayField array = 14;
 
 }
 
 message IntField {
-  int64 default = 1; // default value
-  bool required = 2; // required, can not be nil
-  int64 gt = 3; // greater than
-  int64 gte = 4; // greater than or equal
-  int64 lt = 5; // less than
-  int64 lte = 6; // less than or equal
-  int64 eq = 7; // equal
-  int64 ne = 8; // not equal
+  optional int64 default = 1; // default value
+  optional bool required = 2; // required, can not be nil
+  optional int64 gt = 3; // greater than
+  optional int64 gte = 4; // greater than or equal
+  optional int64 lt = 5; // less than
+  optional int64 lte = 6; // less than or equal
+  optional int64 eq = 7; // equal
+  optional int64 ne = 8; // not equal
   repeated int64 in = 9; // in list
 }
 
 message StringField {
-  string default = 1; // default value
-  bool required = 2; // required, can not be nil or empty
-  bool not_blank = 3; // not blank, can not be blank string, such as " ", "\t", "\n"
-  int64 min_len = 4; // min length
-  int64 max_len = 5; // max length
+  optional string default = 1; // default value
+  optional bool required = 2; // required, can not be nil or empty
+  optional bool not_blank = 3; // not blank, can not be blank string, such as " ", "\t", "\n"
+  optional int64 min_len = 4; // min length
+  optional int64 max_len = 5; // max length
   repeated string in = 6; // in list
-  string pattern = 7; // regex pattern
+  optional string pattern = 7; // regex pattern
 }
 
 message BytesField {
-  bytes default = 1; // default value
-  bool required = 2; // required, can not be nil or empty
-  int64 min_len = 3; // min length
-  int64 max_len = 4; // max length
+  optional bytes default = 1; // default value
+  optional bool required = 2; // required, can not be nil or empty
+  optional int64 min_len = 3; // min length
+  optional int64 max_len = 4; // max length
 }
 
 message ArrayField {
-  bool required = 1; // required, can not be nil or empty
-  int64 min_items = 2; // min items in array
-  int64 max_items = 3; // max items in array
-  int64 len = 4; // length of array
-  ItemField item = 5; // item validation
+  optional bool required = 1; // required, can not be nil or empty
+  optional int64 min_items = 2; // min items in array
+  optional int64 max_items = 3; // max items in array
+  optional int64 len = 4; // length of array
+  optional ItemField item = 5; // item validation
 }
 
 message ItemField {
-  IntField int = 1;
-  StringField str = 2;
-  BytesField bytes = 3;
+  optional IntField int = 1;
+  optional StringField str = 2;
+  optional BytesField bytes = 3;
 }
 
 
