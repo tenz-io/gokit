@@ -8,36 +8,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func init() {
-
-	_LoginRequest := &LoginRequest{}
-	genproto.Register("LoginRequest", _LoginRequest.ValidateRule())
-
-	_LoginResponse := &LoginResponse{}
-	genproto.Register("LoginResponse", _LoginResponse.ValidateRule())
-
-	_HelloRequest := &HelloRequest{}
-	genproto.Register("HelloRequest", _HelloRequest.ValidateRule())
-
-	_HelloResponse := &HelloResponse{}
-	genproto.Register("HelloResponse", _HelloResponse.ValidateRule())
-
-	_GetImageRequest := &GetImageRequest{}
-	genproto.Register("GetImageRequest", _GetImageRequest.ValidateRule())
-
-	_GetImageResponse := &GetImageResponse{}
-	genproto.Register("GetImageResponse", _GetImageResponse.ValidateRule())
-
-	_UploadImageRequest := &UploadImageRequest{}
-	genproto.Register("UploadImageRequest", _UploadImageRequest.ValidateRule())
-
-	_UploadImageResponse := &UploadImageResponse{}
-	genproto.Register("UploadImageResponse", _UploadImageResponse.ValidateRule())
-
-}
-
 func (x *LoginRequest) Validate(_ context.Context) error {
-	return genproto.Validate(x)
+	return genproto.ValidateMessage(x.ValidateRule(), x)
 }
 
 func (x *LoginRequest) ValidateRule() genproto.FieldRules {
@@ -64,7 +36,7 @@ func (x *LoginRequest) ValidateRule() genproto.FieldRules {
 }
 
 func (x *LoginResponse) Validate(_ context.Context) error {
-	return genproto.Validate(x)
+	return genproto.ValidateMessage(x.ValidateRule(), x)
 }
 
 func (x *LoginResponse) ValidateRule() genproto.FieldRules {
@@ -77,7 +49,7 @@ func (x *LoginResponse) ValidateRule() genproto.FieldRules {
 }
 
 func (x *HelloRequest) Validate(_ context.Context) error {
-	return genproto.Validate(x)
+	return genproto.ValidateMessage(x.ValidateRule(), x)
 }
 
 func (x *HelloRequest) ValidateRule() genproto.FieldRules {
@@ -96,7 +68,7 @@ func (x *HelloRequest) ValidateRule() genproto.FieldRules {
 }
 
 func (x *HelloResponse) Validate(_ context.Context) error {
-	return genproto.Validate(x)
+	return genproto.ValidateMessage(x.ValidateRule(), x)
 }
 
 func (x *HelloResponse) ValidateRule() genproto.FieldRules {
@@ -107,7 +79,7 @@ func (x *HelloResponse) ValidateRule() genproto.FieldRules {
 }
 
 func (x *GetImageRequest) Validate(_ context.Context) error {
-	return genproto.Validate(x)
+	return genproto.ValidateMessage(x.ValidateRule(), x)
 }
 
 func (x *GetImageRequest) ValidateRule() genproto.FieldRules {
@@ -140,7 +112,7 @@ func (x *GetImageRequest) ValidateRule() genproto.FieldRules {
 }
 
 func (x *GetImageResponse) Validate(_ context.Context) error {
-	return genproto.Validate(x)
+	return genproto.ValidateMessage(x.ValidateRule(), x)
 }
 
 func (x *GetImageResponse) ValidateRule() genproto.FieldRules {
@@ -151,7 +123,7 @@ func (x *GetImageResponse) ValidateRule() genproto.FieldRules {
 }
 
 func (x *UploadImageRequest) Validate(_ context.Context) error {
-	return genproto.Validate(x)
+	return genproto.ValidateMessage(x.ValidateRule(), x)
 }
 
 func (x *UploadImageRequest) ValidateRule() genproto.FieldRules {
@@ -160,8 +132,7 @@ func (x *UploadImageRequest) ValidateRule() genproto.FieldRules {
 		"Image": &idl.Field{
 			Bytes: &idl.BytesField{
 				Required: proto.Bool(true),
-				MinLen:   proto.Int64(1),
-				MaxLen:   proto.Int64(1048576),
+				MinLen:   proto.Int64(1048576),
 			},
 		},
 
@@ -181,7 +152,7 @@ func (x *UploadImageRequest) ValidateRule() genproto.FieldRules {
 }
 
 func (x *UploadImageResponse) Validate(_ context.Context) error {
-	return genproto.Validate(x)
+	return genproto.ValidateMessage(x.ValidateRule(), x)
 }
 
 func (x *UploadImageResponse) ValidateRule() genproto.FieldRules {

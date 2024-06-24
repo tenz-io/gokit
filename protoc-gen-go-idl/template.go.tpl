@@ -8,16 +8,9 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func init(){
-{{range .Messages}}
-    _{{.Name}} := &{{.Name}}{}
-	genproto.Register("{{.Name}}", _{{.Name}}.ValidateRule())
-{{end}}
-}
-
 {{range .Messages}}
 func (x *{{.Name}}) Validate(_ context.Context) error {
-	return genproto.Validate(x)
+	return genproto.ValidateMessage(x.ValidateRule(), x)
 }
 
 func (x *{{.Name}}) ValidateRule() genproto.FieldRules {
