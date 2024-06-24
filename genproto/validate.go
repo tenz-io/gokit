@@ -6,9 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protoreflect"
 
 	"github.com/tenz-io/gokit/genproto/go/custom/idl"
 )
@@ -489,68 +487,65 @@ func ValidateField(fieldIdl *idl.Field, fieldVal reflect.Value) error {
 	return nil
 }
 
-func ValidateMessage(protoMessage *protogen.Message, message proto.Message) error {
-	if protoMessage == nil {
+func ValidateMessage(rules FieldRules, message proto.Message) error {
+	if len(rules) == 0 {
 		return nil
 	}
 
-	if proto.MessageName(message).Name() != protoMessage.Desc.Name() {
-		return &ProtoError{
-			Key:     string(protoMessage.Desc.Name()),
-			Message: fmt.Sprintf("message name should be %s, actual %s", protoMessage.Desc.Name(), proto.MessageName(message)),
+	messageVal := reflect.ValueOf(message)
+	messageType := messageVal.Type()
+	if messageVal.Kind() == reflect.Ptr {
+		if messageVal.IsNil() {
+			messageVal = reflect.New(messageType.Elem())
 		}
 	}
 
-	for _, field := range protoMessage.Fields {
-		options := proto.GetExtension(field.Desc.Options(), idl.E_Field)
-		if options == nil {
-			continue
-		}
-
-		protoVal := message.ProtoReflect().Get(field.Desc)
-		fieldVal := reflect.ValueOf(protoVal.Interface())
-
-		fieldIdl, ok := options.(*idl.Field)
+	for i := 0; i < messageVal.NumField(); i++ {
+		fieldVal := messageVal.Field(i)
+		fieldType := messageType.Field(i)
+		fieldIdl, ok := rules[fieldType.Name]
 		if !ok {
 			continue
 		}
 
 		if err := ValidateField(fieldIdl, fieldVal); err != nil {
-
+			return err
 		}
-
 	}
 
 	return nil
 }
 
+type FieldRules map[string]*idl.Field
+
 type Validator struct {
-	protoMessage *protogen.Message
+	rules FieldRules
 }
 
-func NewValidator(protoMessage *protogen.Message) *Validator {
-	return &Validator{protoMessage: protoMessage}
+func NewValidator(rules FieldRules) *Validator {
+	return &Validator{rules: rules}
 }
 
 func (v *Validator) Validate(message proto.Message) error {
-	if v == nil || v.protoMessage == nil {
+	if v == nil || len(v.rules) == 0 {
 		return nil
 	}
-	return ValidateMessage(v.protoMessage, message)
+	return ValidateMessage(v.rules, message)
 }
 
-type validators map[protoreflect.Name]*Validator
+// validators is a map of message name to validator
+type validators map[string]*Validator
 
 var (
 	Validators = validators{}
 )
 
 // Register registers a validator for a message
-func (v validators) Register(protoMessage *protogen.Message) {
-	if protoMessage == nil || protoMessage.Desc == nil {
+func (v validators) Register(messageName string, rules FieldRules) {
+	if messageName == "" || len(rules) == 0 {
 		return
 	}
-	v[protoMessage.Desc.Name()] = NewValidator(protoMessage)
+	v[messageName] = NewValidator(rules)
 }
 
 // Validate validates a message
@@ -559,7 +554,7 @@ func (v validators) Validate(message proto.Message) error {
 		return nil
 	}
 
-	validator, ok := v[proto.MessageName(message).Name()]
+	validator, ok := v[string(proto.MessageName(message).Name())]
 	if !ok {
 		return nil
 	}
@@ -568,8 +563,8 @@ func (v validators) Validate(message proto.Message) error {
 }
 
 // Register registers a validator for a message
-func Register(protoMessage *protogen.Message) {
-	Validators.Register(protoMessage)
+func Register(messageName string, rules FieldRules) {
+	Validators.Register(messageName, rules)
 }
 
 // Validate validates a message

@@ -1,49 +1,55 @@
-// main.go
 package main
 
 import (
-	_ "embed"
+	"flag"
 	"fmt"
-	"os"
+
+	"google.golang.org/protobuf/compiler/protogen"
 )
 
 func main() {
-	// Define the data to be used in the template
-	td := &templateData{
-		Package: "",
-		Messages: []messageData{
-			{
-				Name: "LoginRequest",
-			},
-			{
-				Name: "LoginResponse",
-			},
-			{
-				Name: "IndexRequest",
-			},
-		},
+	var flags flag.FlagSet
+	opts := protogen.Options{
+		ParamFunc: flags.Set,
 	}
 
-	// Create the output file
-	outputFile, err := os.Create("generated.go")
-	if err != nil {
-		fmt.Println("Error creating output file:", err)
-		return
-	}
-	defer outputFile.Close()
+	opts.Run(func(plugin *protogen.Plugin) error {
+		for _, file := range plugin.Files {
+			if !file.Generate {
+				continue
+			}
+			generateValidationMethod(plugin, file)
+		}
+		return nil
+	})
 
-	// Execute the template with the data and write to the output file
-	out, err := td.execute()
+}
+
+func generateValidationMethod(plugin *protogen.Plugin, file *protogen.File) {
+	filename := file.GeneratedFilenamePrefix + ".validation.go"
+
+	msgTpl := &messageTemplate{
+		Filename: filename,
+		Package:  string(file.GoPackageName),
+		Messages: []messageData{},
+	}
+
+	for _, msg := range file.Messages {
+		msgProto := *msg
+		msgData := messageData{
+			Name:         string(msg.Desc.Name()),
+			MessageProto: &msgProto,
+		}
+		msgTpl.Messages = append(msgTpl.Messages, msgData)
+
+	}
+
+	err := msgTpl.execute()
 	if err != nil {
 		fmt.Println("Error executing template:", err)
 		return
 	}
 
-	_, err = outputFile.WriteString(out)
-	if err != nil {
-		fmt.Println("Error writing to output file:", err)
-		return
-	}
+	fmt.Printf("Generated file: %s\n", filename)
 
-	fmt.Println("Generated Go source code in generated.go")
 }

@@ -1,5 +1,4 @@
 
-
-.PHONY proto-compile:
-proto-compile:
-	go run main.go
+.PHONY install:
+install:
+	go build -o $(GOPATH)/bin/protoc-gen-go-idl ./
