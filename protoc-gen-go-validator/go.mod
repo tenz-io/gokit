@@ -1,4 +1,4 @@
-module github.com/tenz-io/gokit/protoc-gen-idl
+module github.com/tenz-io/gokit/protoc-gen-go-validator
 
 go 1.21
 

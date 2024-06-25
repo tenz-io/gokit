@@ -34,7 +34,7 @@ use (
 	./monitor
 	./protoc-gen-go-gin
 	./protoc-gen-go-gin/example
-	./protoc-gen-go-idl
+	./protoc-gen-go-validator
 	./retriever
 	./retriever/example
 	./tracer
