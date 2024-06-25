@@ -1,6 +1,7 @@
 package genproto
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -29,7 +30,7 @@ type ProtoError struct {
 	Message string
 }
 
-type ValidationsError []ValidationError
+type ValidationsError []*ValidationError
 
 func (p *ProtoError) Error() string {
 	if p == nil {
@@ -66,6 +67,7 @@ type FieldData struct {
 	StringField *idl.StringField
 	BytesField  *idl.BytesField
 	ArrayField  *idl.ArrayField
+	FloatField  *idl.FloatField
 }
 
 // ValidateIntField validates an int field
@@ -78,6 +80,7 @@ func ValidateIntField(fieldIdl *idl.IntField, fieldVal reflect.Value) error {
 		fieldType   = fieldVal.Type()
 		isPtr       = fieldVal.Kind() == reflect.Ptr
 		isNil       = fieldVal.IsNil()
+		hasDefault  = fieldIdl.Default != nil
 		defaultVal  = fieldIdl.GetDefault()
 		validations = ValidationsError{}
 	)
@@ -107,56 +110,56 @@ func ValidateIntField(fieldIdl *idl.IntField, fieldVal reflect.Value) error {
 	default:
 		return &ProtoError{
 			Key:     fieldType.Name(),
-			Message: fmt.Sprintf("field %s should be int/uint, actual %s", fieldType.Name(), fieldVal.Kind().String()),
+			Message: fmt.Sprintf("should be int/uint type"),
 		}
 	}
 
-	if fieldIdl.Required != nil && fieldIdl.GetRequired() && isNil {
-		validations = append(validations, ValidationError{
+	if fieldIdl.Required != nil && fieldIdl.GetRequired() && isNil && !hasDefault {
+		validations = append(validations, &ValidationError{
 			Key:     fieldType.Name(),
-			Message: fmt.Sprintf("field %s is required", fieldType.Name()),
+			Message: fmt.Sprintf("is required"),
 		})
 	}
 
 	if fieldIdl.Gt != nil && actualVal <= fieldIdl.GetGt() {
-		validations = append(validations, ValidationError{
+		validations = append(validations, &ValidationError{
 			Key:     fieldType.Name(),
-			Message: fmt.Sprintf("field %s should be greater than %d, actual %d", fieldType.Name(), fieldIdl.GetGt(), actualVal),
+			Message: fmt.Sprintf("should be greater than %d", fieldIdl.GetGt()),
 		})
 	}
 
 	if fieldIdl.Gte != nil && actualVal < fieldIdl.GetGte() {
-		validations = append(validations, ValidationError{
+		validations = append(validations, &ValidationError{
 			Key:     fieldType.Name(),
-			Message: fmt.Sprintf("field %s should be greater than or equal to %d, actual %d", fieldType.Name(), fieldIdl.GetGte(), actualVal),
+			Message: fmt.Sprintf("should be greater than or equal to %d", fieldIdl.GetGte()),
 		})
 	}
 
 	if fieldIdl.Lt != nil && actualVal >= fieldIdl.GetLt() {
-		validations = append(validations, ValidationError{
+		validations = append(validations, &ValidationError{
 			Key:     fieldType.Name(),
-			Message: fmt.Sprintf("field %s should be less than %d, actual %d", fieldType.Name(), fieldIdl.GetLt(), actualVal),
+			Message: fmt.Sprintf("should be less than %d", fieldIdl.GetLt()),
 		})
 	}
 
 	if fieldIdl.Lte != nil && actualVal > fieldIdl.GetLte() {
-		validations = append(validations, ValidationError{
+		validations = append(validations, &ValidationError{
 			Key:     fieldType.Name(),
-			Message: fmt.Sprintf("field %s should be less than or equal to %d, actual %d", fieldType.Name(), fieldIdl.GetLte(), actualVal),
+			Message: fmt.Sprintf("should be less than or equal to %d", fieldIdl.GetLte()),
 		})
 	}
 
 	if fieldIdl.Eq != nil && actualVal != fieldIdl.GetEq() {
-		validations = append(validations, ValidationError{
+		validations = append(validations, &ValidationError{
 			Key:     fieldType.Name(),
-			Message: fmt.Sprintf("field %s should be equal to %d, actual %d", fieldType.Name(), fieldIdl.GetEq(), actualVal),
+			Message: fmt.Sprintf("should be equal to %d", fieldIdl.GetEq()),
 		})
 	}
 
 	if fieldIdl.Ne != nil && actualVal == fieldIdl.GetNe() {
-		validations = append(validations, ValidationError{
+		validations = append(validations, &ValidationError{
 			Key:     fieldType.Name(),
-			Message: fmt.Sprintf("field %s should not be equal to %d, actual %d", fieldType.Name(), fieldIdl.GetNe(), actualVal),
+			Message: fmt.Sprintf("should be not equal to %d", fieldIdl.GetNe()),
 		})
 	}
 
@@ -169,9 +172,25 @@ func ValidateIntField(fieldIdl *idl.IntField, fieldVal reflect.Value) error {
 			}
 		}
 		if !found {
-			validations = append(validations, ValidationError{
+			validations = append(validations, &ValidationError{
 				Key:     fieldType.Name(),
-				Message: fmt.Sprintf("field %s should be in %v, actual %d", fieldType.Name(), fieldIdl.GetIn(), actualVal),
+				Message: fmt.Sprintf("should be in %v", fieldIdl.GetIn()),
+			})
+		}
+	}
+
+	if len(fieldIdl.NotIn) > 0 {
+		var found bool
+		for _, v := range fieldIdl.GetNotIn() {
+			if actualVal == v {
+				found = true
+				break
+			}
+		}
+		if found {
+			validations = append(validations, &ValidationError{
+				Key:     fieldType.Name(),
+				Message: fmt.Sprintf("should be not in %v", fieldIdl.GetNotIn()),
 			})
 		}
 	}
@@ -193,6 +212,7 @@ func ValidateStringField(fieldIdl *idl.StringField, fieldVal reflect.Value) erro
 		fieldType   = fieldVal.Type()
 		isPtr       = fieldVal.Kind() == reflect.Ptr
 		isNil       = isPtr && fieldVal.IsNil()
+		hasDefault  = fieldIdl.Default != nil
 		defaultVal  = fieldIdl.GetDefault()
 		validations = ValidationsError{}
 	)
@@ -220,24 +240,24 @@ func ValidateStringField(fieldIdl *idl.StringField, fieldVal reflect.Value) erro
 		}
 	}
 
-	if fieldIdl.Required != nil && fieldIdl.GetRequired() && isNil {
-		validations = append(validations, ValidationError{
+	if fieldIdl.Required != nil && fieldIdl.GetRequired() && isNil && !hasDefault {
+		validations = append(validations, &ValidationError{
 			Key:     fieldType.Name(),
 			Message: fmt.Sprintf("field %s is required", fieldType.Name()),
 		})
 	}
 
 	if fieldIdl.MinLen != nil && len(actualVal) < int(fieldIdl.GetMinLen()) {
-		validations = append(validations, ValidationError{
+		validations = append(validations, &ValidationError{
 			Key:     fieldType.Name(),
-			Message: fmt.Sprintf("field %s should have minimum length of %d, actual %d", fieldType.Name(), fieldIdl.GetMinLen(), len(actualVal)),
+			Message: fmt.Sprintf("should have minimum length of %d", fieldIdl.GetMinLen()),
 		})
 	}
 
 	if fieldIdl.MaxLen != nil && len(actualVal) > int(fieldIdl.GetMaxLen()) {
-		validations = append(validations, ValidationError{
+		validations = append(validations, &ValidationError{
 			Key:     fieldType.Name(),
-			Message: fmt.Sprintf("field %s should have maximum length of %d, actual %d", fieldType.Name(), fieldIdl.GetMaxLen(), len(actualVal)),
+			Message: fmt.Sprintf("should have maximum length of %d", fieldIdl.GetMaxLen()),
 		})
 	}
 
@@ -250,9 +270,25 @@ func ValidateStringField(fieldIdl *idl.StringField, fieldVal reflect.Value) erro
 			}
 		}
 		if !found {
-			validations = append(validations, ValidationError{
+			validations = append(validations, &ValidationError{
 				Key:     fieldType.Name(),
-				Message: fmt.Sprintf("field %s should be in %v, actual %s", fieldType.Name(), fieldIdl.GetIn(), actualVal),
+				Message: fmt.Sprintf("should be in %v", fieldIdl.GetIn()),
+			})
+		}
+	}
+
+	if len(fieldIdl.NotIn) > 0 {
+		var found bool
+		for _, v := range fieldIdl.GetNotIn() {
+			if actualVal == v {
+				found = true
+				break
+			}
+		}
+		if found {
+			validations = append(validations, &ValidationError{
+				Key:     fieldType.Name(),
+				Message: fmt.Sprintf("should be not in %v", fieldIdl.GetNotIn()),
 			})
 		}
 	}
@@ -262,13 +298,13 @@ func ValidateStringField(fieldIdl *idl.StringField, fieldVal reflect.Value) erro
 		if err != nil {
 			return &ProtoError{
 				Key:     fieldType.Name(),
-				Message: fmt.Sprintf("field %s pattern is invalid: %s", fieldType.Name(), err.Error()),
+				Message: fmt.Sprintf("invalid pattern %s", fieldIdl.GetPattern()),
 			}
 		}
 		if !matched {
-			validations = append(validations, ValidationError{
+			validations = append(validations, &ValidationError{
 				Key:     fieldType.Name(),
-				Message: fmt.Sprintf("field %s should match pattern %s, actual %s", fieldType.Name(), fieldIdl.GetPattern(), actualVal),
+				Message: fmt.Sprintf("should match pattern %s", fieldIdl.GetPattern()),
 			})
 		}
 	}
@@ -293,7 +329,6 @@ func ValidateBytesField(fieldIdl *idl.BytesField, fieldVal reflect.Value) error 
 		validations = ValidationsError{}
 	)
 
-	// fieldVal should be []byte or a pointer to []byte
 	if isPtr {
 		if isNil {
 			fieldVal = reflect.New(fieldType.Elem())
@@ -308,35 +343,35 @@ func ValidateBytesField(fieldIdl *idl.BytesField, fieldVal reflect.Value) error 
 		if fieldVal.Type().Elem().Kind() != reflect.Uint8 {
 			return &ProtoError{
 				Key:     fieldType.Name(),
-				Message: fmt.Sprintf("field %s should be []byte, actual %s", fieldType.Name(), fieldVal.Kind().String()),
+				Message: fmt.Sprintf("should be []byte"),
 			}
 		}
 		actualVal = fieldVal.Bytes()
 	default:
 		return &ProtoError{
 			Key:     fieldType.Name(),
-			Message: fmt.Sprintf("field %s should be []byte, actual %s", fieldType.Name(), fieldVal.Kind().String()),
+			Message: fmt.Sprintf("should be []byte"),
 		}
 	}
 
 	if fieldIdl.Required != nil && fieldIdl.GetRequired() && (isNil || len(actualVal) == 0) {
-		validations = append(validations, ValidationError{
+		validations = append(validations, &ValidationError{
 			Key:     fieldType.Name(),
-			Message: fmt.Sprintf("field %s is required", fieldType.Name()),
+			Message: fmt.Sprintf("is required"),
 		})
 	}
 
 	if fieldIdl.MinLen != nil && len(actualVal) < int(fieldIdl.GetMinLen()) {
-		validations = append(validations, ValidationError{
+		validations = append(validations, &ValidationError{
 			Key:     fieldType.Name(),
-			Message: fmt.Sprintf("field %s should have minimum length of %d, actual %d", fieldType.Name(), fieldIdl.GetMinLen(), len(actualVal)),
+			Message: fmt.Sprintf("should have minimum length of %d", fieldIdl.GetMinLen()),
 		})
 	}
 
 	if fieldIdl.MaxLen != nil && len(actualVal) > int(fieldIdl.GetMaxLen()) {
-		validations = append(validations, ValidationError{
+		validations = append(validations, &ValidationError{
 			Key:     fieldType.Name(),
-			Message: fmt.Sprintf("field %s should have maximum length of %d, actual %d", fieldType.Name(), fieldIdl.GetMaxLen(), len(actualVal)),
+			Message: fmt.Sprintf("should have maximum length of %d", fieldIdl.GetMaxLen()),
 		})
 	}
 
@@ -371,35 +406,35 @@ func ValidateArrayField(fieldIdl *idl.ArrayField, fieldVal reflect.Value) error 
 	default:
 		return &ProtoError{
 			Key:     fieldType.Name(),
-			Message: fmt.Sprintf("field %s should be array, actual %s", fieldType.Name(), fieldVal.Kind().String()),
+			Message: fmt.Sprintf("should be slice/array"),
 		}
 	}
 
 	if fieldIdl.Required != nil && fieldIdl.GetRequired() && (isNil || fieldVal.Len() == 0) {
-		validations = append(validations, ValidationError{
+		validations = append(validations, &ValidationError{
 			Key:     fieldType.Name(),
-			Message: fmt.Sprintf("field %s is required", fieldType.Name()),
+			Message: fmt.Sprintf("should not be empty"),
 		})
 	}
 
 	if fieldIdl.MinItems != nil && int64(fieldVal.Len()) < fieldIdl.GetMinItems() {
-		validations = append(validations, ValidationError{
+		validations = append(validations, &ValidationError{
 			Key:     fieldType.Name(),
-			Message: fmt.Sprintf("field %s should have minimum items of %d, actual %d", fieldType.Name(), fieldIdl.GetMinItems(), fieldVal.Len()),
+			Message: fmt.Sprintf("should have minimum items of %d", fieldIdl.GetMinItems()),
 		})
 	}
 
 	if fieldIdl.MaxItems != nil && int64(fieldVal.Len()) > fieldIdl.GetMaxItems() {
-		validations = append(validations, ValidationError{
+		validations = append(validations, &ValidationError{
 			Key:     fieldType.Name(),
-			Message: fmt.Sprintf("field %s should have maximum items of %d, actual %d", fieldType.Name(), fieldIdl.GetMaxItems(), fieldVal.Len()),
+			Message: fmt.Sprintf("should have maximum items of %d", fieldIdl.GetMaxItems()),
 		})
 	}
 
 	if fieldIdl.Len != nil && int64(fieldVal.Len()) != fieldIdl.GetLen() {
-		validations = append(validations, ValidationError{
+		validations = append(validations, &ValidationError{
 			Key:     fieldType.Name(),
-			Message: fmt.Sprintf("field %s should have length of %d, actual %d", fieldType.Name(), fieldIdl.GetLen(), fieldVal.Len()),
+			Message: fmt.Sprintf("should have %d items", fieldIdl.GetLen()),
 		})
 	}
 
@@ -419,25 +454,34 @@ func ValidateArrayField(fieldIdl *idl.ArrayField, fieldVal reflect.Value) error 
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 				reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 				if err := ValidateIntField(fieldIdl.GetItem().GetInt(), itemVal); err != nil {
-					validations = append(validations, ValidationError{
-						Key:     fieldType.Name(),
-						Message: fmt.Sprintf("field %s item %d is invalid: %s", fieldType.Name(), i, err.Error()),
-					})
+					if e := new(ValidationError); errors.As(err, &e) {
+						validations = append(validations, e)
+					} else if e := new(ValidationsError); errors.As(err, &e) {
+						validations = append(validations, *e...)
+					} else {
+						return err
+					}
 				}
 			case reflect.String:
 				if err := ValidateStringField(fieldIdl.GetItem().GetStr(), itemVal); err != nil {
-					validations = append(validations, ValidationError{
-						Key:     fieldType.Name(),
-						Message: fmt.Sprintf("field %s item %d is invalid: %s", fieldType.Name(), i, err.Error()),
-					})
+					if e := new(ValidationError); errors.As(err, &e) {
+						validations = append(validations, e)
+					} else if e := new(ValidationsError); errors.As(err, &e) {
+						validations = append(validations, *e...)
+					} else {
+						return err
+					}
 				}
 			case reflect.Slice, reflect.Array:
 				if itemVal.Type().Elem().Kind() == reflect.Uint8 {
 					if err := ValidateBytesField(fieldIdl.GetItem().GetBytes(), itemVal); err != nil {
-						validations = append(validations, ValidationError{
-							Key:     fieldType.Name(),
-							Message: fmt.Sprintf("field %s item %d is invalid: %s", fieldType.Name(), i, err.Error()),
-						})
+						if e := new(ValidationError); errors.As(err, &e) {
+							validations = append(validations, e)
+						} else if e := new(ValidationsError); errors.As(err, &e) {
+							validations = append(validations, *e...)
+						} else {
+							return err
+						}
 					}
 				} else {
 					// ignore other types
@@ -446,6 +490,82 @@ func ValidateArrayField(fieldIdl *idl.ArrayField, fieldVal reflect.Value) error 
 			}
 
 		}
+	}
+
+	return nil
+}
+
+// ValidateFloatField validates a float field
+func ValidateFloatField(fieldIdl *idl.FloatField, fieldVal reflect.Value) error {
+	if fieldIdl == nil {
+		return nil
+	}
+
+	var (
+		fieldType   = fieldVal.Type()
+		isPtr       = fieldVal.Kind() == reflect.Ptr
+		isNil       = fieldVal.IsNil()
+		hasDefault  = fieldIdl.Default != nil
+		defaultVal  = fieldIdl.GetDefault()
+		validations = ValidationsError{}
+	)
+
+	// fieldVal should be float32, float64 or a pointer to one of these types
+	if isPtr {
+		if isNil {
+			fieldVal = reflect.New(fieldType.Elem())
+		} else {
+			fieldVal = fieldVal.Elem()
+		}
+	}
+
+	var actualVal float64
+	switch fieldVal.Kind() {
+	case reflect.Float32, reflect.Float64:
+		if isNil {
+			fieldVal.SetFloat(defaultVal)
+		}
+		actualVal = fieldVal.Float()
+	default:
+		return &ProtoError{
+			Key:     fieldType.Name(),
+			Message: fmt.Sprintf("should be float32/float64 type"),
+		}
+	}
+
+	if fieldIdl.Required != nil && fieldIdl.GetRequired() && isNil && !hasDefault {
+		validations = append(validations, &ValidationError{
+			Key:     fieldType.Name(),
+			Message: fmt.Sprintf("should not be empty"),
+		})
+	}
+
+	if fieldIdl.Gt != nil && actualVal <= fieldIdl.GetGt() {
+		validations = append(validations, &ValidationError{
+			Key:     fieldType.Name(),
+			Message: fmt.Sprintf("should be greater than %f", fieldIdl.GetGt()),
+		})
+	}
+
+	if fieldIdl.Gte != nil && actualVal < fieldIdl.GetGte() {
+		validations = append(validations, &ValidationError{
+			Key:     fieldType.Name(),
+			Message: fmt.Sprintf("should be greater than or equal to %f", fieldIdl.GetGte()),
+		})
+	}
+
+	if fieldIdl.Lt != nil && actualVal >= fieldIdl.GetLt() {
+		validations = append(validations, &ValidationError{
+			Key:     fieldType.Name(),
+			Message: fmt.Sprintf("should be less than %f", fieldIdl.GetLt()),
+		})
+	}
+
+	if fieldIdl.Lte != nil && actualVal > fieldIdl.GetLte() {
+		validations = append(validations, &ValidationError{
+			Key:     fieldType.Name(),
+			Message: fmt.Sprintf("should be less than or equal to %f", fieldIdl.GetLte()),
+		})
 	}
 
 	return nil
@@ -480,6 +600,10 @@ func ValidateField(fieldIdl *idl.Field, fieldVal reflect.Value) error {
 
 	if fieldIdl.GetArray() != nil {
 		return ValidateArrayField(fieldIdl.GetArray(), fieldVal)
+	}
+
+	if fieldIdl.GetFloat() != nil {
+		return ValidateFloatField(fieldIdl.GetFloat(), fieldVal)
 	}
 
 	return nil
