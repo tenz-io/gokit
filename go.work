@@ -35,6 +35,7 @@ use (
 	./protoc-gen-go-gin
 	./protoc-gen-go-gin/example
 	./protoc-gen-go-validator
+	./protoc-gen-go-validator/example
 	./retriever
 	./retriever/example
 	./tracer

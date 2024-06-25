@@ -1,4 +1,4 @@
-module github.com/tenz-io/gokit/protoc-gen-go-validator
+module validator-example
 
 go 1.21
 

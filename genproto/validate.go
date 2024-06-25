@@ -17,6 +17,8 @@ var (
 	_ error = (*ProtoError)(nil)
 )
 
+type FieldRules map[string]*idl.Field
+
 type ValidationError struct {
 	Key     string
 	Message string
@@ -288,7 +290,6 @@ func ValidateBytesField(fieldIdl *idl.BytesField, fieldVal reflect.Value) error 
 		fieldType   = fieldVal.Type()
 		isPtr       = fieldVal.Kind() == reflect.Ptr
 		isNil       = isPtr && fieldVal.IsNil()
-		defaultVal  = fieldIdl.GetDefault()
 		validations = ValidationsError{}
 	)
 
@@ -309,9 +310,6 @@ func ValidateBytesField(fieldIdl *idl.BytesField, fieldVal reflect.Value) error 
 				Key:     fieldType.Name(),
 				Message: fmt.Sprintf("field %s should be []byte, actual %s", fieldType.Name(), fieldVal.Kind().String()),
 			}
-		}
-		if isNil {
-			fieldVal.SetBytes(defaultVal)
 		}
 		actualVal = fieldVal.Bytes()
 	default:
@@ -514,60 +512,4 @@ func ValidateMessage(rules FieldRules, message proto.Message) error {
 	}
 
 	return nil
-}
-
-type FieldRules map[string]*idl.Field
-
-type Validator struct {
-	rules FieldRules
-}
-
-func NewValidator(rules FieldRules) *Validator {
-	return &Validator{rules: rules}
-}
-
-func (v *Validator) Validate(message proto.Message) error {
-	if v == nil || len(v.rules) == 0 {
-		return nil
-	}
-	return ValidateMessage(v.rules, message)
-}
-
-// validators is a map of message name to validator
-type validators map[string]*Validator
-
-var (
-	Validators = validators{}
-)
-
-// Register registers a validator for a message
-func (v validators) Register(messageName string, rules FieldRules) {
-	if messageName == "" || len(rules) == 0 {
-		return
-	}
-	v[messageName] = NewValidator(rules)
-}
-
-// Validate validates a message
-func (v validators) Validate(message proto.Message) error {
-	if len(v) == 0 {
-		return nil
-	}
-
-	validator, ok := v[string(proto.MessageName(message).Name())]
-	if !ok {
-		return nil
-	}
-
-	return validator.Validate(message)
-}
-
-// Register registers a validator for a message
-func Register(messageName string, rules FieldRules) {
-	Validators.Register(messageName, rules)
-}
-
-// Validate validates a message
-func Validate(message proto.Message) error {
-	return Validators.Validate(message)
 }
