@@ -615,7 +615,7 @@ func ValidateMessage(rules FieldRules, message proto.Message) error {
 	}
 
 	messageVal := reflect.ValueOf(message)
-	messageType := messageVal.Type()
+	messageType := reflect.TypeOf(message)
 	if messageVal.Kind() == reflect.Ptr {
 		if messageVal.IsNil() {
 			messageVal = reflect.New(messageType.Elem())
@@ -626,8 +626,8 @@ func ValidateMessage(rules FieldRules, message proto.Message) error {
 
 	for i := 0; i < messageVal.NumField(); i++ {
 		fieldVal := messageVal.Field(i)
-		fieldType := fieldVal.Type()
-		fieldIdl, ok := rules[fieldType.Name()]
+		fieldType := messageType.Field(i)
+		fieldIdl, ok := rules[fieldType.Name]
 		if !ok {
 			continue
 		}

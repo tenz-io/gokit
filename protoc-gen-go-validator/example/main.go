@@ -8,12 +8,25 @@ import (
 
 func main() {
 
-	req := &v1pb.LoginRequest{
+	var loginReq *v1pb.LoginRequest
+
+	//if err := loginReq.Validate(context.Background()); err != nil {
+	//	fmt.Println(err)
+	//	return
+	//}
+
+	loginReq = &v1pb.LoginRequest{
 		Username: "alice",
 		Password: "123456",
 	}
 
-	if err := req.Validate(context.Background()); err != nil {
+	if err := loginReq.Validate(context.Background()); err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	loginReq = &v1pb.LoginRequest{}
+	if err := loginReq.Validate(context.Background()); err != nil {
 		fmt.Println(err)
 		return
 	}
