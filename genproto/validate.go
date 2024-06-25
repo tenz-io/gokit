@@ -614,20 +614,25 @@ func ValidateMessage(rules FieldRules, message proto.Message) error {
 		return nil
 	}
 
-	messageVal := reflect.ValueOf(message)
-	messageType := reflect.TypeOf(message)
-	if messageVal.Kind() == reflect.Ptr {
-		if messageVal.IsNil() {
-			messageVal = reflect.New(messageType.Elem())
-		} else {
-			messageVal = messageVal.Elem()
-		}
+	if message == nil {
+		return nil
 	}
 
+	messageVal := reflect.ValueOf(message)
+	if messageVal.Kind() == reflect.Ptr && messageVal.IsNil() {
+		messageVal = reflect.New(messageVal.Type().Elem())
+	}
+
+	if messageVal.Kind() == reflect.Ptr {
+		messageVal = messageVal.Elem()
+	}
+
+	messageTyp := messageVal.Type()
 	for i := 0; i < messageVal.NumField(); i++ {
 		fieldVal := messageVal.Field(i)
-		fieldType := messageType.Field(i)
-		fieldIdl, ok := rules[fieldType.Name]
+		fieldTyp := messageTyp.Field(i)
+
+		fieldIdl, ok := rules[fieldTyp.Name]
 		if !ok {
 			continue
 		}
