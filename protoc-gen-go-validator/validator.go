@@ -67,11 +67,12 @@ func msgFields(msg *protogen.Message) []fieldData {
 		}
 
 		fields = append(fields, fieldData{
-			Name:        field.GoName,
-			IntField:    fieldOpts.GetInt(),
-			StringField: fieldOpts.GetStr(),
-			BytesField:  fieldOpts.GetBytes(),
-			ArrayField:  fieldOpts.GetArray(),
+			Name:  field.GoName,
+			Int:   fieldOpts.GetInt(),
+			Str:   fieldOpts.GetStr(),
+			Bytes: fieldOpts.GetBytes(),
+			Array: fieldOpts.GetArray(),
+			Float: fieldOpts.GetFloat(),
 		})
 	}
 

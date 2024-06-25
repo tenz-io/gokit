@@ -51,6 +51,7 @@ message Field {
   optional StringField str = 12;
   optional BytesField bytes = 13;
   optional ArrayField array = 14;
+  optional FloatField float = 15;
 
 }
 
@@ -64,7 +65,16 @@ message IntField {
   optional int64 eq = 7; // equal
   optional int64 ne = 8; // not equal
   repeated int64 in = 9; // in list
-  repeated int64 nin = 10; // not in list
+  repeated int64 not_in = 10; // not in list
+}
+
+message FloatField {
+  optional double default = 1; // default value
+  optional bool required = 2; // required, can not be nil
+  optional double gt = 3; // greater than
+  optional double gte = 4; // greater than or equal
+  optional double lt = 5; // less than
+  optional double lte = 6; // less than or equal
 }
 
 message StringField {
@@ -74,7 +84,7 @@ message StringField {
   optional int64 min_len = 4; // min length
   optional int64 max_len = 5; // max length
   repeated string in = 6; // in list
-  repeated string nin = 7; // not in list
+  repeated string not_in = 7; // not in list
   optional string pattern = 8; // regex pattern
 }
 
@@ -96,6 +106,7 @@ message ItemField {
   optional IntField int = 1;
   optional StringField str = 2;
   optional BytesField bytes = 3;
+  optional FloatField float = 4;
 }
 
 

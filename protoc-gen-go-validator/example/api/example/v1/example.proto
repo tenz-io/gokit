@@ -35,6 +35,13 @@ service ApiServer {
       type: REST
     };
   }
+  rpc UpdateProgress(UpdateProgressRequest) returns (UpdateProgressResponse) {
+    option (custom.idl.method) = {
+      post: "/api/update/progress"
+      role: USER
+      type: REST
+    };
+  }
 }
 
 message LoginRequest {
@@ -133,5 +140,35 @@ message UploadImageRequest {
 
 message UploadImageResponse {
   string key = 1;
+}
+
+message UpdateProgressRequest {
+  int64 progress = 1[(custom.idl.field) = {
+    form: "progress"
+    float: {
+      default: 0.7
+      required: true
+      gte: 0
+      lte: 1
+    }
+  }];
+  repeated int32 cat_ids = 2[(custom.idl.field) = {
+    form: "cat_ids"
+    array: {
+      required: true
+      min_items: 1
+      max_items: 10
+      item: {
+        int: {
+          gt: 1000
+          lte: 5000
+        }
+      }
+    }
+  }];
+}
+
+message UpdateProgressResponse {
+  double progress = 1;
 }
 

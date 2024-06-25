@@ -23,11 +23,12 @@ type messageData struct {
 }
 
 type fieldData struct {
-	Name        string
-	IntField    *idl.IntField
-	StringField *idl.StringField
-	BytesField  *idl.BytesField
-	ArrayField  *idl.ArrayField
+	Name  string
+	Int   *idl.IntField
+	Str   *idl.StringField
+	Bytes *idl.BytesField
+	Array *idl.ArrayField
+	Float *idl.FloatField
 }
 
 func (d *messageTemplate) execute() string {

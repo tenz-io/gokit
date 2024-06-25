@@ -168,3 +168,45 @@ func (x *UploadImageResponse) ValidateRule() genproto.FieldRules {
 		"Key": &idl.Field{},
 	}
 }
+
+func (x *UpdateProgressRequest) Validate(_ context.Context) error {
+	return genproto.ValidateMessage(x.ValidateRule(), x)
+}
+
+func (x *UpdateProgressRequest) ValidateRule() genproto.FieldRules {
+	return genproto.FieldRules{
+
+		"Progress": &idl.Field{
+			Float: &idl.FloatField{
+				Default:  proto.Float64(0.7),
+				Required: proto.Bool(true),
+				Gte:      proto.Float64(0),
+				Lte:      proto.Float64(1),
+			},
+		},
+
+		"CatIds": &idl.Field{
+			Array: &idl.ArrayField{
+				MinItems: proto.Int64(1),
+				MaxItems: proto.Int64(10),
+				Item: &idl.ItemField{
+					Int: &idl.IntField{
+						Gt:  proto.Int64(1000),
+						Lte: proto.Int64(5000),
+					},
+				},
+			},
+		},
+	}
+}
+
+func (x *UpdateProgressResponse) Validate(_ context.Context) error {
+	return genproto.ValidateMessage(x.ValidateRule(), x)
+}
+
+func (x *UpdateProgressResponse) ValidateRule() genproto.FieldRules {
+	return genproto.FieldRules{
+
+		"Progress": &idl.Field{},
+	}
+}
