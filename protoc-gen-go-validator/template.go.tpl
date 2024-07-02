@@ -1,6 +1,6 @@
 {{range .Messages}}
 func (x *{{.Name}}) Validate(_ context.Context) error {
-	return genproto.ValidateMessage(x.ValidateRule(), x)
+	return genproto.Validate(x.ValidateRule(), x)
 }
 
 func (x *{{.Name}}) ValidateRule() genproto.FieldRules {

@@ -15,7 +15,7 @@ import (
 // idl.proto.
 
 func (x *LoginRequest) Validate(_ context.Context) error {
-	return genproto.ValidateMessage(x.ValidateRule(), x)
+	return genproto.Validate(x.ValidateRule(), x)
 }
 
 func (x *LoginRequest) ValidateRule() genproto.FieldRules {
@@ -42,7 +42,7 @@ func (x *LoginRequest) ValidateRule() genproto.FieldRules {
 }
 
 func (x *LoginResponse) Validate(_ context.Context) error {
-	return genproto.ValidateMessage(x.ValidateRule(), x)
+	return genproto.Validate(x.ValidateRule(), x)
 }
 
 func (x *LoginResponse) ValidateRule() genproto.FieldRules {
@@ -55,7 +55,7 @@ func (x *LoginResponse) ValidateRule() genproto.FieldRules {
 }
 
 func (x *HelloRequest) Validate(_ context.Context) error {
-	return genproto.ValidateMessage(x.ValidateRule(), x)
+	return genproto.Validate(x.ValidateRule(), x)
 }
 
 func (x *HelloRequest) ValidateRule() genproto.FieldRules {
@@ -74,7 +74,7 @@ func (x *HelloRequest) ValidateRule() genproto.FieldRules {
 }
 
 func (x *HelloResponse) Validate(_ context.Context) error {
-	return genproto.ValidateMessage(x.ValidateRule(), x)
+	return genproto.Validate(x.ValidateRule(), x)
 }
 
 func (x *HelloResponse) ValidateRule() genproto.FieldRules {
@@ -85,7 +85,7 @@ func (x *HelloResponse) ValidateRule() genproto.FieldRules {
 }
 
 func (x *GetImageRequest) Validate(_ context.Context) error {
-	return genproto.ValidateMessage(x.ValidateRule(), x)
+	return genproto.Validate(x.ValidateRule(), x)
 }
 
 func (x *GetImageRequest) ValidateRule() genproto.FieldRules {
@@ -118,7 +118,7 @@ func (x *GetImageRequest) ValidateRule() genproto.FieldRules {
 }
 
 func (x *GetImageResponse) Validate(_ context.Context) error {
-	return genproto.ValidateMessage(x.ValidateRule(), x)
+	return genproto.Validate(x.ValidateRule(), x)
 }
 
 func (x *GetImageResponse) ValidateRule() genproto.FieldRules {
@@ -129,7 +129,7 @@ func (x *GetImageResponse) ValidateRule() genproto.FieldRules {
 }
 
 func (x *UploadImageRequest) Validate(_ context.Context) error {
-	return genproto.ValidateMessage(x.ValidateRule(), x)
+	return genproto.Validate(x.ValidateRule(), x)
 }
 
 func (x *UploadImageRequest) ValidateRule() genproto.FieldRules {
@@ -159,7 +159,7 @@ func (x *UploadImageRequest) ValidateRule() genproto.FieldRules {
 }
 
 func (x *UploadImageResponse) Validate(_ context.Context) error {
-	return genproto.ValidateMessage(x.ValidateRule(), x)
+	return genproto.Validate(x.ValidateRule(), x)
 }
 
 func (x *UploadImageResponse) ValidateRule() genproto.FieldRules {
@@ -170,7 +170,7 @@ func (x *UploadImageResponse) ValidateRule() genproto.FieldRules {
 }
 
 func (x *UpdateProgressRequest) Validate(_ context.Context) error {
-	return genproto.ValidateMessage(x.ValidateRule(), x)
+	return genproto.Validate(x.ValidateRule(), x)
 }
 
 func (x *UpdateProgressRequest) ValidateRule() genproto.FieldRules {
@@ -201,7 +201,7 @@ func (x *UpdateProgressRequest) ValidateRule() genproto.FieldRules {
 }
 
 func (x *UpdateProgressResponse) Validate(_ context.Context) error {
-	return genproto.ValidateMessage(x.ValidateRule(), x)
+	return genproto.Validate(x.ValidateRule(), x)
 }
 
 func (x *UpdateProgressResponse) ValidateRule() genproto.FieldRules {

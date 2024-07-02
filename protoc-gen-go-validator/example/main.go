@@ -28,8 +28,7 @@ func main() {
 
 	loginReq = &v1pb.LoginRequest{}
 	if err := loginReq.Validate(context.Background()); err != nil {
-		fmt.Println(err)
-		return
+		panic(err)
 	}
 
 }
