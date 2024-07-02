@@ -67,46 +67,38 @@ type FieldData struct {
 	FloatField  *idl.FloatField
 }
 
-func ValidateIntField(fieldIdl *idl.IntField, fieldName string, v reflect.Value) error {
-	if fieldIdl == nil || !v.IsValid() {
+func ValidateIntField(fieldIdl *idl.IntField, fieldName string, msg any) error {
+	if fieldIdl == nil {
 		return nil
 	}
 
 	var (
+		nilField    = isNilField(msg, fieldName)
 		hasDefault  = fieldIdl.Default != nil
 		defaultVal  = fieldIdl.GetDefault()
 		validations = ValidationsError{}
 	)
 
-	if isNilValue(v) && hasDefault {
-		setIntValue(v, defaultVal)
-	}
-
-	var (
-		isNil = isNilValue(v)
-	)
-
-	if v.Kind() == reflect.Ptr {
-		// get the actual value if v is a pointer
-		v = v.Elem()
-	}
-
-	var actualVal int64
-	switch v.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		actualVal = v.Int()
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		actualVal = int64(v.Uint())
-	case reflect.Invalid:
-		// ignore, caused by nil value
-	default:
-		return &ProtoError{
-			Key:     fieldName,
-			Message: fmt.Sprintf("should be int type"),
+	if nilField && hasDefault {
+		if err := setDefaultValue(msg, fieldName, defaultVal); err != nil {
+			return &ProtoError{
+				Key:     fieldName,
+				Message: err.Error(),
+			}
 		}
 	}
 
-	if fieldIdl.Required != nil && fieldIdl.GetRequired() && !hasDefault && isNil {
+	var msgVal = reflect.ValueOf(msg)
+	if msgVal.Kind() == reflect.Ptr {
+		msgVal = msgVal.Elem()
+	}
+
+	var (
+		field     = msgVal.FieldByName(fieldName)
+		actualVal = getIntFieldVal(field)
+	)
+
+	if fieldIdl.Required != nil && fieldIdl.GetRequired() && !hasDefault && nilField {
 		validations = append(validations, &ValidationError{
 			Key:     fieldName,
 			Message: fmt.Sprintf("is required"),
@@ -195,45 +187,38 @@ func ValidateIntField(fieldIdl *idl.IntField, fieldName string, v reflect.Value)
 }
 
 // ValidateStringField validates a string field
-func ValidateStringField(fieldIdl *idl.StringField, fieldName string, v reflect.Value) error {
+func ValidateStringField(fieldIdl *idl.StringField, fieldName string, msg any) error {
 	if fieldIdl == nil {
 		return nil
 	}
 
 	var (
+		nilField    = isNilField(msg, fieldName)
 		hasDefault  = fieldIdl.Default != nil
 		defaultVal  = fieldIdl.GetDefault()
 		validations = ValidationsError{}
 	)
 
-	if isNilValue(v) && hasDefault {
-		setStringValue(v, defaultVal)
+	if nilField && hasDefault {
+		if err := setDefaultValue(msg, fieldName, defaultVal); err != nil {
+			return &ProtoError{
+				Key:     fieldName,
+				Message: err.Error(),
+			}
+		}
+	}
+
+	var msgVal = reflect.ValueOf(msg)
+	if msgVal.Kind() == reflect.Ptr {
+		msgVal = msgVal.Elem()
 	}
 
 	var (
-		isNil = isNilValue(v)
+		field     = msgVal.FieldByName(fieldName)
+		actualVal = getStringFieldVal(field)
 	)
 
-	if v.Kind() == reflect.Ptr {
-		if isNil {
-			v = reflect.New(v.Type().Elem())
-		} else {
-			v = v.Elem()
-		}
-	}
-
-	var actualVal string
-	switch v.Kind() {
-	case reflect.String:
-		actualVal = v.String()
-	default:
-		return &ProtoError{
-			Key:     fieldName,
-			Message: fmt.Sprintf("should be string type"),
-		}
-	}
-
-	if fieldIdl.Required != nil && fieldIdl.GetRequired() && isNil && !hasDefault {
+	if fieldIdl.Required != nil && fieldIdl.GetRequired() && nilField && !hasDefault {
 		validations = append(validations, &ValidationError{
 			Key:     fieldName,
 			Message: fmt.Sprintf("is required"),
@@ -310,43 +295,27 @@ func ValidateStringField(fieldIdl *idl.StringField, fieldName string, v reflect.
 }
 
 // ValidateBytesField validates a bytes field
-func ValidateBytesField(fieldIdl *idl.BytesField, fieldName string, v reflect.Value) error {
+func ValidateBytesField(fieldIdl *idl.BytesField, fieldName string, msg any) error {
 	if fieldIdl == nil {
 		return nil
 	}
 
 	var (
-		isPtr       = v.Kind() == reflect.Ptr
-		isNil       = isNilValue(v)
+		nilField    = isNilField(msg, fieldName)
 		validations = ValidationsError{}
 	)
 
-	if isPtr {
-		if isNil {
-			v = reflect.New(v.Type().Elem())
-		} else {
-			v = v.Elem()
-		}
+	var msgVal = reflect.ValueOf(msg)
+	if msgVal.Kind() == reflect.Ptr {
+		msgVal = msgVal.Elem()
 	}
 
-	var actualVal []byte
-	switch v.Kind() {
-	case reflect.Slice, reflect.Array:
-		if v.Type().Elem().Kind() != reflect.Uint8 {
-			return &ProtoError{
-				Key:     fieldName,
-				Message: fmt.Sprintf("should be []byte"),
-			}
-		}
-		actualVal = v.Bytes()
-	default:
-		return &ProtoError{
-			Key:     fieldName,
-			Message: fmt.Sprintf("should be []byte"),
-		}
-	}
+	var (
+		field     = msgVal.FieldByName(fieldName)
+		actualVal = getBytesFieldVal(field)
+	)
 
-	if fieldIdl.Required != nil && fieldIdl.GetRequired() && (isNil || len(actualVal) == 0) {
+	if fieldIdl.Required != nil && fieldIdl.GetRequired() && (nilField || len(actualVal) == 0) {
 		validations = append(validations, &ValidationError{
 			Key:     fieldName,
 			Message: fmt.Sprintf("is required"),
@@ -371,29 +340,28 @@ func ValidateBytesField(fieldIdl *idl.BytesField, fieldName string, v reflect.Va
 }
 
 // ValidateArrayField validates an array field
-func ValidateArrayField(fieldIdl *idl.ArrayField, fieldName string, fieldVal reflect.Value) error {
+func ValidateArrayField(fieldIdl *idl.ArrayField, fieldName string, msg any) error {
 	if fieldIdl == nil {
 		return nil
 	}
 
 	var (
-		isPtr       = fieldVal.Kind() == reflect.Ptr
-		isNil       = isPtr && fieldVal.IsNil()
+		nilField    = isNilField(msg, fieldName)
 		validations = ValidationsError{}
 	)
 
-	// fieldVal should be []T or a pointer to []T
-	if isPtr {
-		if isNil {
-			fieldVal = reflect.New(fieldVal.Type().Elem())
-		} else {
-			fieldVal = fieldVal.Elem()
-		}
+	var msgVal = reflect.ValueOf(msg)
+	if msgVal.Kind() == reflect.Ptr {
+		msgVal = msgVal.Elem()
 	}
 
-	switch fieldVal.Kind() {
-	case reflect.Slice, reflect.Array:
+	var (
+		field = msgVal.FieldByName(fieldName)
+	)
 
+	switch field.Kind() {
+	case reflect.Slice, reflect.Array:
+		// ignore
 	default:
 		return &ProtoError{
 			Key:     fieldName,
@@ -401,28 +369,28 @@ func ValidateArrayField(fieldIdl *idl.ArrayField, fieldName string, fieldVal ref
 		}
 	}
 
-	if fieldIdl.Required != nil && fieldIdl.GetRequired() && (isNil || fieldVal.Len() == 0) {
+	if fieldIdl.Required != nil && fieldIdl.GetRequired() && (nilField || field.Len() == 0) {
 		validations = append(validations, &ValidationError{
 			Key:     fieldName,
 			Message: fmt.Sprintf("should not be empty"),
 		})
 	}
 
-	if fieldIdl.MinItems != nil && int64(fieldVal.Len()) < fieldIdl.GetMinItems() {
+	if fieldIdl.MinItems != nil && int64(field.Len()) < fieldIdl.GetMinItems() {
 		validations = append(validations, &ValidationError{
 			Key:     fieldName,
 			Message: fmt.Sprintf("should have minimum items of %d", fieldIdl.GetMinItems()),
 		})
 	}
 
-	if fieldIdl.MaxItems != nil && int64(fieldVal.Len()) > fieldIdl.GetMaxItems() {
+	if fieldIdl.MaxItems != nil && int64(field.Len()) > fieldIdl.GetMaxItems() {
 		validations = append(validations, &ValidationError{
 			Key:     fieldName,
 			Message: fmt.Sprintf("should have maximum items of %d", fieldIdl.GetMaxItems()),
 		})
 	}
 
-	if fieldIdl.Len != nil && int64(fieldVal.Len()) != fieldIdl.GetLen() {
+	if fieldIdl.Len != nil && int64(field.Len()) != fieldIdl.GetLen() {
 		validations = append(validations, &ValidationError{
 			Key:     fieldName,
 			Message: fmt.Sprintf("should have %d items", fieldIdl.GetLen()),
@@ -430,101 +398,46 @@ func ValidateArrayField(fieldIdl *idl.ArrayField, fieldName string, fieldVal ref
 	}
 
 	if fieldIdl.Item != nil {
-		//for i := 0; i < fieldVal.Len(); i++ {
-		//	itemType := fieldVal.Index(i).Type()
-		//	itemVal := fieldVal.Index(i)
-		//	if itemVal.Kind() == reflect.Ptr {
-		//		if itemVal.IsNil() {
-		//			itemVal = reflect.New(itemType.Elem())
-		//		} else {
-		//			itemVal = itemVal.Elem()
-		//		}
-		//	}
-		//
-		//	switch itemVal.Kind() {
-		//	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-		//		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		//
-		//		if err := ValidateIntField(fieldIdl.GetItem().GetInt(), itemType, itemVal); err != nil {
-		//			if e := new(ValidationError); errors.As(err, &e) {
-		//				validations = append(validations, e)
-		//			} else if e := new(ValidationsError); errors.As(err, &e) {
-		//				validations = append(validations, *e...)
-		//			} else {
-		//				return err
-		//			}
-		//		}
-		//	case reflect.String:
-		//		if err := ValidateStringField(fieldIdl.GetItem().GetStr(), itemType, itemVal); err != nil {
-		//			if e := new(ValidationError); errors.As(err, &e) {
-		//				validations = append(validations, e)
-		//			} else if e := new(ValidationsError); errors.As(err, &e) {
-		//				validations = append(validations, *e...)
-		//			} else {
-		//				return err
-		//			}
-		//		}
-		//	case reflect.Slice, reflect.Array:
-		//		if itemVal.Type().Elem().Kind() == reflect.Uint8 {
-		//			if err := ValidateBytesField(fieldIdl.GetItem().GetBytes(), itemType, itemVal); err != nil {
-		//				if e := new(ValidationError); errors.As(err, &e) {
-		//					validations = append(validations, e)
-		//				} else if e := new(ValidationsError); errors.As(err, &e) {
-		//					validations = append(validations, *e...)
-		//				} else {
-		//					return err
-		//				}
-		//			}
-		//		} else {
-		//			// ignore other types
-		//		}
-		//	default:
-		//	}
-		//
-		//}
+		// ignore for now
 	}
 
 	return nil
 }
 
 // ValidateFloatField validates a float field
-func ValidateFloatField(fieldIdl *idl.FloatField, filedName string, fieldVal reflect.Value) error {
+func ValidateFloatField(fieldIdl *idl.FloatField, filedName string, msg any) error {
 	if fieldIdl == nil {
 		return nil
 	}
 
 	var (
-		isPtr       = fieldVal.Kind() == reflect.Ptr
-		isNil       = fieldVal.IsNil()
+		nilField    = isNilField(msg, filedName)
 		hasDefault  = fieldIdl.Default != nil
 		defaultVal  = fieldIdl.GetDefault()
 		validations = ValidationsError{}
 	)
 
 	// fieldVal should be float32, float64 or a pointer to one of these types
-	if isPtr {
-		if isNil {
-			fieldVal = reflect.New(fieldVal.Type().Elem())
-		} else {
-			fieldVal = fieldVal.Elem()
+	if nilField && hasDefault {
+		if err := setDefaultValue(msg, filedName, defaultVal); err != nil {
+			return &ProtoError{
+				Key:     filedName,
+				Message: err.Error(),
+			}
 		}
 	}
 
-	var actualVal float64
-	switch fieldVal.Kind() {
-	case reflect.Float32, reflect.Float64:
-		if isNil {
-			fieldVal.SetFloat(defaultVal)
-		}
-		actualVal = fieldVal.Float()
-	default:
-		return &ProtoError{
-			Key:     filedName,
-			Message: fmt.Sprintf("should be float type"),
-		}
+	var msgVal = reflect.ValueOf(msg)
+	if msgVal.Kind() == reflect.Ptr {
+		msgVal = msgVal.Elem()
 	}
 
-	if fieldIdl.Required != nil && fieldIdl.GetRequired() && isNil && !hasDefault {
+	var (
+		field     = msgVal.FieldByName(filedName)
+		actualVal = getFloatFieldVal(field)
+	)
+
+	if fieldIdl.Required != nil && fieldIdl.GetRequired() && nilField && !hasDefault {
 		validations = append(validations, &ValidationError{
 			Key:     filedName,
 			Message: fmt.Sprintf("should not be empty"),
@@ -562,53 +475,54 @@ func ValidateFloatField(fieldIdl *idl.FloatField, filedName string, fieldVal ref
 	return nil
 }
 
-func ValidateField(fieldIdl *idl.Field, fieldName string, fieldVal reflect.Value) error {
+func ValidateField(fieldIdl *idl.Field, fieldName string, msg any) error {
 	if fieldIdl == nil {
 		return nil
 	}
 
-	if fieldVal.Kind() == reflect.Ptr {
-		if fieldVal.IsNil() {
-			fieldVal = reflect.New(fieldVal.Type().Elem())
-		}
-	}
-
 	if fieldIdl.GetInt() != nil {
-		return ValidateIntField(fieldIdl.GetInt(), fieldName, fieldVal)
+		return ValidateIntField(fieldIdl.GetInt(), fieldName, msg)
 	}
 
 	if fieldIdl.GetStr() != nil {
-		return ValidateStringField(fieldIdl.GetStr(), fieldName, fieldVal)
+		return ValidateStringField(fieldIdl.GetStr(), fieldName, msg)
 	}
 
 	if fieldIdl.GetBytes() != nil {
-		return ValidateBytesField(fieldIdl.GetBytes(), fieldName, fieldVal)
+		return ValidateBytesField(fieldIdl.GetBytes(), fieldName, msg)
 	}
 
 	if fieldIdl.GetArray() != nil {
-		return ValidateArrayField(fieldIdl.GetArray(), fieldName, fieldVal)
+		return ValidateArrayField(fieldIdl.GetArray(), fieldName, msg)
 	}
 
 	if fieldIdl.GetFloat() != nil {
-		return ValidateFloatField(fieldIdl.GetFloat(), fieldName, fieldVal)
+		return ValidateFloatField(fieldIdl.GetFloat(), fieldName, msg)
 	}
 
 	return nil
 }
 
-func Validate(rules FieldRules, val any) error {
+func Validate(rules FieldRules, msg any) error {
 	if len(rules) == 0 {
 		return nil
 	}
 
-	if val == nil {
-		return nil
+	if msg == nil {
+		// should not happen
+		return &ProtoError{
+			Key:     "",
+			Message: "message is nil",
+		}
 	}
 
-	v := reflect.ValueOf(val)
+	v := reflect.ValueOf(msg)
 	if v.Kind() == reflect.Ptr {
 		if v.IsNil() {
-			v = reflect.New(v.Type().Elem())
+			return &ProtoError{
+				Key:     "",
+				Message: "message is nil pointer",
+			}
 		} else {
 			v = v.Elem()
 		}
@@ -616,7 +530,6 @@ func Validate(rules FieldRules, val any) error {
 
 	t := v.Type()
 	for i := 0; i < v.NumField(); i++ {
-		fieldVal := v.Field(i)
 		filedName := t.Field(i).Name
 
 		fieldIdl, ok := rules[filedName]
@@ -624,82 +537,12 @@ func Validate(rules FieldRules, val any) error {
 			continue
 		}
 
-		if err := ValidateField(fieldIdl, filedName, fieldVal); err != nil {
+		if err := ValidateField(fieldIdl, filedName, msg); err != nil {
 			return err
 		}
 	}
 
 	return nil
-}
-
-// isNilValue checks if a reflect.Value is a nil value
-func isNilValue(v reflect.Value) bool {
-	switch v.Kind() {
-	case reflect.Chan,
-		reflect.Func,
-		reflect.Interface,
-		reflect.Map,
-		reflect.Ptr,
-		reflect.Slice,
-		reflect.Array:
-		return v.IsNil()
-	default:
-		return false
-	}
-}
-
-// setIntValue sets the value of a reflect.Value to an int64 value
-// v should be a reflect.Value of int/uint/*int/*uint type
-func setIntValue(v reflect.Value, i int64) {
-	if !v.CanSet() {
-		return
-	}
-
-	switch v.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		v.SetInt(i)
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		v.SetUint(uint64(i))
-	case reflect.Ptr:
-		if v.IsNil() {
-			v.Set(reflect.New(v.Type().Elem()))
-		}
-		setIntValue(v.Elem(), i)
-	default:
-		// ignore
-	}
-}
-
-// setStringValue sets the value of a reflect.Value to a string value
-// v should be a reflect.Value of string/*string type
-func setStringValue(v reflect.Value, s string) {
-	switch v.Kind() {
-	case reflect.String:
-		v.SetString(s)
-	case reflect.Ptr:
-		if v.IsNil() {
-			v.Set(reflect.New(v.Type().Elem()))
-		}
-		setStringValue(v.Elem(), s)
-	default:
-		// ignore
-	}
-}
-
-// setFloatValue sets the value of a reflect.Value to a float64 value
-// v should be a reflect.Value of float32/float64 or a pointer to one of these types
-func setFloatValue(v reflect.Value, f float64) {
-	switch v.Kind() {
-	case reflect.Float32, reflect.Float64:
-		v.SetFloat(f)
-	case reflect.Ptr:
-		if v.IsNil() {
-			v.Set(reflect.New(v.Type().Elem()))
-		}
-		setFloatValue(v.Elem(), f)
-	default:
-		// ignore
-	}
 }
 
 func setDefaultValue(msg any, fieldName string, defaultValue any) error {
@@ -732,4 +575,102 @@ func setDefaultValue(msg any, fieldName string, defaultValue any) error {
 	}
 
 	return nil
+}
+
+// isNilField checks if a field is nil
+func isNilField(msg any, fieldName string) bool {
+	if msg == nil {
+		return true
+	}
+	v := reflect.ValueOf(msg)
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return true
+		}
+		v = v.Elem()
+	}
+
+	// Ensure v is a struct
+	if v.Kind() != reflect.Struct {
+		return true
+	}
+
+	field := v.FieldByName(fieldName)
+	if !field.IsValid() {
+		return true
+	}
+
+	// Check if the field is nil for pointer types
+	if field.Kind() == reflect.Ptr && field.IsNil() {
+		return true
+	}
+
+	return false
+}
+
+// getIntFieldVal gets the int value of a field
+func getIntFieldVal(val reflect.Value) int64 {
+	switch val.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return val.Int()
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return int64(val.Uint())
+	case reflect.Invalid:
+		return 0
+	case reflect.Ptr:
+		if val.IsNil() {
+			return 0
+		}
+		return getIntFieldVal(val.Elem())
+	default:
+		return 0
+	}
+}
+
+// getStringFieldVal gets the string value of a field
+func getStringFieldVal(val reflect.Value) string {
+	switch val.Kind() {
+	case reflect.String:
+		return val.String()
+	case reflect.Ptr:
+		if val.IsNil() {
+			return ""
+		}
+		return getStringFieldVal(val.Elem())
+	default:
+		return ""
+	}
+}
+
+// getBytesFieldVal gets the bytes value of a field
+func getBytesFieldVal(val reflect.Value) []byte {
+	switch val.Kind() {
+	case reflect.Slice, reflect.Array:
+		if val.Type().Elem().Kind() == reflect.Uint8 {
+			return val.Bytes()
+		}
+	case reflect.Ptr:
+		if val.IsNil() {
+			return nil
+		}
+		return getBytesFieldVal(val.Elem())
+	default:
+		return nil
+	}
+	return nil
+}
+
+// getFloatFieldVal gets the float value of a field
+func getFloatFieldVal(val reflect.Value) float64 {
+	switch val.Kind() {
+	case reflect.Float32, reflect.Float64:
+		return val.Float()
+	case reflect.Ptr:
+		if val.IsNil() {
+			return 0
+		}
+		return getFloatFieldVal(val.Elem())
+	default:
+		return 0
+	}
 }

@@ -23,10 +23,16 @@ func TestValidateIntField(t *testing.T) {
 	in := []int64{10, 12, 14}
 	notIn := []int64{1, 2, 3}
 
+	type testMsg struct {
+		Id  *int64
+		Id2 int32
+	}
+
 	tests := []struct {
 		name      string
 		fieldIdl  *idl.IntField
-		val       reflect.Value
+		fieldName string
+		val       any
 		expectErr bool
 	}{
 		{
@@ -36,10 +42,10 @@ func TestValidateIntField(t *testing.T) {
 				Lt: &lt,
 				In: in,
 			},
-			val: func() reflect.Value {
-				var id int64 = 12
-				return reflect.ValueOf(id)
-			}(),
+			fieldName: "Id",
+			val: &testMsg{
+				Id: proto.Int64(12),
+			},
 			expectErr: false,
 		},
 		{
@@ -49,10 +55,10 @@ func TestValidateIntField(t *testing.T) {
 				Lt: &lt,
 				In: in,
 			},
-			val: func() reflect.Value {
-				var id int64 = 12
-				return reflect.ValueOf(&id)
-			}(),
+			fieldName: "Id2",
+			val: &testMsg{
+				Id2: 12,
+			},
 			expectErr: false,
 		},
 		{
@@ -61,10 +67,8 @@ func TestValidateIntField(t *testing.T) {
 				Default:  &defaultValue,
 				Required: &required,
 			},
-			val: func() reflect.Value {
-				var id *int64
-				return reflect.ValueOf(id)
-			}(),
+			fieldName: "Id",
+			val:       &testMsg{},
 			expectErr: false,
 		},
 		{
@@ -72,10 +76,8 @@ func TestValidateIntField(t *testing.T) {
 			fieldIdl: &idl.IntField{
 				Required: &required,
 			},
-			val: func() reflect.Value {
-				var id *int64
-				return reflect.ValueOf(id)
-			}(),
+			fieldName: "Id",
+			val:       &testMsg{},
 			expectErr: true,
 		},
 		{
@@ -83,10 +85,10 @@ func TestValidateIntField(t *testing.T) {
 			fieldIdl: &idl.IntField{
 				Gt: &gt,
 			},
-			val: func() reflect.Value {
-				id := proto.Int32(4)
-				return reflect.ValueOf(id)
-			}(),
+			fieldName: "Id",
+			val: &testMsg{
+				Id: proto.Int64(4),
+			},
 			expectErr: true,
 		},
 		{
@@ -94,10 +96,10 @@ func TestValidateIntField(t *testing.T) {
 			fieldIdl: &idl.IntField{
 				Gte: &gte,
 			},
-			val: func() reflect.Value {
-				var id int64 = 6
-				return reflect.ValueOf(id)
-			}(),
+			fieldName: "Id",
+			val: &testMsg{
+				Id: proto.Int64(6),
+			},
 			expectErr: false,
 		},
 		{
@@ -105,10 +107,10 @@ func TestValidateIntField(t *testing.T) {
 			fieldIdl: &idl.IntField{
 				Lte: &lte,
 			},
-			val: func() reflect.Value {
-				var id int64 = 14
-				return reflect.ValueOf(id)
-			}(),
+			fieldName: "Id",
+			val: &testMsg{
+				Id: proto.Int64(14),
+			},
 			expectErr: false,
 		},
 		{
@@ -116,10 +118,10 @@ func TestValidateIntField(t *testing.T) {
 			fieldIdl: &idl.IntField{
 				Eq: &eq,
 			},
-			val: func() reflect.Value {
-				var id int64 = 14
-				return reflect.ValueOf(id)
-			}(),
+			fieldName: "Id",
+			val: &testMsg{
+				Id: proto.Int64(14),
+			},
 			expectErr: true,
 		},
 		{
@@ -127,10 +129,10 @@ func TestValidateIntField(t *testing.T) {
 			fieldIdl: &idl.IntField{
 				Eq: &eq,
 			},
-			val: func() reflect.Value {
-				var id int64 = 14
-				return reflect.ValueOf(&id)
-			}(),
+			fieldName: "Id",
+			val: &testMsg{
+				Id: proto.Int64(14),
+			},
 			expectErr: true,
 		},
 		{
@@ -138,10 +140,10 @@ func TestValidateIntField(t *testing.T) {
 			fieldIdl: &idl.IntField{
 				Eq: &eq,
 			},
-			val: func() reflect.Value {
-				var id int64 = 12
-				return reflect.ValueOf(id)
-			}(),
+			fieldName: "Id",
+			val: &testMsg{
+				Id: proto.Int64(12),
+			},
 			expectErr: false,
 		},
 		{
@@ -149,10 +151,10 @@ func TestValidateIntField(t *testing.T) {
 			fieldIdl: &idl.IntField{
 				Ne: &ne,
 			},
-			val: func() reflect.Value {
-				var id int64 = 12
-				return reflect.ValueOf(id)
-			}(),
+			fieldName: "Id",
+			val: &testMsg{
+				Id: proto.Int64(12),
+			},
 			expectErr: false,
 		},
 		{
@@ -160,10 +162,10 @@ func TestValidateIntField(t *testing.T) {
 			fieldIdl: &idl.IntField{
 				Ne: &ne,
 			},
-			val: func() reflect.Value {
-				var id int64 = 13
-				return reflect.ValueOf(id)
-			}(),
+			fieldName: "Id",
+			val: &testMsg{
+				Id: proto.Int64(13),
+			},
 			expectErr: true,
 		},
 		{
@@ -171,27 +173,27 @@ func TestValidateIntField(t *testing.T) {
 			fieldIdl: &idl.IntField{
 				In: in,
 			},
-			val: func() reflect.Value {
-				var id int64 = 16
-				return reflect.ValueOf(id)
-			}(),
+			fieldName: "Id",
+			val: &testMsg{
+				Id: proto.Int64(16),
+			},
 			expectErr: true},
 		{
 			name: "Value in NOT IN list",
 			fieldIdl: &idl.IntField{
 				NotIn: notIn,
 			},
-			val: func() reflect.Value {
-				var id int64 = 1
-				return reflect.ValueOf(id)
-			}(),
+			fieldName: "Id",
+			val: &testMsg{
+				Id: proto.Int64(1),
+			},
 			expectErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateIntField(tt.fieldIdl, "Id", tt.val)
+			err := ValidateIntField(tt.fieldIdl, tt.fieldName, tt.val)
 			t.Logf("err: %v", err)
 			if (err != nil) != tt.expectErr {
 				t.Errorf("ValidateIntField() error = %v, expectErr %v", err, tt.expectErr)
@@ -279,6 +281,92 @@ func TestSetDefaultValue(t *testing.T) {
 				if assert.Equal(t, tt.expectedVal, v.Interface()) {
 					t.Logf("Value: %v", v.Interface())
 				}
+			}
+		})
+	}
+}
+
+type TestStruct struct {
+	ValidField   string
+	NilField     *string
+	AnotherField int
+}
+
+func TestCheckNilField(t *testing.T) {
+	var nilString *string
+	validStruct := TestStruct{
+		ValidField:   "value",
+		NilField:     nilString,
+		AnotherField: 42,
+	}
+
+	tests := []struct {
+		name      string
+		msg       any
+		fieldName string
+		want      bool
+	}{
+		{"nil msg", nil, "ValidField", true},
+		{"valid field", validStruct, "ValidField", false},
+		{"nil field", validStruct, "NilField", true},
+		{"invalid field name", validStruct, "NonExistentField", true},
+		{"nil struct pointer", (*TestStruct)(nil), "ValidField", true},
+		{"non-nil struct pointer", &validStruct, "ValidField", false},
+		{"nil field in pointer struct", &validStruct, "NilField", true},
+		{"invalid field in pointer struct", &validStruct, "NonExistentField", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isNilField(tt.msg, tt.fieldName); got != tt.want {
+				t.Errorf("isNilField() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_getIntFieldVal(t *testing.T) {
+	type TestStruct struct {
+		IntField         int
+		IntPtrField      *int
+		UintField        uint
+		UintPtrField     *uint
+		InvalidField     any
+		NilPtrField      *int
+		UnsupportedField string
+	}
+
+	intVal := 42
+	uintVal := uint(42)
+
+	testStruct := TestStruct{
+		IntField:         intVal,
+		IntPtrField:      &intVal,
+		UintField:        uintVal,
+		UintPtrField:     &uintVal,
+		InvalidField:     nil,
+		NilPtrField:      nil,
+		UnsupportedField: "test",
+	}
+
+	tests := []struct {
+		name string
+		val  reflect.Value
+		want int64
+	}{
+		{"IntField", reflect.ValueOf(testStruct.IntField), 42},
+		{"IntPtrField", reflect.ValueOf(testStruct.IntPtrField), 42},
+		{"UintField", reflect.ValueOf(testStruct.UintField), 42},
+		{"UintPtrField", reflect.ValueOf(testStruct.UintPtrField), 42},
+		{"InvalidField", reflect.ValueOf(testStruct.InvalidField), 0},
+		{"NilPtrField", reflect.ValueOf(testStruct.NilPtrField), 0},
+		{"UnsupportedField", reflect.ValueOf(testStruct.UnsupportedField), 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := getIntFieldVal(tt.val); got != tt.want {
+				t.Errorf("getIntFieldVal() = %v, want %v", got, tt.want)
 			}
 		})
 	}
