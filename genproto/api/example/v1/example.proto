@@ -35,6 +35,20 @@ service ApiServer {
       type: REST
     };
   }
+  rpc GetUser(GetUserRequest) returns (GetUserResponse) {
+    option (custom.idl.method) = {
+      get: "/api/user/{id}"
+      role: USER
+      type: REST
+    };
+  }
+  rpc GetUser2(GetUserRequest2) returns (GetUserResponse2) {
+    option (custom.idl.method) = {
+      get: "/api/user2/{id}"
+      role: USER
+      type: REST
+    };
+  }
 }
 
 message LoginRequest {
@@ -135,3 +149,38 @@ message UploadImageResponse {
   string key = 1;
 }
 
+message GetUserRequest {
+  int64 id = 1[(custom.idl.field) = {
+    uri: "id"
+    int: {
+      required: true
+      gt: 0
+    }
+  }];
+}
+
+message GetUserResponse {
+  int64 id = 1;
+  string username = 2;
+  string email = 3;
+  string avatar = 4;
+  string background = 5;
+}
+
+message GetUserRequest2 {
+  optional int64 id = 1[(custom.idl.field) = {
+    uri: "id"
+    int: {
+      required: true
+      gt: 0
+    }
+  }];
+}
+
+message GetUserResponse2 {
+  optional int64 id = 1;
+  optional string username = 2;
+  optional string email = 3;
+  optional string avatar = 4;
+  optional string background = 5;
+}

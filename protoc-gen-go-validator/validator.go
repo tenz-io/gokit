@@ -4,6 +4,7 @@ import (
 	"github.com/tenz-io/gokit/genproto/go/custom/idl"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
 )
 
@@ -57,6 +58,16 @@ func genMessages(_ *protogen.Plugin, file *protogen.File, g *protogen.GeneratedF
 func msgFields(msg *protogen.Message) []fieldData {
 	var fields []fieldData
 	for _, field := range msg.Fields {
+
+		var subFieldsData []fieldData
+		// check if is message type or pointer of message type
+		if field.Desc.Kind() == protoreflect.MessageKind {
+			// recursive call for nested message type
+			subFieldData := msgFields(field.Message)
+			subFieldsData = append(subFieldsData, subFieldData...)
+			continue
+		}
+
 		options := proto.GetExtension(field.Desc.Options(), idl.E_Field)
 		if options == nil {
 			continue

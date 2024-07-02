@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+
 	v1pb "validator-example/api/example/v1"
 )
 
