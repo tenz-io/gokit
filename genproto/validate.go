@@ -493,6 +493,10 @@ func ValidateArrayField(fieldIdl *idl.ArrayField, fieldName string, msg any) err
 					}
 				}
 			case reflect.Slice, reflect.Array:
+				if itemField.Type().Elem().Kind() != reflect.Uint8 {
+					continue
+				}
+
 				if fieldIdl.Item.GetBytes() != nil {
 					if err := validateBytesField(fieldIdl.Item.GetBytes(), fieldName, field.Bytes()); err != nil {
 						var vErr = ValidationsError{}
