@@ -371,3 +371,81 @@ func Test_getIntFieldVal(t *testing.T) {
 		})
 	}
 }
+
+func TestIsNilOrEmpty(t *testing.T) {
+	tests := []struct {
+		name string
+		val  any
+		want bool
+	}{
+		{"nil value", nil, true},
+		{"nil pointer", (*int)(nil), true},
+		{"empty slice", []int{}, true},
+		{"non-empty slice", []int{1, 2, 3}, false},
+		{"empty map", map[string]int{}, true},
+		{"non-empty map", map[string]int{"key": 1}, false},
+		{"empty array", [0]int{}, true},
+		{"non-empty array", [1]int{1}, false},
+		{"zero value int", 0, false},
+		{"non-zero value int", 1, false},
+		{"empty string", "", true},
+		{"non-empty string", "test", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsNilOrEmpty(tt.val); got != tt.want {
+				t.Errorf("IsNilOrEmpty() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSetValue(t *testing.T) {
+	var (
+		i32 int32  = 42
+		i64 int64  = 42
+		u32 uint32 = 42
+	)
+
+	tests := []struct {
+		name       string
+		ptrVal     any
+		newVal     any
+		wantOk     bool
+		wantVal    any
+		wantNewPtr bool
+	}{
+		{"set int value", new(int), 42, true, 42, false},
+		{"set int32 value", new(int32), i64, true, i32, false},
+		{"set uint32 value", new(uint32), i64, true, u32, false},
+		{"set float64 value", new(float64), 3.14, true, 3.14, false},
+		{"set string value", new(string), "hello", true, "hello", false},
+		{"set struct value", new(struct{ X int }), struct{ X int }{X: 10}, true, struct{ X int }{X: 10}, false},
+		{"nil pointer", (*int)(nil), 42, true, 42, true},
+		{"type mismatch", new(int), "string", false, 0, false},
+		{"non-pointer value", 42, 42, false, nil, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			newPtrVal, got := SetValue(tt.ptrVal, tt.newVal)
+			if got != tt.wantOk {
+				t.Errorf("SetValue() = %v, want %v", got, tt.wantOk)
+			}
+
+			if tt.wantOk {
+				if tt.wantNewPtr {
+					if reflect.ValueOf(newPtrVal).Elem().Interface() != tt.newVal {
+						t.Errorf("New pointer value = %v, want %v", reflect.ValueOf(newPtrVal).Elem().Interface(), tt.newVal)
+					}
+				} else {
+					v := reflect.ValueOf(tt.ptrVal).Elem().Interface()
+					if !reflect.DeepEqual(v, tt.wantVal) {
+						t.Errorf("Set value = %v, want %v", v, tt.wantVal)
+					}
+				}
+			}
+		})
+	}
+}

@@ -1,8 +1,50 @@
 {{range .Messages}}
-func (x *{{.Name}}) Validate(_ context.Context) error {
-	return genproto.Validate(x.ValidateRule(), x)
+func (x *{{.Name}}) Validate() error {
+{{range .Fields}}
+	if err := x.validate{{.Name}}(); err != nil {
+        return err
+    }
+{{end}}
+	return nil
 }
+{{end}}
 
+{{range .Messages}}
+{{range .Fields}}
+func (x *{{.MessageName}}) validate{{.Name}}() error {
+    var val = x.Get{{.Name}}()
+{{if .Int}}
+    var hasDefault = {{if .Int.Default}}true{{else}}false{{end}}
+    var defaultVal = {{if .Int.Default}}{{.Int.Default}}{{else}}0{{end}}
+    var required = {{if .Int.Required}}{{.Int}}.GetRequired(){{else}}false{{end}}
+    if hasDefault && x.{{.Name}} == nil {
+            x.{{.Name}} = &defaultVal
+        }
+    {{if .Int.Required}}
+    if x.{{.Name}} == nil {
+        return &genproto.ValidationError{
+            Key: "{{.Name}}",
+            Message: "is required",
+        }
+    }
+    {{- end}}
+    {{if .Int.Gt}}
+    if val <= {{.Int.Gt}} {
+        return &genproto.ValidationError{
+            Key: "{{.Name}}",
+            Message: fmt.Sprintf("must be greater than %d", {{.Int.Gt}}),
+        }
+    }
+    {{- end}}
+
+{{- end}}
+
+	return nil
+}
+{{end}}
+{{end}}
+
+{{range .Messages}}
 func (x *{{.Name}}) ValidateRule() genproto.FieldRules {
 	return genproto.FieldRules{
         {{range .Fields}}

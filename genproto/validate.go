@@ -823,3 +823,83 @@ func getFloatFieldVal(val reflect.Value) float64 {
 		return 0
 	}
 }
+
+// IsNilOrEmpty checks if a value is nil or empty
+func IsNilOrEmpty(val any) bool {
+	if val == nil {
+		return true
+	}
+	v := reflect.ValueOf(val)
+	switch v.Kind() {
+	case reflect.Ptr:
+		return v.IsNil()
+	case reflect.String:
+		return v.Len() == 0
+	case reflect.Array, reflect.Slice, reflect.Map:
+		return v.Len() == 0
+	default:
+		return false
+	}
+}
+
+// SetValue sets a new value to a pointer
+// if ptrVal is not pointer, it returns false
+// If the pointer is nil, it creates a new instance of the type the pointer should point to
+// If the new value type does not match the pointer type, it returns false
+func SetValue(ptrVal any, newVal any) (newPtrVal any, ok bool) {
+	v := reflect.ValueOf(ptrVal)
+	if v.Kind() != reflect.Ptr {
+		return nil, false
+	}
+
+	if v.IsNil() {
+		// Handle nil pointers by creating a new instance
+		var newInstance reflect.Value
+		switch reflect.TypeOf(ptrVal).Elem().Kind() {
+		case reflect.Int32:
+			newInstance = reflect.New(reflect.TypeOf(int32(0))).Elem()
+			newInstance.Set(reflect.ValueOf(int32(newVal.(int64))))
+		case reflect.Int64:
+			newInstance = reflect.New(reflect.TypeOf(int64(0))).Elem()
+			newInstance.Set(reflect.ValueOf(newVal.(int64)))
+		case reflect.Uint32:
+			newInstance = reflect.New(reflect.TypeOf(uint32(0))).Elem()
+			newInstance.Set(reflect.ValueOf(uint32(newVal.(int64))))
+		case reflect.Uint64:
+			newInstance = reflect.New(reflect.TypeOf(uint64(0))).Elem()
+			newInstance.Set(reflect.ValueOf(uint64(newVal.(int64))))
+		case reflect.Float32:
+			newInstance = reflect.New(reflect.TypeOf(float32(0))).Elem()
+			newInstance.Set(reflect.ValueOf(float32(newVal.(float64))))
+		case reflect.Float64:
+			newInstance = reflect.New(reflect.TypeOf(float64(0))).Elem()
+			newInstance.Set(reflect.ValueOf(newVal))
+		default:
+			newInstance = reflect.New(reflect.TypeOf(newVal)).Elem()
+			newInstance.Set(reflect.ValueOf(newVal))
+		}
+		return newInstance.Addr().Interface(), true
+	}
+
+	elem := v.Elem()
+	newValReflect := reflect.ValueOf(newVal)
+
+	if !newValReflect.Type().AssignableTo(elem.Type()) {
+		switch elem.Kind() {
+		case reflect.Int32, reflect.Int64:
+			elem.SetInt(newValReflect.Int())
+			return ptrVal, true
+		case reflect.Uint32, reflect.Uint64:
+			elem.SetUint(uint64(newValReflect.Int()))
+			return ptrVal, true
+		case reflect.Float32, reflect.Float64:
+			elem.SetFloat(newValReflect.Float())
+			return ptrVal, true
+		default:
+			return nil, false
+		}
+	}
+
+	elem.Set(newValReflect)
+	return ptrVal, true
+}

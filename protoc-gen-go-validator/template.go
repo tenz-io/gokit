@@ -20,16 +20,17 @@ type messageData struct {
 	deprecated bool
 	Name       string
 	Fields     []fieldData
+	FieldSet   map[string]fieldData
 }
 
 type fieldData struct {
-	Name          string
-	Int           *idl.IntField    // if field type is int/uint/*int/*uint
-	Str           *idl.StringField // if field type is string/*string
-	Bytes         *idl.BytesField  // if field type is bytes
-	Array         *idl.ArrayField  // if field type is repeated
-	Float         *idl.FloatField  // if field type is float32/float64
-	subFieldsData []fieldData      // for nested message type or pointer of message type
+	MessageName string
+	Name        string
+	Int         *idl.IntField    // if field type is int/uint/*int/*uint
+	Str         *idl.StringField // if field type is string/*string
+	Bytes       *idl.BytesField  // if field type is bytes
+	Array       *idl.ArrayField  // if field type is repeated
+	Float       *idl.FloatField  // if field type is float32/float64
 }
 
 func (d *messageTemplate) execute() string {

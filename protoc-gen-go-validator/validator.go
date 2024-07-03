@@ -9,7 +9,6 @@ import (
 )
 
 const (
-	contextPkg  = protogen.GoImportPath("context")
 	genprotoPkg = protogen.GoImportPath("github.com/tenz-io/gokit/genproto")
 	idlPkg      = protogen.GoImportPath("github.com/tenz-io/gokit/genproto/go/custom/idl")
 	protoPkg    = protogen.GoImportPath("google.golang.org/protobuf/proto")
@@ -28,7 +27,7 @@ func generateFile(gen *protogen.Plugin, file *protogen.File) *protogen.Generated
 	g.P()
 	g.P("// This is a compile-time assertion to ensure that this generated file")
 	g.P("// is compatible with the github.com/tenz-io/gokit/protoc-gen-go-validator package it is being compiled against.")
-	g.P("// ", contextPkg.Ident(""), genprotoPkg.Ident(""))
+	g.P("// ", genprotoPkg.Ident(""))
 	g.P("// ", idlPkg.Ident(""), protoPkg.Ident(""))
 	g.P()
 
@@ -44,10 +43,13 @@ func genMessages(_ *protogen.Plugin, file *protogen.File, g *protogen.GeneratedF
 
 	for _, msg := range file.Messages {
 		deprecated := msg.Desc.Options().(*descriptorpb.MessageOptions).GetDeprecated()
+		msgName := string(msg.Desc.Name())
+		fields := msgFields(msgName, msg)
 		msgData := messageData{
 			deprecated: deprecated,
-			Name:       string(msg.Desc.Name()),
-			Fields:     msgFields(msg),
+			Name:       msgName,
+			Fields:     fields,
+			FieldSet:   buildFieldSet(fields),
 		}
 		msgTpl.Messages = append(msgTpl.Messages, msgData)
 	}
@@ -55,16 +57,20 @@ func genMessages(_ *protogen.Plugin, file *protogen.File, g *protogen.GeneratedF
 	g.P(msgTpl.execute())
 }
 
-func msgFields(msg *protogen.Message) []fieldData {
+func buildFieldSet(fields []fieldData) map[string]fieldData {
+	fieldSet := make(map[string]fieldData)
+	for _, field := range fields {
+		fieldSet[field.Name] = field
+	}
+	return fieldSet
+}
+
+func msgFields(msgName string, msg *protogen.Message) []fieldData {
 	var fields []fieldData
 	for _, field := range msg.Fields {
 
-		var subFieldsData []fieldData
 		// check if is message type or pointer of message type
 		if field.Desc.Kind() == protoreflect.MessageKind {
-			// recursive call for nested message type
-			subFieldData := msgFields(field.Message)
-			subFieldsData = append(subFieldsData, subFieldData...)
 			continue
 		}
 
@@ -78,12 +84,13 @@ func msgFields(msg *protogen.Message) []fieldData {
 		}
 
 		fields = append(fields, fieldData{
-			Name:  field.GoName,
-			Int:   fieldOpts.GetInt(),
-			Str:   fieldOpts.GetStr(),
-			Bytes: fieldOpts.GetBytes(),
-			Array: fieldOpts.GetArray(),
-			Float: fieldOpts.GetFloat(),
+			MessageName: msgName,
+			Name:        field.GoName,
+			Int:         fieldOpts.GetInt(),
+			Str:         fieldOpts.GetStr(),
+			Bytes:       fieldOpts.GetBytes(),
+			Array:       fieldOpts.GetArray(),
+			Float:       fieldOpts.GetFloat(),
 		})
 	}
 

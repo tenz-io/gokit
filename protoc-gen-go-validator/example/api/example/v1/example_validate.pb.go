@@ -3,7 +3,7 @@
 package v1
 
 import (
-	context "context"
+	"fmt"
 	genproto "github.com/tenz-io/gokit/genproto"
 	idl "github.com/tenz-io/gokit/genproto/go/custom/idl"
 	proto "google.golang.org/protobuf/proto"
@@ -11,11 +11,245 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the github.com/tenz-io/gokit/protoc-gen-go-validator package it is being compiled against.
-// context.genproto.
+// genproto.
 // idl.proto.
 
-func (x *LoginRequest) Validate(_ context.Context) error {
-	return genproto.Validate(x.ValidateRule(), x)
+func (x *LoginRequest) Validate() error {
+
+	if err := x.validateUsername(); err != nil {
+		return err
+	}
+
+	if err := x.validatePassword(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (x *LoginResponse) Validate() error {
+
+	if err := x.validateAccessToken(); err != nil {
+		return err
+	}
+
+	if err := x.validateRefreshToken(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (x *HelloRequest) Validate() error {
+
+	if err := x.validateName(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (x *HelloResponse) Validate() error {
+
+	if err := x.validateMessage(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (x *GetImageRequest) Validate() error {
+
+	if err := x.validateKey(); err != nil {
+		return err
+	}
+
+	if err := x.validateWidth(); err != nil {
+		return err
+	}
+
+	if err := x.validateHeight(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (x *GetImageResponse) Validate() error {
+
+	if err := x.validateFile(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (x *UploadImageRequest) Validate() error {
+
+	if err := x.validateImage(); err != nil {
+		return err
+	}
+
+	if err := x.validateCategory(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (x *UploadImageResponse) Validate() error {
+
+	if err := x.validateKey(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (x *UpdateProgressRequest) Validate() error {
+
+	if err := x.validateProgress(); err != nil {
+		return err
+	}
+
+	if err := x.validateCatIds(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (x *UpdateProgressResponse) Validate() error {
+
+	if err := x.validateProgress(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (x *LoginRequest) validateUsername() error {
+	var val = x.GetUsername()
+
+	return nil
+}
+
+func (x *LoginRequest) validatePassword() error {
+	var val = x.GetPassword()
+
+	return nil
+}
+
+func (x *LoginResponse) validateAccessToken() error {
+	var val = x.GetAccessToken()
+
+	return nil
+}
+
+func (x *LoginResponse) validateRefreshToken() error {
+	var val = x.GetRefreshToken()
+
+	return nil
+}
+
+func (x *HelloRequest) validateName() error {
+	var val = x.GetName()
+
+	return nil
+}
+
+func (x *HelloResponse) validateMessage() error {
+	var val = x.GetMessage()
+
+	return nil
+}
+
+func (x *GetImageRequest) validateKey() error {
+	var val = x.GetKey()
+
+	return nil
+}
+
+func (x *GetImageRequest) validateWidth() error {
+	var val = x.GetWidth()
+
+	var hasDefault = true
+	var defaultVal int64 = 640
+	var required = false
+	if hasDefault && x.Width == 0 {
+		x.Width = defaultVal
+	}
+
+	if val <= 0 {
+		return &genproto.ValidationError{
+			Key:     "Width",
+			Message: fmt.Sprintf("must be greater than %d", 0),
+		}
+	}
+
+	return nil
+}
+
+func (x *GetImageRequest) validateHeight() error {
+	var val = x.GetHeight()
+
+	var hasDefault = true
+	var defaultVal = 480
+	var required = false
+	if hasDefault && x.Height == nil {
+		x.Height = &defaultVal
+	}
+
+	if val <= 0 {
+		return &genproto.ValidationError{
+			Key:     "Height",
+			Message: fmt.Sprintf("must be greater than %d", 0),
+		}
+	}
+
+	return nil
+}
+
+func (x *GetImageResponse) validateFile() error {
+	var val = x.GetFile()
+
+	return nil
+}
+
+func (x *UploadImageRequest) validateImage() error {
+	var val = x.GetImage()
+
+	return nil
+}
+
+func (x *UploadImageRequest) validateCategory() error {
+	var val = x.GetCategory()
+
+	return nil
+}
+
+func (x *UploadImageResponse) validateKey() error {
+	var val = x.GetKey()
+
+	return nil
+}
+
+func (x *UpdateProgressRequest) validateProgress() error {
+	var val = x.GetProgress()
+
+	return nil
+}
+
+func (x *UpdateProgressRequest) validateCatIds() error {
+	var val = x.GetCatIds()
+
+	return nil
+}
+
+func (x *UpdateProgressResponse) validateProgress() error {
+	var val = x.GetProgress()
+
+	return nil
 }
 
 func (x *LoginRequest) ValidateRule() genproto.FieldRules {
@@ -41,10 +275,6 @@ func (x *LoginRequest) ValidateRule() genproto.FieldRules {
 	}
 }
 
-func (x *LoginResponse) Validate(_ context.Context) error {
-	return genproto.Validate(x.ValidateRule(), x)
-}
-
 func (x *LoginResponse) ValidateRule() genproto.FieldRules {
 	return genproto.FieldRules{
 
@@ -52,10 +282,6 @@ func (x *LoginResponse) ValidateRule() genproto.FieldRules {
 
 		"RefreshToken": &idl.Field{},
 	}
-}
-
-func (x *HelloRequest) Validate(_ context.Context) error {
-	return genproto.Validate(x.ValidateRule(), x)
 }
 
 func (x *HelloRequest) ValidateRule() genproto.FieldRules {
@@ -73,19 +299,11 @@ func (x *HelloRequest) ValidateRule() genproto.FieldRules {
 	}
 }
 
-func (x *HelloResponse) Validate(_ context.Context) error {
-	return genproto.Validate(x.ValidateRule(), x)
-}
-
 func (x *HelloResponse) ValidateRule() genproto.FieldRules {
 	return genproto.FieldRules{
 
 		"Message": &idl.Field{},
 	}
-}
-
-func (x *GetImageRequest) Validate(_ context.Context) error {
-	return genproto.Validate(x.ValidateRule(), x)
 }
 
 func (x *GetImageRequest) ValidateRule() genproto.FieldRules {
@@ -117,19 +335,11 @@ func (x *GetImageRequest) ValidateRule() genproto.FieldRules {
 	}
 }
 
-func (x *GetImageResponse) Validate(_ context.Context) error {
-	return genproto.Validate(x.ValidateRule(), x)
-}
-
 func (x *GetImageResponse) ValidateRule() genproto.FieldRules {
 	return genproto.FieldRules{
 
 		"File": &idl.Field{},
 	}
-}
-
-func (x *UploadImageRequest) Validate(_ context.Context) error {
-	return genproto.Validate(x.ValidateRule(), x)
 }
 
 func (x *UploadImageRequest) ValidateRule() genproto.FieldRules {
@@ -158,19 +368,11 @@ func (x *UploadImageRequest) ValidateRule() genproto.FieldRules {
 	}
 }
 
-func (x *UploadImageResponse) Validate(_ context.Context) error {
-	return genproto.Validate(x.ValidateRule(), x)
-}
-
 func (x *UploadImageResponse) ValidateRule() genproto.FieldRules {
 	return genproto.FieldRules{
 
 		"Key": &idl.Field{},
 	}
-}
-
-func (x *UpdateProgressRequest) Validate(_ context.Context) error {
-	return genproto.Validate(x.ValidateRule(), x)
 }
 
 func (x *UpdateProgressRequest) ValidateRule() genproto.FieldRules {
@@ -198,10 +400,6 @@ func (x *UpdateProgressRequest) ValidateRule() genproto.FieldRules {
 			},
 		},
 	}
-}
-
-func (x *UpdateProgressResponse) Validate(_ context.Context) error {
-	return genproto.Validate(x.ValidateRule(), x)
 }
 
 func (x *UpdateProgressResponse) ValidateRule() genproto.FieldRules {
