@@ -114,8 +114,13 @@ func ValidateIntField(fieldIdl *idl.IntField, fieldName string, msg any) error {
 		})
 	}
 
-	if err := validateIntField(fieldIdl, fieldName, actualVal); err != nil && err.HasError() {
-		validations = mergeValidationsErrors(validations, err)
+	if err := validateIntField(fieldIdl, fieldName, actualVal); err != nil {
+		var vErr = ValidationsError{}
+		if errors.As(err, &vErr) && vErr.HasError() {
+			validations = mergeValidationsErrors(validations, vErr)
+		} else {
+			return err
+		}
 	}
 
 	if validations.HasError() {
@@ -125,8 +130,8 @@ func ValidateIntField(fieldIdl *idl.IntField, fieldName string, msg any) error {
 	return nil
 }
 
-func validateIntField(fieldIdl *idl.IntField, fieldName string, val int64) ValidationsError {
-	var validations ValidationsError
+func validateIntField(fieldIdl *idl.IntField, fieldName string, val int64) error {
+	var validations = ValidationsError{}
 	if fieldIdl.Gt != nil && val <= fieldIdl.GetGt() {
 		validations = append(validations, &ValidationError{
 			Key:     fieldName,
@@ -201,7 +206,11 @@ func validateIntField(fieldIdl *idl.IntField, fieldName string, val int64) Valid
 		}
 	}
 
-	return validations
+	if validations.HasError() {
+		return validations
+	}
+
+	return nil
 
 }
 
@@ -248,9 +257,8 @@ func ValidateStringField(fieldIdl *idl.StringField, fieldName string, msg any) e
 		var vErr = ValidationsError{}
 		if errors.As(err, &vErr) && vErr.HasError() {
 			validations = mergeValidationsErrors(validations, vErr)
-		}
-		if pErr := new(ProtoError); errors.As(err, &pErr) {
-			return pErr
+		} else {
+			return err
 		}
 	}
 
@@ -262,7 +270,7 @@ func ValidateStringField(fieldIdl *idl.StringField, fieldName string, msg any) e
 }
 
 func validateStringField(fieldIdl *idl.StringField, fieldName string, actualVal string) error {
-	var validations ValidationsError
+	var validations = ValidationsError{}
 	if fieldIdl.MinLen != nil && len(actualVal) < int(fieldIdl.GetMinLen()) {
 		validations = append(validations, &ValidationError{
 			Key:     fieldName,
@@ -324,7 +332,12 @@ func validateStringField(fieldIdl *idl.StringField, fieldName string, actualVal 
 			})
 		}
 	}
-	return validations
+
+	if validations.HasError() {
+		return validations
+	}
+
+	return nil
 }
 
 // ValidateBytesField validates a bytes field
@@ -355,8 +368,13 @@ func ValidateBytesField(fieldIdl *idl.BytesField, fieldName string, msg any) err
 		})
 	}
 
-	if err := validateBytesField(fieldIdl, fieldName, actualVal); err != nil && err.HasError() {
-		validations = mergeValidationsErrors(validations, err)
+	if err := validateBytesField(fieldIdl, fieldName, actualVal); err != nil {
+		var vErr = ValidationsError{}
+		if errors.As(err, &vErr) && vErr.HasError() {
+			validations = mergeValidationsErrors(validations, vErr)
+		} else {
+			return err
+		}
 	}
 
 	if validations.HasError() {
@@ -366,8 +384,8 @@ func ValidateBytesField(fieldIdl *idl.BytesField, fieldName string, msg any) err
 	return nil
 }
 
-func validateBytesField(fieldIdl *idl.BytesField, fieldName string, val []byte) ValidationsError {
-	var validations ValidationsError
+func validateBytesField(fieldIdl *idl.BytesField, fieldName string, val []byte) error {
+	var validations = ValidationsError{}
 	if fieldIdl.MinLen != nil && len(val) < int(fieldIdl.GetMinLen()) {
 		validations = append(validations, &ValidationError{
 			Key:     fieldName,
@@ -381,7 +399,11 @@ func validateBytesField(fieldIdl *idl.BytesField, fieldName string, val []byte) 
 			Message: fmt.Sprintf("should have maximum length of %d", fieldIdl.GetMaxLen()),
 		})
 	}
-	return validations
+
+	if validations.HasError() {
+		return validations
+	}
+	return nil
 }
 
 // ValidateArrayField validates an array field
@@ -451,7 +473,12 @@ func ValidateArrayField(fieldIdl *idl.ArrayField, fieldName string, msg any) err
 				reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 				if fieldIdl.Item.GetInt() != nil {
 					if err := validateIntField(fieldIdl.Item.GetInt(), fieldName, field.Int()); err != nil {
-						validations = mergeValidationsErrors(validations, err)
+						var vErr = ValidationsError{}
+						if errors.As(err, &vErr) && vErr.HasError() {
+							validations = mergeValidationsErrors(validations, vErr)
+						} else {
+							return err
+						}
 					}
 				}
 			case reflect.String:
@@ -460,22 +487,31 @@ func ValidateArrayField(fieldIdl *idl.ArrayField, fieldName string, msg any) err
 						var vErr = ValidationsError{}
 						if errors.As(err, &vErr) && vErr.HasError() {
 							validations = mergeValidationsErrors(validations, vErr)
-						}
-						if pErr := new(ProtoError); errors.As(err, &pErr) {
-							return pErr
+						} else {
+							return err
 						}
 					}
 				}
 			case reflect.Slice, reflect.Array:
 				if fieldIdl.Item.GetBytes() != nil {
 					if err := validateBytesField(fieldIdl.Item.GetBytes(), fieldName, field.Bytes()); err != nil {
-						validations = mergeValidationsErrors(validations, err)
+						var vErr = ValidationsError{}
+						if errors.As(err, &vErr) && vErr.HasError() {
+							validations = mergeValidationsErrors(validations, vErr)
+						} else {
+							return err
+						}
 					}
 				}
 			case reflect.Float32, reflect.Float64:
 				if fieldIdl.Item.GetFloat() != nil {
 					if err := validateFloatField(fieldIdl.Item.GetFloat(), fieldName, field.Float()); err != nil {
-						validations = mergeValidationsErrors(validations, err)
+						var vErr = ValidationsError{}
+						if errors.As(err, &vErr) && vErr.HasError() {
+							validations = mergeValidationsErrors(validations, vErr)
+						} else {
+							return err
+						}
 					}
 				}
 			default:
@@ -531,8 +567,13 @@ func ValidateFloatField(fieldIdl *idl.FloatField, filedName string, msg any) err
 		})
 	}
 
-	if err := validateFloatField(fieldIdl, filedName, actualVal); err != nil && err.HasError() {
-		validations = mergeValidationsErrors(validations, err)
+	if err := validateFloatField(fieldIdl, filedName, actualVal); err != nil {
+		var vErr = ValidationsError{}
+		if errors.As(err, &vErr) && vErr.HasError() {
+			validations = mergeValidationsErrors(validations, vErr)
+		} else {
+			return err
+		}
 	}
 
 	if validations.HasError() {
@@ -542,8 +583,8 @@ func ValidateFloatField(fieldIdl *idl.FloatField, filedName string, msg any) err
 	return nil
 }
 
-func validateFloatField(fieldIdl *idl.FloatField, filedName string, val float64) ValidationsError {
-	var validations ValidationsError
+func validateFloatField(fieldIdl *idl.FloatField, filedName string, val float64) error {
+	var validations = ValidationsError{}
 	if fieldIdl.Gt != nil && val <= fieldIdl.GetGt() {
 		validations = append(validations, &ValidationError{
 			Key:     filedName,
@@ -572,7 +613,11 @@ func validateFloatField(fieldIdl *idl.FloatField, filedName string, val float64)
 		})
 	}
 
-	return validations
+	if validations.HasError() {
+		return validations
+	}
+
+	return nil
 }
 
 func ValidateField(fieldIdl *idl.Field, fieldName string, msg any) error {
