@@ -60,6 +60,12 @@ func msgFields(msgName string, msg *protogen.Message) []fieldData {
 	var fields []fieldData
 	for _, field := range msg.Fields {
 		if field.Desc.Kind() == protoreflect.MessageKind {
+			fields = append(fields, fieldData{
+				MessageName: msgName,
+				FieldName:   field.GoName,
+				IsMessage:   true,
+			})
+
 			continue
 		}
 
@@ -75,6 +81,7 @@ func msgFields(msgName string, msg *protogen.Message) []fieldData {
 		fields = append(fields, fieldData{
 			MessageName: msgName,
 			FieldName:   field.GoName,
+			IsMessage:   false,
 			Int:         fieldOpts.GetInt(),
 			Str:         fieldOpts.GetStr(),
 			Bytes:       fieldOpts.GetBytes(),

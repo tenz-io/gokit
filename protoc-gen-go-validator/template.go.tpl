@@ -9,6 +9,10 @@ func (x *{{.MessageName}}) Validate() error {
 
 {{range .Fields}}
 func (x *{{.MessageName}}) validate{{.FieldName}}() error {
+{{if .IsMessage}}
+    return x.{{.FieldName}}.Validate()
+{{- end}}
+
 {{if .Int}}
     {{if .Int.Required}}
     if genproto.IsNilOrEmpty(x.{{.FieldName}}) {

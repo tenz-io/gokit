@@ -27,6 +27,7 @@ type initTemplate struct {
 type fieldData struct {
 	MessageName string
 	FieldName   string
+	IsMessage   bool
 	Int         *idl.IntField    // if field type is int/uint/*int/*uint
 	Str         *idl.StringField // if field type is string/*string
 	Bytes       *idl.BytesField  // if field type is bytes

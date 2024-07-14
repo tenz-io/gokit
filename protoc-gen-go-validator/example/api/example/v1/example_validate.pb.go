@@ -432,3 +432,139 @@ func (x *UpdateProgressResponse) validateProgress() error {
 
 	return nil
 }
+
+func (x *QueryRequest) Validate() error {
+
+	if err := x.validatePage(); err != nil {
+		return err
+	}
+
+	if err := x.validatePageSize(); err != nil {
+		return err
+	}
+
+	if err := x.validateMatch(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (x *QueryRequest) validatePage() error {
+
+	if x.GetPage() <= 0 {
+		return &genproto.ValidationError{
+			Key:     "Page",
+			Message: fmt.Sprintf("must be greater than %d", 0),
+		}
+	}
+
+	return nil
+}
+
+func (x *QueryRequest) validatePageSize() error {
+
+	if x.GetPageSize() <= 0 {
+		return &genproto.ValidationError{
+			Key:     "PageSize",
+			Message: fmt.Sprintf("must be greater than %d", 0),
+		}
+	}
+
+	if x.GetPageSize() > 100 {
+		return &genproto.ValidationError{
+			Key:     "PageSize",
+			Message: fmt.Sprintf("must be less than or equal to %d", 100),
+		}
+	}
+
+	return nil
+}
+
+func (x *QueryRequest) validateMatch() error {
+
+	return x.Match.Validate()
+
+	return nil
+}
+
+func (x *QueryMatch) Validate() error {
+
+	if err := x.validateKey(); err != nil {
+		return err
+	}
+
+	if err := x.validateValue(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (x *QueryMatch) validateKey() error {
+
+	if genproto.IsNilOrEmpty(x.Key) {
+		return &genproto.ValidationError{
+			Key:     "Key",
+			Message: "is required",
+		}
+	}
+
+	if strings.TrimSpace(x.GetKey()) == "" {
+		return &genproto.ValidationError{
+			Key:     "Key",
+			Message: "can not be blank",
+		}
+	}
+
+	if len(x.GetKey()) < 1 {
+		return &genproto.ValidationError{
+			Key:     "Key",
+			Message: fmt.Sprintf("must be at least %d characters long", 1),
+		}
+	}
+
+	if len(x.GetKey()) > 64 {
+		return &genproto.ValidationError{
+			Key:     "Key",
+			Message: fmt.Sprintf("must be at most %d characters long", 64),
+		}
+	}
+
+	return nil
+}
+
+func (x *QueryMatch) validateValue() error {
+
+	if len(x.GetValue()) > 128 {
+		return &genproto.ValidationError{
+			Key:     "Value",
+			Message: fmt.Sprintf("must be at most %d characters long", 128),
+		}
+	}
+
+	return nil
+}
+
+func (x *QueryResponse) Validate() error {
+
+	if err := x.validateTotal(); err != nil {
+		return err
+	}
+
+	if err := x.validateItems(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (x *QueryResponse) validateTotal() error {
+
+	return nil
+}
+
+func (x *QueryResponse) validateItems() error {
+
+	return nil
+}

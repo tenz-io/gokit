@@ -42,6 +42,13 @@ service ApiServer {
       type: REST
     };
   }
+  rpc Query(QueryRequest) returns (QueryResponse) {
+    option (custom.idl.method) = {
+      post: "/api/query"
+      role: USER
+      type: REST
+    };
+  }
 }
 
 message LoginRequest {
@@ -170,5 +177,47 @@ message UpdateProgressRequest {
 
 message UpdateProgressResponse {
   double progress = 1;
+}
+
+message QueryRequest {
+  int32 page = 1[(custom.idl.field) = {
+    query: "page"
+    int: {
+      default: 1
+      gt: 0
+    }
+  }];
+  int32 page_size = 2[(custom.idl.field) = {
+    query: "page_size"
+    int: {
+      default: 10
+      gt: 0
+      lte: 100
+    }
+  }];
+  QueryMatch match = 3;
+}
+
+message QueryMatch {
+  string key = 1[(custom.idl.field) = {
+    form: "key"
+    str: {
+      required: true
+      not_blank: true
+      min_len: 1
+      max_len: 64
+    }
+  }];
+  string value = 2[(custom.idl.field) = {
+    form: "value"
+    str: {
+      max_len: 128
+    }
+  }];
+}
+
+message QueryResponse {
+  int32 total = 1;
+  repeated string items = 2;
 }
 
