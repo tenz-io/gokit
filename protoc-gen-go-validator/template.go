@@ -13,19 +13,13 @@ import (
 var tpl string
 
 type messageTemplate struct {
-	Messages []messageData
-}
-
-type messageData struct {
-	deprecated bool
-	Name       string
-	Fields     []fieldData
-	FieldSet   map[string]fieldData
+	MessageName string
+	Fields      []fieldData
 }
 
 type fieldData struct {
 	MessageName string
-	Name        string
+	FieldName   string
 	Int         *idl.IntField    // if field type is int/uint/*int/*uint
 	Str         *idl.StringField // if field type is string/*string
 	Bytes       *idl.BytesField  // if field type is bytes
@@ -34,7 +28,11 @@ type fieldData struct {
 }
 
 func (d *messageTemplate) execute() string {
-	if len(d.Messages) == 0 {
+	if d == nil || d.MessageName == "" {
+		panic("message name is required")
+	}
+
+	if len(d.Fields) == 0 {
 		return ""
 	}
 

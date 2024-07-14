@@ -903,3 +903,37 @@ func SetValue(ptrVal any, newVal any) (newPtrVal any, ok bool) {
 	elem.Set(newValReflect)
 	return ptrVal, true
 }
+
+// StringIn checks if a string is in a list of strings
+func StringIn(s string, list []string) bool {
+	for _, v := range list {
+		if s == v {
+			return true
+		}
+	}
+	return false
+}
+
+// StringMatches checks if a string matches a pattern
+func StringMatches(s string, pattern string) bool {
+	p, err := regexp.Compile(pattern)
+	if err != nil {
+		return false
+	}
+
+	return p.MatchString(s)
+}
+
+type intTyp interface {
+	int8 | int16 | int32 | int64 | uint8 | uint16 | uint32 | uint64
+}
+
+// IntIn checks if an int is in a list of ints
+func IntIn[T intTyp](i T, list []int) bool {
+	for _, v := range list {
+		if int(i) == v {
+			return true
+		}
+	}
+	return false
+}

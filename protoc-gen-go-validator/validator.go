@@ -5,13 +5,14 @@ import (
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/types/descriptorpb"
 )
 
 const (
+	fmtPkg      = protogen.GoImportPath("fmt")
+	stringsPkg  = protogen.GoImportPath("strings")
 	genprotoPkg = protogen.GoImportPath("github.com/tenz-io/gokit/genproto")
-	idlPkg      = protogen.GoImportPath("github.com/tenz-io/gokit/genproto/go/custom/idl")
-	protoPkg    = protogen.GoImportPath("google.golang.org/protobuf/proto")
+	//idlPkg      = protogen.GoImportPath("github.com/tenz-io/gokit/genproto/go/custom/idl")
+	//protoPkg    = protogen.GoImportPath("google.golang.org/protobuf/proto")
 )
 
 func generateFile(gen *protogen.Plugin, file *protogen.File) *protogen.GeneratedFile {
@@ -27,8 +28,9 @@ func generateFile(gen *protogen.Plugin, file *protogen.File) *protogen.Generated
 	g.P()
 	g.P("// This is a compile-time assertion to ensure that this generated file")
 	g.P("// is compatible with the github.com/tenz-io/gokit/protoc-gen-go-validator package it is being compiled against.")
+	g.P("// ", fmtPkg.Ident(""))
+	g.P("// ", stringsPkg.Ident(""))
 	g.P("// ", genprotoPkg.Ident(""))
-	g.P("// ", idlPkg.Ident(""), protoPkg.Ident(""))
 	g.P()
 
 	genMessages(gen, file, g)
@@ -37,39 +39,20 @@ func generateFile(gen *protogen.Plugin, file *protogen.File) *protogen.Generated
 }
 
 func genMessages(_ *protogen.Plugin, file *protogen.File, g *protogen.GeneratedFile) {
-	msgTpl := &messageTemplate{
-		Messages: []messageData{},
-	}
-
 	for _, msg := range file.Messages {
-		deprecated := msg.Desc.Options().(*descriptorpb.MessageOptions).GetDeprecated()
 		msgName := string(msg.Desc.Name())
 		fields := msgFields(msgName, msg)
-		msgData := messageData{
-			deprecated: deprecated,
-			Name:       msgName,
-			Fields:     fields,
-			FieldSet:   buildFieldSet(fields),
+		msgTpl := messageTemplate{
+			MessageName: msgName,
+			Fields:      fields,
 		}
-		msgTpl.Messages = append(msgTpl.Messages, msgData)
+		g.P(msgTpl.execute())
 	}
-
-	g.P(msgTpl.execute())
-}
-
-func buildFieldSet(fields []fieldData) map[string]fieldData {
-	fieldSet := make(map[string]fieldData)
-	for _, field := range fields {
-		fieldSet[field.Name] = field
-	}
-	return fieldSet
 }
 
 func msgFields(msgName string, msg *protogen.Message) []fieldData {
 	var fields []fieldData
 	for _, field := range msg.Fields {
-
-		// check if is message type or pointer of message type
 		if field.Desc.Kind() == protoreflect.MessageKind {
 			continue
 		}
@@ -85,7 +68,7 @@ func msgFields(msgName string, msg *protogen.Message) []fieldData {
 
 		fields = append(fields, fieldData{
 			MessageName: msgName,
-			Name:        field.GoName,
+			FieldName:   field.GoName,
 			Int:         fieldOpts.GetInt(),
 			Str:         fieldOpts.GetStr(),
 			Bytes:       fieldOpts.GetBytes(),

@@ -3,16 +3,16 @@
 package v1
 
 import (
-	"fmt"
+	fmt "fmt"
 	genproto "github.com/tenz-io/gokit/genproto"
-	idl "github.com/tenz-io/gokit/genproto/go/custom/idl"
-	proto "google.golang.org/protobuf/proto"
+	strings "strings"
 )
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the github.com/tenz-io/gokit/protoc-gen-go-validator package it is being compiled against.
+// fmt.
+// strings.
 // genproto.
-// idl.proto.
 
 func (x *LoginRequest) Validate() error {
 
@@ -22,6 +22,72 @@ func (x *LoginRequest) Validate() error {
 
 	if err := x.validatePassword(); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (x *LoginRequest) validateUsername() error {
+
+	if genproto.IsNilOrEmpty(x.Username) {
+		return &genproto.ValidationError{
+			Key:     "Username",
+			Message: "is required",
+		}
+	}
+
+	if strings.TrimSpace(x.GetUsername()) == "" {
+		return &genproto.ValidationError{
+			Key:     "Username",
+			Message: "can not be blank",
+		}
+	}
+
+	if len(x.GetUsername()) < 2 {
+		return &genproto.ValidationError{
+			Key:     "Username",
+			Message: fmt.Sprintf("must be at least %d characters long", 2),
+		}
+	}
+
+	if len(x.GetUsername()) > 64 {
+		return &genproto.ValidationError{
+			Key:     "Username",
+			Message: fmt.Sprintf("must be at most %d characters long", 64),
+		}
+	}
+
+	return nil
+}
+
+func (x *LoginRequest) validatePassword() error {
+
+	if genproto.IsNilOrEmpty(x.Password) {
+		return &genproto.ValidationError{
+			Key:     "Password",
+			Message: "is required",
+		}
+	}
+
+	if strings.TrimSpace(x.GetPassword()) == "" {
+		return &genproto.ValidationError{
+			Key:     "Password",
+			Message: "can not be blank",
+		}
+	}
+
+	if len(x.GetPassword()) < 6 {
+		return &genproto.ValidationError{
+			Key:     "Password",
+			Message: fmt.Sprintf("must be at least %d characters long", 6),
+		}
+	}
+
+	if len(x.GetPassword()) > 64 {
+		return &genproto.ValidationError{
+			Key:     "Password",
+			Message: fmt.Sprintf("must be at most %d characters long", 64),
+		}
 	}
 
 	return nil
@@ -40,10 +106,53 @@ func (x *LoginResponse) Validate() error {
 	return nil
 }
 
+func (x *LoginResponse) validateAccessToken() error {
+
+	return nil
+}
+
+func (x *LoginResponse) validateRefreshToken() error {
+
+	return nil
+}
+
 func (x *HelloRequest) Validate() error {
 
 	if err := x.validateName(); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (x *HelloRequest) validateName() error {
+
+	if genproto.IsNilOrEmpty(x.Name) {
+		return &genproto.ValidationError{
+			Key:     "Name",
+			Message: "is required",
+		}
+	}
+
+	if strings.TrimSpace(x.GetName()) == "" {
+		return &genproto.ValidationError{
+			Key:     "Name",
+			Message: "can not be blank",
+		}
+	}
+
+	if len(x.GetName()) < 2 {
+		return &genproto.ValidationError{
+			Key:     "Name",
+			Message: fmt.Sprintf("must be at least %d characters long", 2),
+		}
+	}
+
+	if len(x.GetName()) > 64 {
+		return &genproto.ValidationError{
+			Key:     "Name",
+			Message: fmt.Sprintf("must be at most %d characters long", 64),
+		}
 	}
 
 	return nil
@@ -54,6 +163,11 @@ func (x *HelloResponse) Validate() error {
 	if err := x.validateMessage(); err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func (x *HelloResponse) validateMessage() error {
 
 	return nil
 }
@@ -75,11 +189,80 @@ func (x *GetImageRequest) Validate() error {
 	return nil
 }
 
+func (x *GetImageRequest) validateKey() error {
+
+	if genproto.IsNilOrEmpty(x.Key) {
+		return &genproto.ValidationError{
+			Key:     "Key",
+			Message: "is required",
+		}
+	}
+
+	if strings.TrimSpace(x.GetKey()) == "" {
+		return &genproto.ValidationError{
+			Key:     "Key",
+			Message: "can not be blank",
+		}
+	}
+
+	if len(x.GetKey()) > 64 {
+		return &genproto.ValidationError{
+			Key:     "Key",
+			Message: fmt.Sprintf("must be at most %d characters long", 64),
+		}
+	}
+
+	return nil
+}
+
+func (x *GetImageRequest) validateWidth() error {
+
+	if x.GetWidth() <= 0 {
+		return &genproto.ValidationError{
+			Key:     "Width",
+			Message: fmt.Sprintf("must be greater than %d", 0),
+		}
+	}
+
+	if x.GetWidth() > 1024 {
+		return &genproto.ValidationError{
+			Key:     "Width",
+			Message: fmt.Sprintf("must be less than or equal to %d", 1024),
+		}
+	}
+
+	return nil
+}
+
+func (x *GetImageRequest) validateHeight() error {
+
+	if x.GetHeight() <= 0 {
+		return &genproto.ValidationError{
+			Key:     "Height",
+			Message: fmt.Sprintf("must be greater than %d", 0),
+		}
+	}
+
+	if x.GetHeight() > 1024 {
+		return &genproto.ValidationError{
+			Key:     "Height",
+			Message: fmt.Sprintf("must be less than or equal to %d", 1024),
+		}
+	}
+
+	return nil
+}
+
 func (x *GetImageResponse) Validate() error {
 
 	if err := x.validateFile(); err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func (x *GetImageResponse) validateFile() error {
 
 	return nil
 }
@@ -97,11 +280,47 @@ func (x *UploadImageRequest) Validate() error {
 	return nil
 }
 
+func (x *UploadImageRequest) validateImage() error {
+
+	return nil
+}
+
+func (x *UploadImageRequest) validateCategory() error {
+
+	if genproto.IsNilOrEmpty(x.Category) {
+		return &genproto.ValidationError{
+			Key:     "Category",
+			Message: "is required",
+		}
+	}
+
+	if strings.TrimSpace(x.GetCategory()) == "" {
+		return &genproto.ValidationError{
+			Key:     "Category",
+			Message: "can not be blank",
+		}
+	}
+
+	if !genproto.StringIn(x.GetCategory(), []string{"avatar", "background", "post"}) {
+		return &genproto.ValidationError{
+			Key:     "Category",
+			Message: "is invalid",
+		}
+	}
+
+	return nil
+}
+
 func (x *UploadImageResponse) Validate() error {
 
 	if err := x.validateKey(); err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func (x *UploadImageResponse) validateKey() error {
 
 	return nil
 }
@@ -119,6 +338,16 @@ func (x *UpdateProgressRequest) Validate() error {
 	return nil
 }
 
+func (x *UpdateProgressRequest) validateProgress() error {
+
+	return nil
+}
+
+func (x *UpdateProgressRequest) validateCatIds() error {
+
+	return nil
+}
+
 func (x *UpdateProgressResponse) Validate() error {
 
 	if err := x.validateProgress(); err != nil {
@@ -128,283 +357,7 @@ func (x *UpdateProgressResponse) Validate() error {
 	return nil
 }
 
-func (x *LoginRequest) validateUsername() error {
-	var val = x.GetUsername()
-
-	return nil
-}
-
-func (x *LoginRequest) validatePassword() error {
-	var val = x.GetPassword()
-
-	return nil
-}
-
-func (x *LoginResponse) validateAccessToken() error {
-	var val = x.GetAccessToken()
-
-	return nil
-}
-
-func (x *LoginResponse) validateRefreshToken() error {
-	var val = x.GetRefreshToken()
-
-	return nil
-}
-
-func (x *HelloRequest) validateName() error {
-	var val = x.GetName()
-
-	return nil
-}
-
-func (x *HelloResponse) validateMessage() error {
-	var val = x.GetMessage()
-
-	return nil
-}
-
-func (x *GetImageRequest) validateKey() error {
-	var val = x.GetKey()
-
-	return nil
-}
-
-func (x *GetImageRequest) validateWidth() error {
-	var val = x.GetWidth()
-
-	var hasDefault = true
-	var defaultVal int64 = 640
-	var required = false
-	if hasDefault && x.Width == 0 {
-		x.Width = defaultVal
-	}
-
-	if val <= 0 {
-		return &genproto.ValidationError{
-			Key:     "Width",
-			Message: fmt.Sprintf("must be greater than %d", 0),
-		}
-	}
-
-	return nil
-}
-
-func (x *GetImageRequest) validateHeight() error {
-	var val = x.GetHeight()
-
-	var hasDefault = true
-	var defaultVal = 480
-	var required = false
-	if hasDefault && x.Height == nil {
-		x.Height = &defaultVal
-	}
-
-	if val <= 0 {
-		return &genproto.ValidationError{
-			Key:     "Height",
-			Message: fmt.Sprintf("must be greater than %d", 0),
-		}
-	}
-
-	return nil
-}
-
-func (x *GetImageResponse) validateFile() error {
-	var val = x.GetFile()
-
-	return nil
-}
-
-func (x *UploadImageRequest) validateImage() error {
-	var val = x.GetImage()
-
-	return nil
-}
-
-func (x *UploadImageRequest) validateCategory() error {
-	var val = x.GetCategory()
-
-	return nil
-}
-
-func (x *UploadImageResponse) validateKey() error {
-	var val = x.GetKey()
-
-	return nil
-}
-
-func (x *UpdateProgressRequest) validateProgress() error {
-	var val = x.GetProgress()
-
-	return nil
-}
-
-func (x *UpdateProgressRequest) validateCatIds() error {
-	var val = x.GetCatIds()
-
-	return nil
-}
-
 func (x *UpdateProgressResponse) validateProgress() error {
-	var val = x.GetProgress()
 
 	return nil
-}
-
-func (x *LoginRequest) ValidateRule() genproto.FieldRules {
-	return genproto.FieldRules{
-
-		"Username": &idl.Field{
-			Str: &idl.StringField{
-				Required: proto.Bool(true),
-				NotBlank: proto.Bool(true),
-				MinLen:   proto.Int64(2),
-				MaxLen:   proto.Int64(64),
-			},
-		},
-
-		"Password": &idl.Field{
-			Str: &idl.StringField{
-				Required: proto.Bool(true),
-				NotBlank: proto.Bool(true),
-				MinLen:   proto.Int64(6),
-				MaxLen:   proto.Int64(64),
-			},
-		},
-	}
-}
-
-func (x *LoginResponse) ValidateRule() genproto.FieldRules {
-	return genproto.FieldRules{
-
-		"AccessToken": &idl.Field{},
-
-		"RefreshToken": &idl.Field{},
-	}
-}
-
-func (x *HelloRequest) ValidateRule() genproto.FieldRules {
-	return genproto.FieldRules{
-
-		"Name": &idl.Field{
-			Str: &idl.StringField{
-				Default:  proto.String("goer"),
-				Required: proto.Bool(true),
-				NotBlank: proto.Bool(true),
-				MinLen:   proto.Int64(2),
-				MaxLen:   proto.Int64(64),
-			},
-		},
-	}
-}
-
-func (x *HelloResponse) ValidateRule() genproto.FieldRules {
-	return genproto.FieldRules{
-
-		"Message": &idl.Field{},
-	}
-}
-
-func (x *GetImageRequest) ValidateRule() genproto.FieldRules {
-	return genproto.FieldRules{
-
-		"Key": &idl.Field{
-			Str: &idl.StringField{
-				Required: proto.Bool(true),
-				NotBlank: proto.Bool(true),
-				MaxLen:   proto.Int64(64),
-			},
-		},
-
-		"Width": &idl.Field{
-			Int: &idl.IntField{
-				Default: proto.Int64(640),
-				Gt:      proto.Int64(0),
-				Lte:     proto.Int64(1024),
-			},
-		},
-
-		"Height": &idl.Field{
-			Int: &idl.IntField{
-				Default: proto.Int64(480),
-				Gt:      proto.Int64(0),
-				Lte:     proto.Int64(1024),
-			},
-		},
-	}
-}
-
-func (x *GetImageResponse) ValidateRule() genproto.FieldRules {
-	return genproto.FieldRules{
-
-		"File": &idl.Field{},
-	}
-}
-
-func (x *UploadImageRequest) ValidateRule() genproto.FieldRules {
-	return genproto.FieldRules{
-
-		"Image": &idl.Field{
-			Bytes: &idl.BytesField{
-				Required: proto.Bool(true),
-				MinLen:   proto.Int64(1),
-				MaxLen:   proto.Int64(1048576),
-			},
-		},
-
-		"Category": &idl.Field{
-			Str: &idl.StringField{
-				Default:  proto.String("post"),
-				Required: proto.Bool(true),
-				NotBlank: proto.Bool(true),
-				In: []string{
-					"avatar",
-					"background",
-					"post",
-				},
-			},
-		},
-	}
-}
-
-func (x *UploadImageResponse) ValidateRule() genproto.FieldRules {
-	return genproto.FieldRules{
-
-		"Key": &idl.Field{},
-	}
-}
-
-func (x *UpdateProgressRequest) ValidateRule() genproto.FieldRules {
-	return genproto.FieldRules{
-
-		"Progress": &idl.Field{
-			Float: &idl.FloatField{
-				Default:  proto.Float64(0.7),
-				Required: proto.Bool(true),
-				Gte:      proto.Float64(0),
-				Lte:      proto.Float64(1),
-			},
-		},
-
-		"CatIds": &idl.Field{
-			Array: &idl.ArrayField{
-				MinItems: proto.Int64(1),
-				MaxItems: proto.Int64(10),
-				Item: &idl.ItemField{
-					Int: &idl.IntField{
-						Gt:  proto.Int64(1000),
-						Lte: proto.Int64(5000),
-					},
-				},
-			},
-		},
-	}
-}
-
-func (x *UpdateProgressResponse) ValidateRule() genproto.FieldRules {
-	return genproto.FieldRules{
-
-		"Progress": &idl.Field{},
-	}
 }

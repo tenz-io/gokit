@@ -449,3 +449,76 @@ func TestSetValue(t *testing.T) {
 		})
 	}
 }
+
+func TestStringIn(t *testing.T) {
+	type args struct {
+		s    string
+		list []string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{"string in list", args{"avatar", []string{"avatar", "background", "post"}}, true},
+		{"string not in list", args{"invalid", []string{"avatar", "background", "post"}}, false},
+		{"empty list", args{"avatar", []string{}}, false},
+		{"empty string", args{"", []string{"avatar", "background", "post"}}, false},
+		{"empty string and list", args{"", []string{}}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, StringIn(tt.args.s, tt.args.list), "StringIn(%v, %v)", tt.args.s, tt.args.list)
+		})
+	}
+}
+
+func TestStringMatches(t *testing.T) {
+	type args struct {
+		s       string
+		pattern string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{"match pattern", args{"test", "test"}, true},
+		{"match pattern with wildcard", args{"test", "te*"}, true},
+		{"no match pattern", args{"test", "tes"}, true},
+		{"empty string", args{"", "test"}, false},
+		{"empty pattern", args{"test", ""}, true},
+		{"empty string and pattern", args{"", ""}, true},
+		{"empty string and wildcard", args{"", ".*"}, true},
+		{"match all", args{"abb", ".*"}, true},
+		{"match int", args{"123", "\\d+"}, true},
+		{"match email", args{"example.12@gmail.com", "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}"}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, StringMatches(tt.args.s, tt.args.pattern), "StringMatches(%v, %v)", tt.args.s, tt.args.pattern)
+		})
+	}
+}
+
+func TestIntIn(t *testing.T) {
+	type args[T intTyp] struct {
+		i    T
+		list []int
+	}
+	type testCase[T intTyp] struct {
+		name string
+		args args[T]
+		want bool
+	}
+	tests := []testCase[int32]{
+		{"int in list", args[int32]{10, []int{10, 12, 14}}, true},
+		{"int not in list", args[int32]{11, []int{10, 12, 14}}, false},
+		{"empty list", args[int32]{10, []int{}}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, IntIn(tt.args.i, tt.args.list), "IntIn(%v, %v)", tt.args.i, tt.args.list)
+		})
+	}
+}
