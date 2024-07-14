@@ -9,8 +9,8 @@ import (
 
 const (
 	fmtPkg      = protogen.GoImportPath("fmt")
-	stringsPkg  = protogen.GoImportPath("strings")
 	genprotoPkg = protogen.GoImportPath("github.com/tenz-io/gokit/genproto")
+	stringsPkg  = protogen.GoImportPath("strings")
 	//idlPkg      = protogen.GoImportPath("github.com/tenz-io/gokit/genproto/go/custom/idl")
 	//protoPkg    = protogen.GoImportPath("google.golang.org/protobuf/proto")
 )
@@ -29,24 +29,30 @@ func generateFile(gen *protogen.Plugin, file *protogen.File) *protogen.Generated
 	g.P("// This is a compile-time assertion to ensure that this generated file")
 	g.P("// is compatible with the github.com/tenz-io/gokit/protoc-gen-go-validator package it is being compiled against.")
 	g.P("// ", fmtPkg.Ident(""))
-	g.P("// ", stringsPkg.Ident(""))
 	g.P("// ", genprotoPkg.Ident(""))
+	g.P("// ", stringsPkg.Ident(""))
 	g.P()
 
+	genInit(gen, file, g)
 	genMessages(gen, file, g)
 
 	return g
+}
+
+func genInit(_ *protogen.Plugin, _ *protogen.File, g *protogen.GeneratedFile) {
+	tpl := initTemplate{}
+	g.P(tpl.execute())
 }
 
 func genMessages(_ *protogen.Plugin, file *protogen.File, g *protogen.GeneratedFile) {
 	for _, msg := range file.Messages {
 		msgName := string(msg.Desc.Name())
 		fields := msgFields(msgName, msg)
-		msgTpl := messageTemplate{
+		tpl := messageTemplate{
 			MessageName: msgName,
 			Fields:      fields,
 		}
-		g.P(msgTpl.execute())
+		g.P(tpl.execute())
 	}
 }
 

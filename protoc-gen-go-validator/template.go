@@ -9,12 +9,19 @@ import (
 	"github.com/tenz-io/gokit/genproto/go/custom/idl"
 )
 
-//go:embed template.go.tpl
-var tpl string
+var (
+	//go:embed template.go.tpl
+	msgTpl string
+	//go:embed init.go.tpl
+	initTpl string
+)
 
 type messageTemplate struct {
 	MessageName string
 	Fields      []fieldData
+}
+
+type initTemplate struct {
 }
 
 type fieldData struct {
@@ -37,7 +44,19 @@ func (d *messageTemplate) execute() string {
 	}
 
 	buf := new(bytes.Buffer)
-	tmpl, err := template.New("message").Parse(strings.TrimSpace(tpl))
+	tmpl, err := template.New("message").Parse(strings.TrimSpace(msgTpl))
+	if err != nil {
+		panic(err)
+	}
+	if err = tmpl.Execute(buf, d); err != nil {
+		panic(err)
+	}
+	return buf.String()
+}
+
+func (d *initTemplate) execute() string {
+	buf := new(bytes.Buffer)
+	tmpl, err := template.New("init").Parse(strings.TrimSpace(initTpl))
 	if err != nil {
 		panic(err)
 	}

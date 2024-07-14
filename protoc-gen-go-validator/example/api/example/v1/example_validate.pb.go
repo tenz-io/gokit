@@ -11,9 +11,16 @@ import (
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the github.com/tenz-io/gokit/protoc-gen-go-validator package it is being compiled against.
 // fmt.
-// strings.
 // genproto.
+// strings.
 
+func init() {
+	fmt.Sprint("")
+	genproto.IsNilOrEmpty(nil)
+	strings.TrimSpace("")
+}
+
+// message
 func (x *LoginRequest) Validate() error {
 
 	if err := x.validateUsername(); err != nil {
@@ -282,6 +289,27 @@ func (x *UploadImageRequest) Validate() error {
 
 func (x *UploadImageRequest) validateImage() error {
 
+	if genproto.IsNilOrEmpty(x.Image) {
+		return &genproto.ValidationError{
+			Key:     "Image",
+			Message: "is required",
+		}
+	}
+
+	if len(x.GetImage()) < 1 {
+		return &genproto.ValidationError{
+			Key:     "Image",
+			Message: fmt.Sprintf("must be at least %d bytes long", 1),
+		}
+	}
+
+	if len(x.GetImage()) > 1048576 {
+		return &genproto.ValidationError{
+			Key:     "Image",
+			Message: fmt.Sprintf("must be at most %d bytes long", 1048576),
+		}
+	}
+
 	return nil
 }
 
@@ -301,10 +329,11 @@ func (x *UploadImageRequest) validateCategory() error {
 		}
 	}
 
-	if !genproto.StringIn(x.GetCategory(), []string{"avatar", "background", "post"}) {
+	inList := []string{"avatar", "background", "post"}
+	if !genproto.StringIn(x.GetCategory(), inList) {
 		return &genproto.ValidationError{
 			Key:     "Category",
-			Message: "is invalid",
+			Message: fmt.Sprintf("must be one of %v", inList),
 		}
 	}
 
@@ -340,10 +369,52 @@ func (x *UpdateProgressRequest) Validate() error {
 
 func (x *UpdateProgressRequest) validateProgress() error {
 
+	if genproto.IsNilOrEmpty(x.Progress) {
+		return &genproto.ValidationError{
+			Key:     "Progress",
+			Message: "is required",
+		}
+	}
+
+	if x.GetProgress() < 0 {
+		return &genproto.ValidationError{
+			Key:     "Progress",
+			Message: fmt.Sprintf("must be greater than or equal to %f", 0),
+		}
+	}
+
+	if x.GetProgress() > 1 {
+		return &genproto.ValidationError{
+			Key:     "Progress",
+			Message: fmt.Sprintf("must be less than or equal to %f", 1),
+		}
+	}
+
 	return nil
 }
 
 func (x *UpdateProgressRequest) validateCatIds() error {
+
+	if genproto.IsNilOrEmpty(x.CatIds) {
+		return &genproto.ValidationError{
+			Key:     "CatIds",
+			Message: "is required",
+		}
+	}
+
+	if len(x.GetCatIds()) < 1 {
+		return &genproto.ValidationError{
+			Key:     "CatIds",
+			Message: fmt.Sprintf("must have at least %d items", 1),
+		}
+	}
+
+	if len(x.GetCatIds()) > 10 {
+		return &genproto.ValidationError{
+			Key:     "CatIds",
+			Message: fmt.Sprintf("must have at most %d items", 10),
+		}
+	}
 
 	return nil
 }

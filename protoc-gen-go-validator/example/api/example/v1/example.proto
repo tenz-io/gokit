@@ -143,7 +143,7 @@ message UploadImageResponse {
 }
 
 message UpdateProgressRequest {
-  int64 progress = 1[(custom.idl.field) = {
+  float progress = 1[(custom.idl.field) = {
     form: "progress"
     float: {
       default: 0.7
