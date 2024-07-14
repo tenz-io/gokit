@@ -206,6 +206,7 @@ message QueryMatch {
       not_blank: true
       min_len: 1
       max_len: 64
+      in: ["name", "title", "content"]
     }
   }];
   string value = 2[(custom.idl.field) = {

@@ -531,6 +531,14 @@ func (x *QueryMatch) validateKey() error {
 		}
 	}
 
+	inList := []string{"name", "title", "content"}
+	if !genproto.StringIn(x.GetKey(), inList) {
+		return &genproto.ValidationError{
+			Key:     "Key",
+			Message: fmt.Sprintf("must be one of %v", inList),
+		}
+	}
+
 	return nil
 }
 
