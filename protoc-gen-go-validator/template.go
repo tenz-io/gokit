@@ -16,13 +16,16 @@ var (
 	initTpl string
 )
 
-type messageTemplate struct {
-	MessageName string
-	Fields      []fieldData
-}
+type (
+	// messageTemplate is a template for generating validation code for a message.
+	messageTemplate struct {
+		MessageName string
+		Fields      []fieldData
+	}
 
-type initTemplate struct {
-}
+	// initTemplate is a template for generating init code.
+	initTemplate struct{}
+)
 
 type fieldData struct {
 	MessageName string

@@ -6,8 +6,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
-github.com/tenz-io/gokit/genproto v1.0.6-beta-5.0.20240714152128-217d362c2e43 h1:rjWI6/Ic+Is7voPtqUsq+FlrNysjHWYYihF/qUX6Nio=
-github.com/tenz-io/gokit/genproto v1.0.6-beta-5.0.20240714152128-217d362c2e43/go.mod h1:yc4Cjpv/vdeKTQI1v9HJrbhxynuR9aR1AEXse1gf7II=
+github.com/tenz-io/gokit/genproto v1.0.6-beta-5.0.20240715005152-e553cd82a434 h1:mBljSpxzq8dpyXM3s6JF9JvGnieO6ZDDAGqffLigh2Q=
+github.com/tenz-io/gokit/genproto v1.0.6-beta-5.0.20240715005152-e553cd82a434/go.mod h1:yc4Cjpv/vdeKTQI1v9HJrbhxynuR9aR1AEXse1gf7II=
 golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 h1:E7g+9GITq07hpfrRu66IVDexMakfv52eLZ2CXBWiKr4=
 golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
 google.golang.org/protobuf v1.34.2 h1:6xV6lTsCfpGD21XK49h7MhtcApnLqkfYgPcdHftf6hg=

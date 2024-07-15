@@ -78,7 +78,7 @@ message LoginResponse {
 }
 
 message HelloRequest {
-  string name = 1[(custom.idl.field) = {
+  optional string name = 1[(custom.idl.field) = {
     query: "name"
     str: {
       default: "goer"
@@ -103,7 +103,7 @@ message GetImageRequest {
       max_len: 64
     }
   }];
-  int64 width = 2[(custom.idl.field) = {
+  optional int64 width = 2[(custom.idl.field) = {
     query: "width"
     int: {
       default: 640
@@ -111,7 +111,7 @@ message GetImageRequest {
       lte: 1024
     }
   }];
-  int64 height = 3[(custom.idl.field) = {
+  optional int64 height = 3[(custom.idl.field) = {
     query: "height"
     int: {
       default: 480
@@ -134,7 +134,7 @@ message UploadImageRequest {
       max_len: 1048576 // 1MB
     }
   }];
-  string category = 2[(custom.idl.field) = {
+  optional string category = 2[(custom.idl.field) = {
     form: "category"
     str: {
       default: "post"
@@ -150,7 +150,7 @@ message UploadImageResponse {
 }
 
 message UpdateProgressRequest {
-  float progress = 1[(custom.idl.field) = {
+  optional float progress = 1[(custom.idl.field) = {
     form: "progress"
     float: {
       default: 0.7
