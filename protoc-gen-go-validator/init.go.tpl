@@ -4,4 +4,4 @@ func init(){
 	strings.TrimSpace("")
 }
 
-// message
+//

@@ -434,6 +434,8 @@ func TestSetValue(t *testing.T) {
 				t.Errorf("SetValue() = %v, want %v", got, tt.wantOk)
 			}
 
+			t.Logf("newPtrVal: %v, %T, ok: %t", newPtrVal, newPtrVal, got)
+
 			if tt.wantOk {
 				if tt.wantNewPtr {
 					if reflect.ValueOf(newPtrVal).Elem().Interface() != tt.newVal {

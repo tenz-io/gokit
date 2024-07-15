@@ -20,7 +20,6 @@ func init() {
 	strings.TrimSpace("")
 }
 
-// message
 func (x *LoginRequest) Validate() error {
 
 	if err := x.validateUsername(); err != nil {
@@ -135,6 +134,10 @@ func (x *HelloRequest) Validate() error {
 func (x *HelloRequest) validateName() error {
 
 	if genproto.IsNilOrEmpty(x.Name) {
+		genproto.SetValue(x.Name, "goer")
+	}
+
+	if genproto.IsNilOrEmpty(x.Name) {
 		return &genproto.ValidationError{
 			Key:     "Name",
 			Message: "is required",
@@ -224,6 +227,10 @@ func (x *GetImageRequest) validateKey() error {
 
 func (x *GetImageRequest) validateWidth() error {
 
+	if genproto.IsNilOrEmpty(x.Width) {
+		genproto.SetValue(x.Width, 640)
+	}
+
 	if x.GetWidth() <= 0 {
 		return &genproto.ValidationError{
 			Key:     "Width",
@@ -242,6 +249,10 @@ func (x *GetImageRequest) validateWidth() error {
 }
 
 func (x *GetImageRequest) validateHeight() error {
+
+	if genproto.IsNilOrEmpty(x.Height) {
+		genproto.SetValue(x.Height, 480)
+	}
 
 	if x.GetHeight() <= 0 {
 		return &genproto.ValidationError{
@@ -316,6 +327,10 @@ func (x *UploadImageRequest) validateImage() error {
 func (x *UploadImageRequest) validateCategory() error {
 
 	if genproto.IsNilOrEmpty(x.Category) {
+		genproto.SetValue(x.Category, "post")
+	}
+
+	if genproto.IsNilOrEmpty(x.Category) {
 		return &genproto.ValidationError{
 			Key:     "Category",
 			Message: "is required",
@@ -368,6 +383,10 @@ func (x *UpdateProgressRequest) Validate() error {
 }
 
 func (x *UpdateProgressRequest) validateProgress() error {
+
+	if genproto.IsNilOrEmpty(x.Progress) {
+		genproto.SetValue(x.Progress, 0.7)
+	}
 
 	if genproto.IsNilOrEmpty(x.Progress) {
 		return &genproto.ValidationError{
@@ -452,6 +471,10 @@ func (x *QueryRequest) Validate() error {
 
 func (x *QueryRequest) validatePage() error {
 
+	if genproto.IsNilOrEmpty(x.Page) {
+		genproto.SetValue(x.Page, 1)
+	}
+
 	if x.GetPage() <= 0 {
 		return &genproto.ValidationError{
 			Key:     "Page",
@@ -463,6 +486,10 @@ func (x *QueryRequest) validatePage() error {
 }
 
 func (x *QueryRequest) validatePageSize() error {
+
+	if genproto.IsNilOrEmpty(x.PageSize) {
+		genproto.SetValue(x.PageSize, 10)
+	}
 
 	if x.GetPageSize() <= 0 {
 		return &genproto.ValidationError{

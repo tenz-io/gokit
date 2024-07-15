@@ -874,6 +874,9 @@ func SetValue(ptrVal any, newVal any) (newPtrVal any, ok bool) {
 		case reflect.Float64:
 			newInstance = reflect.New(reflect.TypeOf(float64(0))).Elem()
 			newInstance.Set(reflect.ValueOf(newVal))
+		case reflect.String:
+			newInstance = reflect.New(reflect.TypeOf("")).Elem()
+			newInstance.Set(reflect.ValueOf(newVal))
 		default:
 			newInstance = reflect.New(reflect.TypeOf(newVal)).Elem()
 			newInstance.Set(reflect.ValueOf(newVal))
@@ -883,7 +886,6 @@ func SetValue(ptrVal any, newVal any) (newPtrVal any, ok bool) {
 
 	elem := v.Elem()
 	newValReflect := reflect.ValueOf(newVal)
-
 	if !newValReflect.Type().AssignableTo(elem.Type()) {
 		switch elem.Kind() {
 		case reflect.Int32, reflect.Int64:
@@ -894,6 +896,9 @@ func SetValue(ptrVal any, newVal any) (newPtrVal any, ok bool) {
 			return ptrVal, true
 		case reflect.Float32, reflect.Float64:
 			elem.SetFloat(newValReflect.Float())
+			return ptrVal, true
+		case reflect.String:
+			elem.SetString(newValReflect.String())
 			return ptrVal, true
 		default:
 			return nil, false
@@ -925,7 +930,7 @@ func StringMatches(s string, pattern string) bool {
 }
 
 type intTyp interface {
-	int8 | int16 | int32 | int64 | uint8 | uint16 | uint32 | uint64
+	int | int8 | int16 | int32 | int64 | uint | uint8 | uint16 | uint32 | uint64
 }
 
 // IntIn checks if an int is in a list of ints
