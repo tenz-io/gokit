@@ -12,7 +12,6 @@ import (
 )
 
 func TestValidateIntField(t *testing.T) {
-	defaultValue := int64(10)
 	required := true
 	gt := int64(5)
 	gte := int64(6)
@@ -64,11 +63,12 @@ func TestValidateIntField(t *testing.T) {
 		{
 			name: "Nil value with default",
 			fieldIdl: &idl.IntField{
-				Default:  &defaultValue,
 				Required: &required,
 			},
 			fieldName: "Id",
-			val:       &testMsg{},
+			val: &testMsg{
+				Id: proto.Int64(10),
+			},
 			expectErr: false,
 		},
 		{

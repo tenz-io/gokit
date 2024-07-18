@@ -83,19 +83,8 @@ func ValidateIntField(fieldIdl *idl.IntField, fieldName string, msg any) error {
 
 	var (
 		nilField    = isNilField(msg, fieldName)
-		hasDefault  = fieldIdl.Default != nil
-		defaultVal  = fieldIdl.GetDefault()
 		validations = ValidationsError{}
 	)
-
-	if nilField && hasDefault {
-		if err := setDefaultValue(msg, fieldName, defaultVal); err != nil {
-			return &ProtoError{
-				Key:     fieldName,
-				Message: err.Error(),
-			}
-		}
-	}
 
 	var msgVal = reflect.ValueOf(msg)
 	if msgVal.Kind() == reflect.Ptr {
@@ -107,7 +96,7 @@ func ValidateIntField(fieldIdl *idl.IntField, fieldName string, msg any) error {
 		actualVal = getIntFieldVal(field)
 	)
 
-	if fieldIdl.Required != nil && fieldIdl.GetRequired() && !hasDefault && nilField {
+	if fieldIdl.Required != nil && fieldIdl.GetRequired() && nilField {
 		validations = append(validations, &ValidationError{
 			Key:     fieldName,
 			Message: fmt.Sprintf("is required"),
@@ -222,19 +211,8 @@ func ValidateStringField(fieldIdl *idl.StringField, fieldName string, msg any) e
 
 	var (
 		nilField    = isNilField(msg, fieldName)
-		hasDefault  = fieldIdl.Default != nil
-		defaultVal  = fieldIdl.GetDefault()
 		validations = ValidationsError{}
 	)
-
-	if nilField && hasDefault {
-		if err := setDefaultValue(msg, fieldName, defaultVal); err != nil {
-			return &ProtoError{
-				Key:     fieldName,
-				Message: err.Error(),
-			}
-		}
-	}
 
 	var msgVal = reflect.ValueOf(msg)
 	if msgVal.Kind() == reflect.Ptr {
@@ -246,7 +224,7 @@ func ValidateStringField(fieldIdl *idl.StringField, fieldName string, msg any) e
 		actualVal = getStringFieldVal(field)
 	)
 
-	if fieldIdl.Required != nil && fieldIdl.GetRequired() && nilField && !hasDefault {
+	if fieldIdl.Required != nil && fieldIdl.GetRequired() && nilField {
 		validations = append(validations, &ValidationError{
 			Key:     fieldName,
 			Message: fmt.Sprintf("is required"),
@@ -539,20 +517,8 @@ func ValidateFloatField(fieldIdl *idl.FloatField, filedName string, msg any) err
 
 	var (
 		nilField    = isNilField(msg, filedName)
-		hasDefault  = fieldIdl.Default != nil
-		defaultVal  = fieldIdl.GetDefault()
 		validations = ValidationsError{}
 	)
-
-	// fieldVal should be float32, float64 or a pointer to one of these types
-	if nilField && hasDefault {
-		if err := setDefaultValue(msg, filedName, defaultVal); err != nil {
-			return &ProtoError{
-				Key:     filedName,
-				Message: err.Error(),
-			}
-		}
-	}
 
 	var msgVal = reflect.ValueOf(msg)
 	if msgVal.Kind() == reflect.Ptr {
@@ -564,7 +530,7 @@ func ValidateFloatField(fieldIdl *idl.FloatField, filedName string, msg any) err
 		actualVal = getFloatFieldVal(field)
 	)
 
-	if fieldIdl.Required != nil && fieldIdl.GetRequired() && nilField && !hasDefault {
+	if fieldIdl.Required != nil && fieldIdl.GetRequired() && nilField {
 		validations = append(validations, &ValidationError{
 			Key:     filedName,
 			Message: fmt.Sprintf("should not be empty"),
