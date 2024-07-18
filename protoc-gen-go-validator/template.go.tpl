@@ -14,12 +14,6 @@ func (x *{{.MessageName}}) validate{{.FieldName}}() error {
 {{- end}}
 
 {{if .Int}}
-    {{if .Int.Default}}
-    if genproto.IsNilOrEmpty(x.{{.FieldName}}) {
-        genproto.SetValue(x.{{.FieldName}}, {{.Int.Default}})
-    }
-    {{- end}}
-
     {{if .Int.Required}}
     if genproto.IsNilOrEmpty(x.{{.FieldName}}) {
         return &genproto.ValidationError{
@@ -97,12 +91,6 @@ func (x *{{.MessageName}}) validate{{.FieldName}}() error {
 {{- end}}
 
 {{if .Str}}
-    {{if .Str.Default}}
-    if genproto.IsNilOrEmpty(x.{{.FieldName}}) {
-        genproto.SetValue(x.{{.FieldName}}, "{{.Str.Default}}")
-    }
-    {{- end}}
-
     {{if .Str.Required}}
     if genproto.IsNilOrEmpty(x.{{.FieldName}}) {
         return &genproto.ValidationError{
@@ -164,12 +152,6 @@ func (x *{{.MessageName}}) validate{{.FieldName}}() error {
 {{- end}}
 
 {{if .Float}}
-    {{if .Float.Default}}
-    if genproto.IsNilOrEmpty(x.{{.FieldName}}) {
-        genproto.SetValue(x.{{.FieldName}}, {{.Float.Default}})
-    }
-    {{- end}}
-
     {{if .Float.Required}}
     if genproto.IsNilOrEmpty(x.{{.FieldName}}) {
         return &genproto.ValidationError{
