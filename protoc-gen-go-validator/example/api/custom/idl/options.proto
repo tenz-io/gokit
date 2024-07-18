@@ -56,36 +56,33 @@ message Field {
 }
 
 message IntField {
-  optional int64 default = 1; // default value
-  optional bool required = 2; // required, can not be nil
-  optional int64 gt = 3; // greater than
-  optional int64 gte = 4; // greater than or equal
-  optional int64 lt = 5; // less than
-  optional int64 lte = 6; // less than or equal
-  optional int64 eq = 7; // equal
-  optional int64 ne = 8; // not equal
-  repeated int64 in = 9; // in list
-  repeated int64 not_in = 10; // not in list
+  optional bool required = 1; // required, can not be nil
+  optional int64 gt = 2; // greater than
+  optional int64 gte = 3; // greater than or equal
+  optional int64 lt = 4; // less than
+  optional int64 lte = 5; // less than or equal
+  optional int64 eq = 6; // equal
+  optional int64 ne = 7; // not equal
+  repeated int64 in = 8; // in list
+  repeated int64 not_in = 9; // not in list
 }
 
 message FloatField {
-  optional double default = 1; // default value
-  optional bool required = 2; // required, can not be nil
-  optional double gt = 3; // greater than
-  optional double gte = 4; // greater than or equal
-  optional double lt = 5; // less than
-  optional double lte = 6; // less than or equal
+  optional bool required = 1; // required, can not be nil
+  optional double gt = 2; // greater than
+  optional double gte = 3; // greater than or equal
+  optional double lt = 4; // less than
+  optional double lte = 5; // less than or equal
 }
 
 message StringField {
-  optional string default = 1; // default value
-  optional bool required = 2; // required, can not be nil or empty
-  optional bool not_blank = 3; // not blank, can not be blank string, such as " ", "\t", "\n"
-  optional int64 min_len = 4; // min length
-  optional int64 max_len = 5; // max length
-  repeated string in = 6; // in list
-  repeated string not_in = 7; // not in list
-  optional string pattern = 8; // regex pattern
+  optional bool required = 1; // required, can not be nil or empty
+  optional bool not_blank = 2; // not blank, can not be blank string, such as " ", "\t", "\n"
+  optional int64 min_len = 3; // min length
+  optional int64 max_len = 4; // max length
+  repeated string in = 5; // in list
+  repeated string not_in = 6; // not in list
+  optional string pattern = 7; // regex pattern
 }
 
 message BytesField {

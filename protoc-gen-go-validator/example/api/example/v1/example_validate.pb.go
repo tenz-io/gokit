@@ -35,6 +35,13 @@ func (x *LoginRequest) Validate() error {
 
 func (x *LoginRequest) validateUsername() error {
 
+	if genproto.IsNilOrEmpty(x.Username) {
+		return &genproto.ValidationError{
+			Key:     "Username",
+			Message: "is required",
+		}
+	}
+
 	if strings.TrimSpace(x.GetUsername()) == "" {
 		return &genproto.ValidationError{
 			Key:     "Username",
@@ -42,17 +49,17 @@ func (x *LoginRequest) validateUsername() error {
 		}
 	}
 
-	if len(x.GetUsername()) < 1 {
+	if len(x.GetUsername()) < 2 {
 		return &genproto.ValidationError{
 			Key:     "Username",
-			Message: fmt.Sprintf("must be at least %d characters long", 1),
+			Message: fmt.Sprintf("must be at least %d characters long", 2),
 		}
 	}
 
-	if len(x.GetUsername()) > 2 {
+	if len(x.GetUsername()) > 64 {
 		return &genproto.ValidationError{
 			Key:     "Username",
-			Message: fmt.Sprintf("must be at most %d characters long", 2),
+			Message: fmt.Sprintf("must be at most %d characters long", 64),
 		}
 	}
 
@@ -61,6 +68,13 @@ func (x *LoginRequest) validateUsername() error {
 
 func (x *LoginRequest) validatePassword() error {
 
+	if genproto.IsNilOrEmpty(x.Password) {
+		return &genproto.ValidationError{
+			Key:     "Password",
+			Message: "is required",
+		}
+	}
+
 	if strings.TrimSpace(x.GetPassword()) == "" {
 		return &genproto.ValidationError{
 			Key:     "Password",
@@ -68,17 +82,17 @@ func (x *LoginRequest) validatePassword() error {
 		}
 	}
 
-	if len(x.GetPassword()) < 1 {
+	if len(x.GetPassword()) < 6 {
 		return &genproto.ValidationError{
 			Key:     "Password",
-			Message: fmt.Sprintf("must be at least %d characters long", 1),
+			Message: fmt.Sprintf("must be at least %d characters long", 6),
 		}
 	}
 
-	if len(x.GetPassword()) > 6 {
+	if len(x.GetPassword()) > 64 {
 		return &genproto.ValidationError{
 			Key:     "Password",
-			Message: fmt.Sprintf("must be at most %d characters long", 6),
+			Message: fmt.Sprintf("must be at most %d characters long", 64),
 		}
 	}
 
@@ -119,6 +133,13 @@ func (x *HelloRequest) Validate() error {
 
 func (x *HelloRequest) validateName() error {
 
+	if genproto.IsNilOrEmpty(x.Name) {
+		return &genproto.ValidationError{
+			Key:     "Name",
+			Message: "is required",
+		}
+	}
+
 	if strings.TrimSpace(x.GetName()) == "" {
 		return &genproto.ValidationError{
 			Key:     "Name",
@@ -126,17 +147,17 @@ func (x *HelloRequest) validateName() error {
 		}
 	}
 
-	if len(x.GetName()) < 1 {
+	if len(x.GetName()) < 2 {
 		return &genproto.ValidationError{
 			Key:     "Name",
-			Message: fmt.Sprintf("must be at least %d characters long", 1),
+			Message: fmt.Sprintf("must be at least %d characters long", 2),
 		}
 	}
 
-	if len(x.GetName()) > 2 {
+	if len(x.GetName()) > 64 {
 		return &genproto.ValidationError{
 			Key:     "Name",
-			Message: fmt.Sprintf("must be at most %d characters long", 2),
+			Message: fmt.Sprintf("must be at most %d characters long", 64),
 		}
 	}
 
@@ -176,6 +197,13 @@ func (x *GetImageRequest) Validate() error {
 
 func (x *GetImageRequest) validateKey() error {
 
+	if genproto.IsNilOrEmpty(x.Key) {
+		return &genproto.ValidationError{
+			Key:     "Key",
+			Message: "is required",
+		}
+	}
+
 	if strings.TrimSpace(x.GetKey()) == "" {
 		return &genproto.ValidationError{
 			Key:     "Key",
@@ -183,10 +211,10 @@ func (x *GetImageRequest) validateKey() error {
 		}
 	}
 
-	if len(x.GetKey()) < 1 {
+	if len(x.GetKey()) > 64 {
 		return &genproto.ValidationError{
 			Key:     "Key",
-			Message: fmt.Sprintf("must be at least %d characters long", 1),
+			Message: fmt.Sprintf("must be at most %d characters long", 64),
 		}
 	}
 
@@ -195,24 +223,17 @@ func (x *GetImageRequest) validateKey() error {
 
 func (x *GetImageRequest) validateWidth() error {
 
-	if genproto.IsNilOrEmpty(x.Width) {
+	if x.GetWidth() <= 0 {
 		return &genproto.ValidationError{
 			Key:     "Width",
-			Message: "is required",
+			Message: fmt.Sprintf("must be greater than %d", 0),
 		}
 	}
 
-	if x.GetWidth() < 0 {
+	if x.GetWidth() > 1024 {
 		return &genproto.ValidationError{
 			Key:     "Width",
-			Message: fmt.Sprintf("must be greater than or equal to %d", 0),
-		}
-	}
-
-	if x.GetWidth() != 1024 {
-		return &genproto.ValidationError{
-			Key:     "Width",
-			Message: fmt.Sprintf("must be equal to %d", 1024),
+			Message: fmt.Sprintf("must be less than or equal to %d", 1024),
 		}
 	}
 
@@ -221,24 +242,17 @@ func (x *GetImageRequest) validateWidth() error {
 
 func (x *GetImageRequest) validateHeight() error {
 
-	if genproto.IsNilOrEmpty(x.Height) {
+	if x.GetHeight() <= 0 {
 		return &genproto.ValidationError{
 			Key:     "Height",
-			Message: "is required",
+			Message: fmt.Sprintf("must be greater than %d", 0),
 		}
 	}
 
-	if x.GetHeight() < 0 {
+	if x.GetHeight() > 1024 {
 		return &genproto.ValidationError{
 			Key:     "Height",
-			Message: fmt.Sprintf("must be greater than or equal to %d", 0),
-		}
-	}
-
-	if x.GetHeight() != 1024 {
-		return &genproto.ValidationError{
-			Key:     "Height",
-			Message: fmt.Sprintf("must be equal to %d", 1024),
+			Message: fmt.Sprintf("must be less than or equal to %d", 1024),
 		}
 	}
 
@@ -300,6 +314,13 @@ func (x *UploadImageRequest) validateImage() error {
 
 func (x *UploadImageRequest) validateCategory() error {
 
+	if genproto.IsNilOrEmpty(x.Category) {
+		return &genproto.ValidationError{
+			Key:     "Category",
+			Message: "is required",
+		}
+	}
+
 	if strings.TrimSpace(x.GetCategory()) == "" {
 		return &genproto.ValidationError{
 			Key:     "Category",
@@ -307,18 +328,11 @@ func (x *UploadImageRequest) validateCategory() error {
 		}
 	}
 
-	if len(x.GetCategory()) < 1 {
+	inList := []string{"avatar", "background", "post"}
+	if !genproto.StringIn(x.GetCategory(), inList) {
 		return &genproto.ValidationError{
 			Key:     "Category",
-			Message: fmt.Sprintf("must be at least %d characters long", 1),
-		}
-	}
-
-	notInList := []string{"avatar", "background", "post"}
-	if genproto.StringIn(x.GetCategory(), notInList) {
-		return &genproto.ValidationError{
-			Key:     "Category",
-			Message: fmt.Sprintf("must not be one of %v", notInList),
+			Message: fmt.Sprintf("must be one of %v", inList),
 		}
 	}
 
@@ -354,10 +368,24 @@ func (x *UpdateProgressRequest) Validate() error {
 
 func (x *UpdateProgressRequest) validateProgress() error {
 
-	if x.GetProgress() >= 0 {
+	if genproto.IsNilOrEmpty(x.Progress) {
 		return &genproto.ValidationError{
 			Key:     "Progress",
-			Message: fmt.Sprintf("must be less than %f", 0),
+			Message: "is required",
+		}
+	}
+
+	if x.GetProgress() < 0 {
+		return &genproto.ValidationError{
+			Key:     "Progress",
+			Message: fmt.Sprintf("must be greater than or equal to %f", 0),
+		}
+	}
+
+	if x.GetProgress() > 1 {
+		return &genproto.ValidationError{
+			Key:     "Progress",
+			Message: fmt.Sprintf("must be less than or equal to %f", 1),
 		}
 	}
 
@@ -423,17 +451,10 @@ func (x *QueryRequest) Validate() error {
 
 func (x *QueryRequest) validatePage() error {
 
-	if genproto.IsNilOrEmpty(x.Page) {
+	if x.GetPage() <= 0 {
 		return &genproto.ValidationError{
 			Key:     "Page",
-			Message: "is required",
-		}
-	}
-
-	if x.GetPage() < 0 {
-		return &genproto.ValidationError{
-			Key:     "Page",
-			Message: fmt.Sprintf("must be greater than or equal to %d", 0),
+			Message: fmt.Sprintf("must be greater than %d", 0),
 		}
 	}
 
@@ -442,24 +463,17 @@ func (x *QueryRequest) validatePage() error {
 
 func (x *QueryRequest) validatePageSize() error {
 
-	if genproto.IsNilOrEmpty(x.PageSize) {
+	if x.GetPageSize() <= 0 {
 		return &genproto.ValidationError{
 			Key:     "PageSize",
-			Message: "is required",
+			Message: fmt.Sprintf("must be greater than %d", 0),
 		}
 	}
 
-	if x.GetPageSize() < 0 {
+	if x.GetPageSize() > 100 {
 		return &genproto.ValidationError{
 			Key:     "PageSize",
-			Message: fmt.Sprintf("must be greater than or equal to %d", 0),
-		}
-	}
-
-	if x.GetPageSize() != 100 {
-		return &genproto.ValidationError{
-			Key:     "PageSize",
-			Message: fmt.Sprintf("must be equal to %d", 100),
+			Message: fmt.Sprintf("must be less than or equal to %d", 100),
 		}
 	}
 
@@ -488,6 +502,13 @@ func (x *QueryMatch) Validate() error {
 
 func (x *QueryMatch) validateKey() error {
 
+	if genproto.IsNilOrEmpty(x.Key) {
+		return &genproto.ValidationError{
+			Key:     "Key",
+			Message: "is required",
+		}
+	}
+
 	if strings.TrimSpace(x.GetKey()) == "" {
 		return &genproto.ValidationError{
 			Key:     "Key",
@@ -502,18 +523,18 @@ func (x *QueryMatch) validateKey() error {
 		}
 	}
 
-	if len(x.GetKey()) > 1 {
+	if len(x.GetKey()) > 64 {
 		return &genproto.ValidationError{
 			Key:     "Key",
-			Message: fmt.Sprintf("must be at most %d characters long", 1),
+			Message: fmt.Sprintf("must be at most %d characters long", 64),
 		}
 	}
 
-	notInList := []string{"name", "title", "content"}
-	if genproto.StringIn(x.GetKey(), notInList) {
+	inList := []string{"name", "title", "content"}
+	if !genproto.StringIn(x.GetKey(), inList) {
 		return &genproto.ValidationError{
 			Key:     "Key",
-			Message: fmt.Sprintf("must not be one of %v", notInList),
+			Message: fmt.Sprintf("must be one of %v", inList),
 		}
 	}
 
@@ -521,6 +542,13 @@ func (x *QueryMatch) validateKey() error {
 }
 
 func (x *QueryMatch) validateValue() error {
+
+	if len(x.GetValue()) > 128 {
+		return &genproto.ValidationError{
+			Key:     "Value",
+			Message: fmt.Sprintf("must be at most %d characters long", 128),
+		}
+	}
 
 	return nil
 }
