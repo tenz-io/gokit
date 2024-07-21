@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"html/template"
 	"strings"
+
+	"github.com/tenz-io/gokit/genproto/go/custom/idl"
+	"github.com/tenz-io/gokit/ginext"
 )
 
 //go:embed template.go.tpl
@@ -18,6 +21,18 @@ type service struct {
 
 	Methods   []*method
 	MethodSet map[string]*method
+}
+
+type fieldData struct {
+	MessageName string
+	FieldName   string
+	IsMessage   bool
+	Bind        string
+	Uri         *idl.Field_Uri
+	Query       *idl.Field_Query
+	Header      *idl.Field_Header
+	Form        *idl.Field_Form
+	File        *idl.Field_File
 }
 
 func (s *service) execute() string {
@@ -54,8 +69,8 @@ type method struct {
 	Method       string // HTTP Method
 	Body         string
 	ResponseBody string
-	Role         int32 // auth role: 0 anonymous, 1 admin, 2 user
-	AuthType     int32 // auth type: 0 web, 1 rest
+	Role         ginext.RoleType // auth role: 0 anonymous, 1 admin, 2 user
+	AuthType     ginext.AuthType // auth type: 0 web, 1 rest
 }
 
 // HandlerName for gin handler name

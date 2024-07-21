@@ -14,45 +14,45 @@ import (
 // context.metadata.
 // gin.ginext.
 
-type BlogServiceHTTPServer interface {
-	CreateArticle(context.Context, *CreateArticleReq) (*CreateArticleResp, error)
+type ApiServerHTTPServer interface {
+	GetImage(context.Context, *GetImageRequest) (*GetImageResponse, error)
 
-	GetArticles(context.Context, *GetArticlesReq) (*GetArticlesResp, error)
+	Hello(context.Context, *HelloRequest) (*HelloResponse, error)
 
-	GetImage(context.Context, *GetImageReq) (*GetImageResp, error)
+	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 
-	Login(context.Context, *LoginReq) (*LoginResp, error)
+	Query(context.Context, *QueryRequest) (*QueryResponse, error)
 
-	Refresh(context.Context, *RefreshReq) (*RefreshResp, error)
+	UpdateProgress(context.Context, *UpdateProgressRequest) (*UpdateProgressResponse, error)
 
-	UploadImage(context.Context, *UploadImageReq) (*UploadImageResp, error)
+	UploadImage(context.Context, *UploadImageRequest) (*UploadImageResponse, error)
 }
 
-func RegisterBlogServiceHTTPServer(r gin.IRouter, srv BlogServiceHTTPServer) {
-	s := BlogService{
+func RegisterApiServerHTTPServer(r gin.IRouter, srv ApiServerHTTPServer) {
+	s := ApiServer{
 		server: srv,
 		router: r,
 	}
 	s.RegisterService()
 }
 
-type BlogService struct {
-	server BlogServiceHTTPServer
+type ApiServer struct {
+	server ApiServerHTTPServer
 	router gin.IRouter
 }
 
-func (s *BlogService) Login_0(ctx *gin.Context) {
-	var in LoginReq
+func (s *ApiServer) Login_0(ctx *gin.Context) {
+	var in LoginRequest
 	if err := ginext.BindAndValidate(ctx, &in); err != nil {
 		ginext.ErrorResponse(ctx, err)
 		return
 	}
 
 	var handler ginext.RpcHandler = func(ctx context.Context, req any) (resp any, err error) {
-		return s.server.(BlogServiceHTTPServer).Login(ctx, req.(*LoginReq))
+		return s.server.(ApiServerHTTPServer).Login(ctx, req.(*LoginRequest))
 	}
 
-	md := metadata.New(ctx, "BlogServiceHTTPServer.Login")
+	md := metadata.New(ctx, "ApiServerHTTPServer.Login")
 	newCtx := metadata.WithMetadata(ctx.Request.Context(), md)
 	out, err := ginext.AllRpcInterceptor.Intercept(newCtx, &in, handler)
 	if err != nil {
@@ -63,18 +63,18 @@ func (s *BlogService) Login_0(ctx *gin.Context) {
 	ginext.Response(ctx, out)
 }
 
-func (s *BlogService) Refresh_0(ctx *gin.Context) {
-	var in RefreshReq
+func (s *ApiServer) Hello_0(ctx *gin.Context) {
+	var in HelloRequest
 	if err := ginext.BindAndValidate(ctx, &in); err != nil {
 		ginext.ErrorResponse(ctx, err)
 		return
 	}
 
 	var handler ginext.RpcHandler = func(ctx context.Context, req any) (resp any, err error) {
-		return s.server.(BlogServiceHTTPServer).Refresh(ctx, req.(*RefreshReq))
+		return s.server.(ApiServerHTTPServer).Hello(ctx, req.(*HelloRequest))
 	}
 
-	md := metadata.New(ctx, "BlogServiceHTTPServer.Refresh")
+	md := metadata.New(ctx, "ApiServerHTTPServer.Hello")
 	newCtx := metadata.WithMetadata(ctx.Request.Context(), md)
 	out, err := ginext.AllRpcInterceptor.Intercept(newCtx, &in, handler)
 	if err != nil {
@@ -85,18 +85,18 @@ func (s *BlogService) Refresh_0(ctx *gin.Context) {
 	ginext.Response(ctx, out)
 }
 
-func (s *BlogService) GetArticles_0(ctx *gin.Context) {
-	var in GetArticlesReq
+func (s *ApiServer) GetImage_0(ctx *gin.Context) {
+	var in GetImageRequest
 	if err := ginext.BindAndValidate(ctx, &in); err != nil {
 		ginext.ErrorResponse(ctx, err)
 		return
 	}
 
 	var handler ginext.RpcHandler = func(ctx context.Context, req any) (resp any, err error) {
-		return s.server.(BlogServiceHTTPServer).GetArticles(ctx, req.(*GetArticlesReq))
+		return s.server.(ApiServerHTTPServer).GetImage(ctx, req.(*GetImageRequest))
 	}
 
-	md := metadata.New(ctx, "BlogServiceHTTPServer.GetArticles")
+	md := metadata.New(ctx, "ApiServerHTTPServer.GetImage")
 	newCtx := metadata.WithMetadata(ctx.Request.Context(), md)
 	out, err := ginext.AllRpcInterceptor.Intercept(newCtx, &in, handler)
 	if err != nil {
@@ -107,18 +107,18 @@ func (s *BlogService) GetArticles_0(ctx *gin.Context) {
 	ginext.Response(ctx, out)
 }
 
-func (s *BlogService) CreateArticle_0(ctx *gin.Context) {
-	var in CreateArticleReq
+func (s *ApiServer) UploadImage_0(ctx *gin.Context) {
+	var in UploadImageRequest
 	if err := ginext.BindAndValidate(ctx, &in); err != nil {
 		ginext.ErrorResponse(ctx, err)
 		return
 	}
 
 	var handler ginext.RpcHandler = func(ctx context.Context, req any) (resp any, err error) {
-		return s.server.(BlogServiceHTTPServer).CreateArticle(ctx, req.(*CreateArticleReq))
+		return s.server.(ApiServerHTTPServer).UploadImage(ctx, req.(*UploadImageRequest))
 	}
 
-	md := metadata.New(ctx, "BlogServiceHTTPServer.CreateArticle")
+	md := metadata.New(ctx, "ApiServerHTTPServer.UploadImage")
 	newCtx := metadata.WithMetadata(ctx.Request.Context(), md)
 	out, err := ginext.AllRpcInterceptor.Intercept(newCtx, &in, handler)
 	if err != nil {
@@ -129,18 +129,18 @@ func (s *BlogService) CreateArticle_0(ctx *gin.Context) {
 	ginext.Response(ctx, out)
 }
 
-func (s *BlogService) UploadImage_0(ctx *gin.Context) {
-	var in UploadImageReq
+func (s *ApiServer) UpdateProgress_0(ctx *gin.Context) {
+	var in UpdateProgressRequest
 	if err := ginext.BindAndValidate(ctx, &in); err != nil {
 		ginext.ErrorResponse(ctx, err)
 		return
 	}
 
 	var handler ginext.RpcHandler = func(ctx context.Context, req any) (resp any, err error) {
-		return s.server.(BlogServiceHTTPServer).UploadImage(ctx, req.(*UploadImageReq))
+		return s.server.(ApiServerHTTPServer).UpdateProgress(ctx, req.(*UpdateProgressRequest))
 	}
 
-	md := metadata.New(ctx, "BlogServiceHTTPServer.UploadImage")
+	md := metadata.New(ctx, "ApiServerHTTPServer.UpdateProgress")
 	newCtx := metadata.WithMetadata(ctx.Request.Context(), md)
 	out, err := ginext.AllRpcInterceptor.Intercept(newCtx, &in, handler)
 	if err != nil {
@@ -151,18 +151,18 @@ func (s *BlogService) UploadImage_0(ctx *gin.Context) {
 	ginext.Response(ctx, out)
 }
 
-func (s *BlogService) GetImage_0(ctx *gin.Context) {
-	var in GetImageReq
+func (s *ApiServer) Query_0(ctx *gin.Context) {
+	var in QueryRequest
 	if err := ginext.BindAndValidate(ctx, &in); err != nil {
 		ginext.ErrorResponse(ctx, err)
 		return
 	}
 
 	var handler ginext.RpcHandler = func(ctx context.Context, req any) (resp any, err error) {
-		return s.server.(BlogServiceHTTPServer).GetImage(ctx, req.(*GetImageReq))
+		return s.server.(ApiServerHTTPServer).Query(ctx, req.(*QueryRequest))
 	}
 
-	md := metadata.New(ctx, "BlogServiceHTTPServer.GetImage")
+	md := metadata.New(ctx, "ApiServerHTTPServer.Query")
 	newCtx := metadata.WithMetadata(ctx.Request.Context(), md)
 	out, err := ginext.AllRpcInterceptor.Intercept(newCtx, &in, handler)
 	if err != nil {
@@ -173,18 +173,18 @@ func (s *BlogService) GetImage_0(ctx *gin.Context) {
 	ginext.Response(ctx, out)
 }
 
-func (s *BlogService) RegisterService() {
+func (s *ApiServer) RegisterService() {
 
-	s.router.Handle("POST", "/login", ginext.Authenticate(0, 0), s.Login_0)
+	s.router.Handle("POST", "/api/login", ginext.Authenticate(0, 0), s.Login_0)
 
-	s.router.Handle("POST", "/refresh", ginext.Authenticate(0, 0), s.Refresh_0)
+	s.router.Handle("GET", "/api/hello", ginext.Authenticate(2, 1), s.Hello_0)
 
-	s.router.Handle("GET", "/v1/author/:author_id/articles", ginext.Authenticate(2, 1), s.GetArticles_0)
+	s.router.Handle("GET", "/api/image/:key", ginext.Authenticate(2, 1), s.GetImage_0)
 
-	s.router.Handle("POST", "/v1/author/:author_id/articles", ginext.Authenticate(1, 0), s.CreateArticle_0)
+	s.router.Handle("POST", "/api/upload/image", ginext.Authenticate(2, 1), s.UploadImage_0)
 
-	s.router.Handle("POST", "/v1/images/:key", ginext.Authenticate(1, 0), s.UploadImage_0)
+	s.router.Handle("POST", "/api/update/progress", ginext.Authenticate(2, 1), s.UpdateProgress_0)
 
-	s.router.Handle("GET", "/v1/images/:key", ginext.Authenticate(2, 1), s.GetImage_0)
+	s.router.Handle("POST", "/api/query", ginext.Authenticate(2, 1), s.Query_0)
 
 }

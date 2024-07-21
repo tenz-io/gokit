@@ -2,12 +2,12 @@ package main
 
 import (
 	"github.com/tenz-io/gokit/ginext"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"net/http"
 	"regexp"
 	"strings"
 
-	"github.com/tenz-io/gokit/genproto/go/custom/common"
-	"google.golang.org/genproto/googleapis/api/annotations"
+	"github.com/tenz-io/gokit/genproto/go/custom/idl"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/descriptorpb"
@@ -40,13 +40,13 @@ func generateFile(gen *protogen.Plugin, file *protogen.File) *protogen.Generated
 	g.P("// ", ginPkg.Ident(""), ginextPkg.Ident(""))
 	g.P()
 
-	for _, service := range file.Services {
-		genService(gen, file, g, service)
+	for _, srv := range file.Services {
+		genService(gen, file, g, srv)
 	}
 	return g
 }
 
-func genService(gen *protogen.Plugin, file *protogen.File, g *protogen.GeneratedFile, s *protogen.Service) {
+func genService(_ *protogen.Plugin, file *protogen.File, g *protogen.GeneratedFile, s *protogen.Service) {
 	if s.Desc.Options().(*descriptorpb.ServiceOptions).GetDeprecated() {
 		g.P("//")
 		g.P(deprecationComment)
@@ -66,33 +66,77 @@ func genService(gen *protogen.Plugin, file *protogen.File, g *protogen.Generated
 
 func genMethod(m *protogen.Method) []*method {
 	var (
-		methods  []*method
-		role     = ginext.RoleAnonymous
-		authType = ginext.AuthTypeWeb
+		methods []*method
 	)
 
-	if auth, ok := proto.GetExtension(m.Desc.Options(), common.E_Auth).(*common.Auth); ok {
-		role = int32(auth.GetRole())
-		authType = int32(auth.GetType())
-	}
-
-	rule, ok := proto.GetExtension(m.Desc.Options(), annotations.E_Http).(*annotations.HttpRule)
-	if rule != nil && ok {
-		for _, bind := range rule.AdditionalBindings {
-			methods = append(methods, buildHTTPRule(m, bind, role, authType))
-		}
-		methods = append(methods, buildHTTPRule(m, rule, role, authType))
-		return methods
-	}
-
-	// default method
-	methods = append(methods, defaultMethod(m))
+	methods = append(methods, buildHTTPRule(m))
 	return methods
 }
 
-// defaultMethodPath 根据函数名生成 http 路由
-// 例如: GetBlogArticles ==> get: /blog/articles
-// 如果方法名首个单词不是 http method 映射，那么默认返回 POST
+func msgFields(msgName string, msg *protogen.Message) []fieldData {
+	var fields []fieldData
+	for _, field := range msg.Fields {
+		if field.Desc.Kind() == protoreflect.MessageKind {
+			fields = append(fields, fieldData{
+				MessageName: msgName,
+				FieldName:   field.GoName,
+				IsMessage:   true,
+			})
+
+			continue
+		}
+
+		options := proto.GetExtension(field.Desc.Options(), idl.E_Field)
+		if options == nil {
+			continue
+		}
+		fieldOpts, ok := options.(*idl.Field)
+		if !ok {
+			continue
+		}
+
+		fd := fieldData{
+			MessageName: msgName,
+			FieldName:   field.GoName,
+			IsMessage:   false,
+		}
+		setFieldData(&fd, fieldOpts)
+		fields = append(fields, fd)
+
+	}
+
+	return fields
+}
+
+func setFieldData(field *fieldData, fdOpt *idl.Field) {
+	if fdOpt.GetBind() == nil {
+		return
+	}
+
+	switch bind := fdOpt.GetBind().(type) {
+	case *idl.Field_Uri:
+		field.Uri = bind
+		field.Bind = bind.Uri
+	case *idl.Field_Query:
+		field.Query = bind
+		field.Bind = bind.Query
+	case *idl.Field_Header:
+		field.Header = bind
+		field.Bind = bind.Header
+	case *idl.Field_Form:
+		field.Form = bind
+		field.Bind = bind.Form
+	case *idl.Field_File:
+		field.File = bind
+		field.Bind = bind.File
+	default:
+	}
+
+}
+
+// defaultMethodPath generates default path for method
+// eg: GetBlogArticles ==> get: /blog/articles
+// if method name contains http method, use it as prefix
 func defaultMethod(m *protogen.Method) *method {
 	names := strings.Split(toSnakeCase(m.GoName), "_")
 	var (
@@ -125,41 +169,52 @@ func defaultMethod(m *protogen.Method) *method {
 		path = strings.Join(names[1:], "/")
 	}
 
-	md := buildMethodDesc(m, httpMethod, path, ginext.RoleAnonymous, ginext.AuthTypeWeb)
+	md := buildMethodDesc(m, httpMethod, path, idl.Method_ANONYMOUS, idl.Method_WEB)
 	md.Body = "*"
 	return md
 }
 
-func buildHTTPRule(m *protogen.Method, rule *annotations.HttpRule, role, authType int32) *method {
+func buildHTTPRule(m *protogen.Method) *method {
+	options := proto.GetExtension(m.Desc.Options(), idl.E_Method)
+	if options == nil {
+		return defaultMethod(m)
+	}
+	methodOpts, ok := options.(*idl.Method)
+	if !ok {
+		return defaultMethod(m)
+	}
+
 	var (
 		path       string
 		httpMethod string
+		role       = methodOpts.GetRole()
+		authType   = methodOpts.GetType()
 	)
-	switch pattern := rule.Pattern.(type) {
-	case *annotations.HttpRule_Get:
-		path = pattern.Get
+	switch route := methodOpts.GetRoute().(type) {
+	case *idl.Method_Get:
+		path = route.Get
 		httpMethod = "GET"
-	case *annotations.HttpRule_Put:
-		path = pattern.Put
+	case *idl.Method_Put:
+		path = route.Put
 		httpMethod = "PUT"
-	case *annotations.HttpRule_Post:
-		path = pattern.Post
+	case *idl.Method_Post:
+		path = route.Post
 		httpMethod = "POST"
-	case *annotations.HttpRule_Delete:
-		path = pattern.Delete
+	case *idl.Method_Delete:
+		path = route.Delete
 		httpMethod = "DELETE"
-	case *annotations.HttpRule_Patch:
-		path = pattern.Patch
+	case *idl.Method_Patch:
+		path = route.Patch
 		httpMethod = "PATCH"
-	case *annotations.HttpRule_Custom:
-		path = pattern.Custom.Path
-		httpMethod = pattern.Custom.Kind
+	default:
+		panic("unknown http method")
 	}
+
 	md := buildMethodDesc(m, httpMethod, path, role, authType)
 	return md
 }
 
-func buildMethodDesc(m *protogen.Method, httpMethod, path string, role, authType int32) *method {
+func buildMethodDesc(m *protogen.Method, httpMethod, path string, role idl.Method_AuthRole, authType idl.Method_AuthType) *method {
 	defer func() { methodSets[m.GoName]++ }()
 	md := &method{
 		Name:     m.GoName,
@@ -168,8 +223,8 @@ func buildMethodDesc(m *protogen.Method, httpMethod, path string, role, authType
 		Reply:    m.Output.GoIdent.GoName,
 		Path:     path,
 		Method:   httpMethod,
-		Role:     role,
-		AuthType: authType,
+		Role:     toRoleType(role),
+		AuthType: toAuthType(authType),
 	}
 	md.initPathParams()
 	return md
@@ -183,4 +238,28 @@ func toSnakeCase(input string) string {
 	output = matchAllCap.ReplaceAllString(output, "${1}_${2}")
 	output = strings.ReplaceAll(output, "-", "_")
 	return strings.ToLower(output)
+}
+
+func toRoleType(roleType idl.Method_AuthRole) ginext.RoleType {
+	switch roleType {
+	case idl.Method_ANONYMOUS:
+		return ginext.RoleAnonymous
+	case idl.Method_ADMIN:
+		return ginext.RoleAdmin
+	case idl.Method_USER:
+		return ginext.RoleUser
+	default:
+		panic("unknown role type")
+	}
+}
+
+func toAuthType(authType idl.Method_AuthType) ginext.AuthType {
+	switch authType {
+	case idl.Method_WEB:
+		return ginext.AuthTypeWeb
+	case idl.Method_REST:
+		return ginext.AuthTypeRest
+	default:
+		panic("unknown auth type")
+	}
 }

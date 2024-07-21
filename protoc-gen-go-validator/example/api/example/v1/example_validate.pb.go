@@ -378,14 +378,14 @@ func (x *UpdateProgressRequest) validateProgress() error {
 	if x.GetProgress() < 0 {
 		return &genproto.ValidationError{
 			Key:     "Progress",
-			Message: fmt.Sprintf("must be greater than or equal to %f", 0),
+			Message: fmt.Sprintf("must be greater than or equal to %v", 0),
 		}
 	}
 
 	if x.GetProgress() > 1 {
 		return &genproto.ValidationError{
 			Key:     "Progress",
-			Message: fmt.Sprintf("must be less than or equal to %f", 1),
+			Message: fmt.Sprintf("must be less than or equal to %v", 1),
 		}
 	}
 

@@ -1,0 +1,217 @@
+syntax = "proto3";
+
+option go_package = "github.com/tenz-io/gokit/protoc-gen-go-gin/example/go/example/v1;v1";
+
+package example.v1;
+
+import "custom/idl/options.proto";
+
+
+service ApiServer {
+  rpc Login(LoginRequest) returns (LoginResponse) {
+    option (custom.idl.method) = {
+      post: "/api/login"
+      role: ANONYMOUS
+    };
+  }
+  rpc Hello(HelloRequest) returns (HelloResponse) {
+    option (custom.idl.method) = {
+      get: "/api/hello"
+      role: USER
+      type: REST
+    };
+  }
+  rpc GetImage(GetImageRequest) returns (GetImageResponse) {
+    option (custom.idl.method) = {
+      get: "/api/image/{key}"
+      role: USER
+      type: REST
+    };
+  }
+  rpc UploadImage(UploadImageRequest) returns (UploadImageResponse) {
+    option (custom.idl.method) = {
+      post: "/api/upload/image"
+      role: USER
+      type: REST
+    };
+  }
+  rpc UpdateProgress(UpdateProgressRequest) returns (UpdateProgressResponse) {
+    option (custom.idl.method) = {
+      post: "/api/update/progress"
+      role: USER
+      type: REST
+    };
+  }
+  rpc Query(QueryRequest) returns (QueryResponse) {
+    option (custom.idl.method) = {
+      post: "/api/query"
+      role: USER
+      type: REST
+    };
+  }
+}
+
+message LoginRequest {
+  string username = 1[(custom.idl.field) = {
+    form: "username"
+    str: {
+      required: true
+      not_blank: true
+      min_len: 2
+      max_len: 64
+    }
+  }];
+  string password = 2[(custom.idl.field) = {
+    form: "password"
+    str: {
+      required: true
+      not_blank: true
+      min_len: 6
+      max_len: 64
+    }
+  }];
+}
+
+message LoginResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+}
+
+message HelloRequest {
+  optional string name = 1[(custom.idl.field) = {
+    query: "name"
+    str: {
+      required: true
+      not_blank: true
+      min_len: 2
+      max_len: 64
+    }
+  }];
+}
+
+message HelloResponse {
+  string message = 1;
+}
+
+message GetImageRequest {
+  string key = 1[(custom.idl.field) = {
+    uri: "key"
+    str: {
+      required: true
+      not_blank: true
+      max_len: 64
+    }
+  }];
+  optional int64 width = 2[(custom.idl.field) = {
+    query: "width"
+    int: {
+      gt: 0
+      lte: 1024
+    }
+  }];
+  optional int64 height = 3[(custom.idl.field) = {
+    query: "height"
+    int: {
+      gt: 0
+      lte: 1024
+    }
+  }];
+}
+
+message GetImageResponse {
+  bytes file = 1;
+}
+
+message UploadImageRequest {
+  bytes image = 1[(custom.idl.field) = {
+    file: "image"
+    bytes: {
+      required: true
+      min_len: 1
+      max_len: 1048576 // 1MB
+    }
+  }];
+  optional string category = 2[(custom.idl.field) = {
+    form: "category"
+    str: {
+      required: true
+      not_blank: true
+      in: ["avatar", "background", "post"]
+    }
+  }];
+}
+
+message UploadImageResponse {
+  string key = 1;
+}
+
+message UpdateProgressRequest {
+  optional float progress = 1[(custom.idl.field) = {
+    form: "progress"
+    float: {
+      required: true
+      gte: 0
+      lte: 1
+    }
+  }];
+  repeated int32 cat_ids = 2[(custom.idl.field) = {
+    form: "cat_ids"
+    array: {
+      required: true
+      min_items: 1
+      max_items: 10
+      item: {
+        int: {
+          gt: 1000
+          lte: 5000
+        }
+      }
+    }
+  }];
+}
+
+message UpdateProgressResponse {
+  double progress = 1;
+}
+
+message QueryRequest {
+  optional int32 page = 1[(custom.idl.field) = {
+    query: "page"
+    int: {
+      gt: 0
+    }
+  }];
+  optional int32 page_size = 2[(custom.idl.field) = {
+    query: "page_size"
+    int: {
+      gt: 0
+      lte: 100
+    }
+  }];
+  QueryMatch match = 3;
+}
+
+message QueryMatch {
+  optional string key = 1[(custom.idl.field) = {
+    form: "key"
+    str: {
+      required: true
+      not_blank: true
+      min_len: 1
+      max_len: 64
+      in: ["name", "title", "content"]
+    }
+  }];
+  optional string value = 2[(custom.idl.field) = {
+    form: "value"
+    str: {
+      max_len: 128
+    }
+  }];
+}
+
+message QueryResponse {
+  optional int32 total = 1;
+  repeated string items = 2;
+}
+

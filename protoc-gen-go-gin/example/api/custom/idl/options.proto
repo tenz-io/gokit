@@ -1,0 +1,110 @@
+syntax = "proto3";
+
+// custom interface definition language
+package custom.idl;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "github.com/tenz-io/gokit/genproto/go/custom/idl;idl";
+
+extend google.protobuf.MethodOptions {
+  Method method = 50001;
+}
+
+message Method {
+  enum AuthRole {
+    ANONYMOUS = 0; // anonymous, no need to verify
+    ADMIN = 1; // admin
+    USER = 2; // user
+  };
+  enum AuthType {
+    WEB = 0; // web page, verify by cookie
+    REST = 1; // restful api, verify by token
+  }
+  optional AuthRole role = 1;
+  optional AuthType type = 2;
+  oneof route {
+    string get = 21;
+    string put = 22;
+    string post = 23;
+    string delete = 24;
+    string patch = 25;
+    string head = 26;
+    string options = 27;
+  }
+
+}
+
+extend google.protobuf.FieldOptions {
+  Field field = 60001;
+}
+
+message Field {
+  oneof bind {
+    string header = 1; // bind http header
+    string uri = 2; // bind uri path
+    string query = 3; // bind query string
+    string form = 4; // bind form data
+    string file = 5; // bind file data
+  }
+  optional IntField int = 11;
+  optional StringField str = 12;
+  optional BytesField bytes = 13;
+  optional ArrayField array = 14;
+  optional FloatField float = 15;
+
+}
+
+message IntField {
+  optional bool required = 1; // required, can not be nil
+  optional int64 gt = 2; // greater than
+  optional int64 gte = 3; // greater than or equal
+  optional int64 lt = 4; // less than
+  optional int64 lte = 5; // less than or equal
+  optional int64 eq = 6; // equal
+  optional int64 ne = 7; // not equal
+  repeated int64 in = 8; // in list
+  repeated int64 not_in = 9; // not in list
+}
+
+message FloatField {
+  optional bool required = 1; // required, can not be nil
+  optional double gt = 2; // greater than
+  optional double gte = 3; // greater than or equal
+  optional double lt = 4; // less than
+  optional double lte = 5; // less than or equal
+}
+
+message StringField {
+  optional bool required = 1; // required, can not be nil or empty
+  optional bool not_blank = 2; // not blank, can not be blank string, such as " ", "\t", "\n"
+  optional int64 min_len = 3; // min length
+  optional int64 max_len = 4; // max length
+  repeated string in = 5; // in list
+  repeated string not_in = 6; // not in list
+  optional string pattern = 7; // regex pattern
+}
+
+message BytesField {
+  optional bool required = 1; // required, can not be nil or empty
+  optional int64 min_len = 2; // min length
+  optional int64 max_len = 3; // max length
+}
+
+message ArrayField {
+  optional bool required = 1; // required, can not be nil or empty
+  optional int64 min_items = 2; // min items in array
+  optional int64 max_items = 3; // max items in array
+  optional int64 len = 4; // length of array
+  optional ItemField item = 5; // item validation
+}
+
+message ItemField {
+  optional IntField int = 1;
+  optional StringField str = 2;
+  optional BytesField bytes = 3;
+  optional FloatField float = 4;
+}
+
+
+

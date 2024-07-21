@@ -164,7 +164,7 @@ func (x *{{.MessageName}}) validate{{.FieldName}}() error {
     if x.Get{{.FieldName}}() <= {{.Float.Gt}} {
         return &genproto.ValidationError{
             Key: "{{.FieldName}}",
-            Message: fmt.Sprintf("must be greater than %f", {{.Float.Gt}}),
+            Message: fmt.Sprintf("must be greater than %v", {{.Float.Gt}}),
         }
     }
     {{- end}}
@@ -172,7 +172,7 @@ func (x *{{.MessageName}}) validate{{.FieldName}}() error {
     if x.Get{{.FieldName}}() < {{.Float.Gte}} {
         return &genproto.ValidationError{
             Key: "{{.FieldName}}",
-            Message: fmt.Sprintf("must be greater than or equal to %f", {{.Float.Gte}}),
+            Message: fmt.Sprintf("must be greater than or equal to %v", {{.Float.Gte}}),
         }
     }
     {{- end}}
@@ -180,7 +180,7 @@ func (x *{{.MessageName}}) validate{{.FieldName}}() error {
     if x.Get{{.FieldName}}() >= {{.Float.Lt}} {
         return &genproto.ValidationError{
             Key: "{{.FieldName}}",
-            Message: fmt.Sprintf("must be less than %f", {{.Float.Lt}}),
+            Message: fmt.Sprintf("must be less than %v", {{.Float.Lt}}),
         }
     }
     {{- end}}
@@ -188,7 +188,7 @@ func (x *{{.MessageName}}) validate{{.FieldName}}() error {
     if x.Get{{.FieldName}}() > {{.Float.Lte}} {
         return &genproto.ValidationError{
             Key: "{{.FieldName}}",
-            Message: fmt.Sprintf("must be less than or equal to %f", {{.Float.Lte}}),
+            Message: fmt.Sprintf("must be less than or equal to %v", {{.Float.Lte}}),
         }
     }
     {{- end}}
