@@ -8,6 +8,15 @@ func NewSet[T comparable]() Set[T] {
 	return make(Set[T])
 }
 
+// NewSetWithValues creates a new set with values
+func NewSetWithValues[T comparable](values ...T) Set[T] {
+	s := make(Set[T])
+	for _, v := range values {
+		s.Add(v)
+	}
+	return s
+}
+
 // Add adds an element to the set
 func (s Set[T]) Add(a T) {
 	s[a] = struct{}{}
