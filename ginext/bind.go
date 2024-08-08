@@ -205,11 +205,9 @@ func tryBindJSON(c *gin.Context, ptr any) (isJson bool, err error) {
 		return false, nil
 	}
 
-	if c.Request.Method != http.MethodPost && c.Request.Method != http.MethodPut {
-		return true, annotation.NewValidationError(
-			"method",
-			fmt.Sprintf("invalid method %s for json request, should be POST or PUT", c.Request.Method),
-		)
+	// if method is GET, HEAD, DELETE, ignore json body
+	if c.Request.Method == http.MethodGet || c.Request.Method == http.MethodHead || c.Request.Method == http.MethodDelete {
+		return false, nil
 	}
 
 	// read request body into byte slice
