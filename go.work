@@ -20,7 +20,8 @@ use (
 	./ginext/example
 	./ginext/example-bind
 	./gormext
-	./gormext/example
+	./gormext/example-mysql
+	./gormext/example-sqlite
 	./grpcetcd
 	./grpcetcd/example-client
 	./grpcetcd/example-server

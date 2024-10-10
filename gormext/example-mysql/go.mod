@@ -1,4 +1,4 @@
-module gormext-example
+module gormext-example-mysql
 
 go 1.21
 
