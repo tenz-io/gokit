@@ -18,8 +18,15 @@ func NewSetWithValues[T comparable](values ...T) Set[T] {
 }
 
 // Add adds an element to the set
-func (s Set[T]) Add(a T) {
-	s[a] = struct{}{}
+func (s Set[T]) Add(val T) {
+	s[val] = struct{}{}
+}
+
+// AddAll adds multiple elements to the set
+func (s Set[T]) AddAll(values ...T) {
+	for _, v := range values {
+		s.Add(v)
+	}
 }
 
 // Remove removes an element from the set
