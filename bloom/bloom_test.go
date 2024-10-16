@@ -14,12 +14,6 @@ func Test_optimalSize(t *testing.T) {
 		wantHashNum int
 	}{
 		{
-			name:        "1000 elements, 0.01 false positive probability",
-			args:        args{n: 1000, p: 0.01},
-			wantSize:    9586,
-			wantHashNum: 7,
-		},
-		{
 			name:        "10 elements, 0.01 false positive probability",
 			args:        args{n: 10, p: 0.001},
 			wantSize:    144,
@@ -38,10 +32,28 @@ func Test_optimalSize(t *testing.T) {
 			wantHashNum: 5,
 		},
 		{
-			name:        "2000 elements, 0.001 false positive probability",
-			args:        args{n: 2000, p: 0.001},
-			wantSize:    28756,
-			wantHashNum: 10,
+			name:        "1000 elements, 0.01 false positive probability",
+			args:        args{n: 1000, p: 0.01},
+			wantSize:    9586,
+			wantHashNum: 7,
+		},
+		{
+			name:        "2000 elements, 0.01 false positive probability",
+			args:        args{n: 2000, p: 0.01},
+			wantSize:    19171, // ~ 2.34106445 KB
+			wantHashNum: 7,
+		},
+		{
+			name:        "millions elements, 0.01 false positive probability",
+			args:        args{n: 1e6, p: 0.01},
+			wantSize:    9585059, // ~ 1.14903259 MB
+			wantHashNum: 7,
+		},
+		{
+			name:        "billions elements, 0.01 false positive probability",
+			args:        args{n: 1e9, p: 0.01},
+			wantSize:    9585058378, // ~ 1.11584766 GB
+			wantHashNum: 7,
 		},
 	}
 	for _, tt := range tests {
@@ -93,5 +105,14 @@ func TestFilter_AddAndExists(t *testing.T) {
 				t.Errorf("Exists() = %v, want %v", exists, tt.expected)
 			}
 		})
+	}
+}
+
+func Test_filter_hashWithSeed(t *testing.T) {
+	f := &filter{seed: 123}
+	for i := 0; i < 10; i++ {
+		seed := i ^ f.seed
+		got := f.hashWithSeed([]byte("hello"), uint32(seed))
+		t.Logf("%d: hashWithSeed( %d ) = %v", i, seed, got)
 	}
 }

@@ -33,16 +33,16 @@ func NewFilter(count uint64, p float64) Filter {
 
 func (f *filter) Add(data []byte) {
 	for i := 0; i < f.numHashes; i++ {
-		hashValue := f.hashWithSeed(data, uint32(i^f.seed))
-		index := hashValue % f.size
+		hashVal := f.hashWithSeed(data, uint32(i^f.seed))
+		index := hashVal % f.size
 		f.setBit(index)
 	}
 }
 
 func (f *filter) Exists(data []byte) bool {
 	for i := 0; i < f.numHashes; i++ {
-		hashValue := f.hashWithSeed(data, uint32(i^f.seed))
-		index := hashValue % f.size
+		hashVal := f.hashWithSeed(data, uint32(i^f.seed))
+		index := hashVal % f.size
 		if !f.getBit(index) {
 			return false
 		}
@@ -72,7 +72,9 @@ func (f *filter) getBit(index uint64) bool {
 }
 
 // optimalSize calculates the optimal size of the bit array and the number of hash functions.
-func optimalSize(n uint64, p float64) (size uint64, hashNum int) {
+// n is the number of elements to be inserted into the filter.
+// p is the false positive probability.
+func optimalSize(n uint64, p float64) (arraySize uint64, hashNum int) {
 	// calculate the optimal size of the bit array m
 	m := -float64(n) * math.Log(p) / (math.Ln2 * math.Ln2)
 	// calculate the optimal number of hash functions k
