@@ -8,6 +8,7 @@ use (
 	./app/example
 	./async
 	./async/example
+	./bloom
 	./cache
 	./cache/example
 	./cmd
