@@ -59,7 +59,7 @@ func Test_optimalSize(t *testing.T) {
 }
 
 func TestFilter_AddAndExists(t *testing.T) {
-	bf := NewBloomFilter(1000, 0.01)
+	bf := NewFilter(1000, 0.01)
 
 	tests := []struct {
 		name     string

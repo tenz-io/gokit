@@ -18,10 +18,10 @@ type filter struct {
 	seed      int
 }
 
-// NewBloomFilter creates a new bloom filter with the given number of elements and false positive probability.
+// NewFilter creates a new bloom filter with the given number of elements and false positive probability.
 // count is the number of elements to be inserted into the filter.
 // p is the false positive probability.
-func NewBloomFilter(count uint64, p float64) Filter {
+func NewFilter(count uint64, p float64) Filter {
 	arraySize, numHashes := optimalSize(count, p)
 	return &filter{
 		bitArray:  make([]byte, (arraySize+7)/8), // round up to the nearest byte
