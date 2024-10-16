@@ -109,10 +109,9 @@ func TestFilter_AddAndExists(t *testing.T) {
 }
 
 func Test_filter_hashWithSeed(t *testing.T) {
-	f := &filter{seed: 123}
+	f := &filter{}
 	for i := 0; i < 10; i++ {
-		seed := i ^ f.seed
-		got := f.hashWithSeed([]byte("hello"), uint32(seed))
-		t.Logf("%d: hashWithSeed( %d ) = %v", i, seed, got)
+		got := f.hashWithSeed([]byte("hello"), uint32(i))
+		t.Logf("hashWithSeed( %d ) = %v", i, got)
 	}
 }

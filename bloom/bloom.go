@@ -15,7 +15,6 @@ type filter struct {
 	bitArray  []byte
 	size      uint64
 	numHashes int
-	seed      int
 }
 
 // NewFilter creates a new bloom filter with the given number of elements and false positive probability.
@@ -27,13 +26,12 @@ func NewFilter(count uint64, p float64) Filter {
 		bitArray:  make([]byte, (arraySize+7)/8), // round up to the nearest byte
 		size:      arraySize,
 		numHashes: numHashes,
-		seed:      123, // initial seed
 	}
 }
 
 func (f *filter) Add(data []byte) {
 	for i := 0; i < f.numHashes; i++ {
-		hashVal := f.hashWithSeed(data, uint32(i^f.seed))
+		hashVal := f.hashWithSeed(data, uint32(i))
 		index := hashVal % f.size
 		f.setBit(index)
 	}
@@ -41,7 +39,7 @@ func (f *filter) Add(data []byte) {
 
 func (f *filter) Exists(data []byte) bool {
 	for i := 0; i < f.numHashes; i++ {
-		hashVal := f.hashWithSeed(data, uint32(i^f.seed))
+		hashVal := f.hashWithSeed(data, uint32(i))
 		index := hashVal % f.size
 		if !f.getBit(index) {
 			return false
