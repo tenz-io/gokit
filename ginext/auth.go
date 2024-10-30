@@ -247,6 +247,110 @@ func AuthenticateCookie(role RoleType) func(c *gin.Context) {
 	}
 }
 
+// IsAuthenticated checks if the user is authenticated
+func IsAuthenticated(c *gin.Context, role RoleType, authType AuthType) bool {
+	if role == RoleAnonymous {
+		// skip authentication
+		return true
+	}
+
+	switch authType {
+	case AuthTypeWeb:
+		return IsAuthenticateCookie(c, role)
+	case AuthTypeRest:
+		return IsAuthenticateRest(c, role)
+	default:
+		return false
+	}
+}
+
+// isTokenAuthenticated checks if the token is valid and the role is matched
+func isTokenAuthenticated(c *gin.Context, role RoleType, token string) bool {
+	var (
+		ctx = c.Request.Context()
+		le  = logger.FromContext(ctx).WithFields(logger.Fields{
+			"role": role,
+		})
+	)
+
+	if role == RoleAnonymous {
+		le.Debugf("skip authentication")
+		return true
+	}
+
+	if token == "" {
+		le.Warnf("missing token")
+		return false
+	}
+
+	claims, err := VerifyToken(token)
+	if err != nil {
+		le.WithError(err).Warnf("error parsing token")
+		return false
+	}
+
+	if claims.Type != TokenTypeAccess {
+		le.Warnf("invalid token type")
+		return false
+	}
+
+	if role == RoleAdmin && claims.Role != RoleAdmin {
+		le.Warnf("require admin role")
+		return false
+	}
+
+	if claims.Role == RoleAdmin || role&claims.Role > 0 {
+		le.Debugf("authenticated")
+		c.Set("userid", claims.Userid)
+		c.Set("role", claims.Role)
+		return true
+	}
+
+	le.Debugf("role not match")
+	return false
+}
+
+// IsAuthenticateRest is a middleware to check if user is authenticated by token in Authorization header
+func IsAuthenticateRest(c *gin.Context, role RoleType) bool {
+	var (
+		ctx = c.Request.Context()
+		le  = logger.FromContext(ctx).WithFields(logger.Fields{
+			"role": role,
+		})
+	)
+
+	if role == RoleAnonymous {
+		le.Debugf("skip authentication")
+		return true
+	}
+
+	tokenString := c.GetHeader("Authorization")
+	return isTokenAuthenticated(c, role, tokenString)
+}
+
+// IsAuthenticateCookie is a middleware to check if user is authenticated by token in cookie
+func IsAuthenticateCookie(c *gin.Context, role RoleType) bool {
+	var (
+		ctx = c.Request.Context()
+		le  = logger.FromContext(ctx).WithFields(logger.Fields{
+			"role": role,
+		})
+	)
+
+	if role == RoleAnonymous {
+		le.Debugf("skip authentication")
+		return true
+	}
+
+	tokenString, err := c.Cookie(CookieTokenName)
+	if err != nil {
+		le.Warnf("missing token")
+		return false
+	}
+
+	return isTokenAuthenticated(c, role, tokenString)
+}
+
 // GenerateToken generates a token with userid, role, token type and expired time
 func GenerateToken(userid int64, role RoleType, tokenType TokenType, expiredAt time.Time) (string, error) {
 	claims := &Claims{
