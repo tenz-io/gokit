@@ -40,7 +40,7 @@ func TestAuthenticate(t *testing.T) {
 			name:         "Invalid Token",
 			token:        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InRlc3R1c2VyIiwiZXhwIjoxNzE4NjM4NjIzfQ.3jkMyPp2j7-3EFsLBmMRmTY15JVqmMo8kZGySd7gr-U",
 			expectedCode: http.StatusUnauthorized,
-			expectedBody: `{"code":401,"message":"invalid token","data":{}}`,
+			expectedBody: `{"code":401,"message":"unauthorized","data":{}}`,
 		},
 		{
 			name:         "Valid Token",
@@ -56,6 +56,130 @@ func TestAuthenticate(t *testing.T) {
 			t.Logf("token: %s", tt.token)
 			if tt.token != "" {
 				req.Header.Set("Authorization", tt.token)
+			}
+
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.expectedCode, w.Code)
+			t.Logf("body: %s", w.Body.String())
+			assert.JSONEq(t, tt.expectedBody, w.Body.String())
+		})
+	}
+}
+
+func TestIsAuthenticated(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	router := gin.New()
+	router.GET("/protected", func(c *gin.Context) {
+		authenticated := IsAuthenticated(c, RoleUser, AuthTypeRest)
+		if !authenticated {
+			c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized"})
+			return
+		}
+		userid := c.GetInt64("userid")
+		role, _ := c.Get("role")
+		c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("userid: %d, role: %d", userid, role)})
+	})
+
+	validToken, err := GenerateToken(123, RoleUser, TokenTypeAccess, time.Now().Add(5*time.Minute))
+	assert.NoError(t, err)
+
+	tests := []struct {
+		name         string
+		token        string
+		expectedCode int
+		expectedBody string
+	}{
+		{
+			name:         "Missing Token",
+			token:        "",
+			expectedCode: http.StatusUnauthorized,
+			expectedBody: `{"message":"unauthorized"}`,
+		},
+		{
+			name:         "Invalid Token",
+			token:        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InRlc3R1c2VyIiwiZXhwIjoxNzE4NjM4NjIzfQ.3jkMyPp2j7-3EFsLBmMRmTY15JVqmMo8kZGySd7gr-U",
+			expectedCode: http.StatusUnauthorized,
+			expectedBody: `{"message":"unauthorized"}`,
+		},
+		{
+			name:         "Valid Token",
+			token:        validToken,
+			expectedCode: http.StatusOK,
+			expectedBody: `{"message":"userid: 123, role: 2"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, _ := http.NewRequest(http.MethodGet, "/protected", nil)
+			t.Logf("token: %s", tt.token)
+			if tt.token != "" {
+				req.Header.Set("Authorization", tt.token)
+			}
+
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.expectedCode, w.Code)
+			t.Logf("body: %s", w.Body.String())
+			assert.JSONEq(t, tt.expectedBody, w.Body.String())
+		})
+	}
+}
+
+func TestIsAuthenticated_web(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	router := gin.New()
+	router.GET("/protected", func(c *gin.Context) {
+		authenticated := IsAuthenticated(c, RoleUser, AuthTypeWeb)
+		if !authenticated {
+			c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized"})
+			return
+		}
+		userid := c.GetInt64("userid")
+		role, _ := c.Get("role")
+		c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("userid: %d, role: %d", userid, role)})
+	})
+
+	validToken, err := GenerateToken(123, RoleUser, TokenTypeAccess, time.Now().Add(5*time.Minute))
+	assert.NoError(t, err)
+
+	tests := []struct {
+		name         string
+		token        string
+		expectedCode int
+		expectedBody string
+	}{
+		{
+			name:         "Missing Token",
+			token:        "",
+			expectedCode: http.StatusUnauthorized,
+			expectedBody: `{"message":"unauthorized"}`,
+		},
+		{
+			name:         "Invalid Token",
+			token:        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InRlc3R1c2VyIiwiZXhwIjoxNzE4NjM4NjIzfQ.3jkMyPp2j7-3EFsLBmMRmTY15JVqmMo8kZGySd7gr-U",
+			expectedCode: http.StatusUnauthorized,
+			expectedBody: `{"message":"unauthorized"}`,
+		},
+		{
+			name:         "Valid Token",
+			token:        validToken,
+			expectedCode: http.StatusOK,
+			expectedBody: `{"message":"userid: 123, role: 2"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, _ := http.NewRequest(http.MethodGet, "/protected", nil)
+			t.Logf("token: %s", tt.token)
+			if tt.token != "" {
+				req.Header.Set("Cookie", fmt.Sprintf("token=%s", tt.token))
 			}
 
 			w := httptest.NewRecorder()

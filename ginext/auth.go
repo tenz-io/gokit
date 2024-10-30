@@ -118,49 +118,16 @@ func AuthenticateRest(role RoleType) func(c *gin.Context) {
 			tokenString = strings.TrimSpace(tokenString[7:])
 		}
 
-		claims, err := VerifyToken(tokenString)
-		if err != nil {
-			le.Warnf("error parsing token: %v", err)
-			if IsUnauthorizedError(err) {
-				ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "invalid token"))
-				return
-			}
-
-			ErrorResponse(c, errcode.BadRequest(http.StatusBadRequest, "bad token in request"))
+		authed, claims := isTokenAuthenticated(c, role, tokenString)
+		if !authed {
+			le.Warnf("unauthorized")
+			ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "unauthorized"))
 			return
 		}
 
-		le = le.WithFields(logger.Fields{
-			"userid":     claims.Userid,
-			"user_role":  claims.Role,
-			"token_type": claims.Type,
-		})
-
-		// token type check
-		if claims.Type != TokenTypeAccess {
-			le.Warnf("invalid token type")
-			ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "invalid token type"))
-			return
-		}
-
-		// check admin
-		if role == RoleAdmin && claims.Role != RoleAdmin {
-			le.Warnf("require admin role")
-			ErrorResponse(c, errcode.Unauthorized(http.StatusForbidden, "forbidden"))
-			return
-		}
-
-		// admin can access all resources
-		if claims.Role == RoleAdmin || role&claims.Role > 0 {
-			le.Debugf("authenticated")
-			c.Set("userid", claims.Userid)
-			c.Set("role", claims.Role)
-			c.Next()
-			return
-		}
-
-		le.Warnf("role not match")
-		ErrorResponse(c, errcode.Unauthorized(http.StatusForbidden, "forbidden"))
+		c.Set("userid", claims.Userid)
+		c.Set("role", claims.Role)
+		c.Next()
 		return
 	}
 }
@@ -189,60 +156,28 @@ func AuthenticateCookie(role RoleType) func(c *gin.Context) {
 			return
 		}
 
-		claims, err := VerifyToken(tokenString)
+		authed, claims := isTokenAuthenticated(c, role, tokenString)
+		if !authed {
+			le.Warnf("unauthorized")
+			ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "unauthorized"))
+			return
+		}
+
+		le.Debugf("authenticated")
+		c.Set("userid", claims.Userid)
+		c.Set("role", claims.Role)
+
+		// refresh token
+		expiredAt := time.Now().Add(ExpiresInMinutes * time.Minute)
+		newToken, err := GenerateToken(claims.Userid, claims.Role, TokenTypeAccess, expiredAt)
 		if err != nil {
-			le.Warnf("error parsing token: %v", err)
-			if IsUnauthorizedError(err) {
-				ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "invalid token"))
-				return
-			}
-
-			ErrorResponse(c, errcode.BadRequest(http.StatusBadRequest, "bad token in request"))
+			le.Warnf("failed to generate token: %v", err)
+			ErrorResponse(c, errcode.InternalServer(http.StatusInternalServerError, "failed to generate token"))
 			return
 		}
+		c.SetCookie("token", newToken, ExpiresInMinutes*60, "/", "", false, true)
 
-		le = le.WithFields(logger.Fields{
-			"userid":     claims.Userid,
-			"user_role":  claims.Role,
-			"token_type": claims.Type,
-		})
-
-		// token type check
-		if claims.Type != TokenTypeAccess {
-			le.Warnf("invalid token type")
-			ErrorResponse(c, errcode.Unauthorized(http.StatusUnauthorized, "invalid token type"))
-			return
-		}
-
-		// check admin
-		if role == RoleAdmin && claims.Role != RoleAdmin {
-			le.Warnf("require admin role")
-			ErrorResponse(c, errcode.Unauthorized(http.StatusForbidden, "forbidden"))
-			return
-		}
-
-		// admin can access all resources
-		if claims.Role == RoleAdmin || role&claims.Role > 0 {
-			le.Debugf("authenticated")
-			c.Set("userid", claims.Userid)
-			c.Set("role", claims.Role)
-
-			// refresh token
-			expiredAt := time.Now().Add(ExpiresInMinutes * time.Minute)
-			newToken, err := GenerateToken(claims.Userid, claims.Role, TokenTypeAccess, expiredAt)
-			if err != nil {
-				le.Warnf("failed to generate token: %v", err)
-				ErrorResponse(c, errcode.InternalServer(http.StatusInternalServerError, "failed to generate token"))
-				return
-			}
-			c.SetCookie("token", newToken, ExpiresInMinutes*60, "/", "", false, true)
-
-			c.Next()
-			return
-		}
-
-		le.Warnf("role not match")
-		ErrorResponse(c, errcode.Unauthorized(http.StatusForbidden, "forbidden"))
+		c.Next()
 		return
 	}
 }
@@ -265,7 +200,7 @@ func IsAuthenticated(c *gin.Context, role RoleType, authType AuthType) bool {
 }
 
 // isTokenAuthenticated checks if the token is valid and the role is matched
-func isTokenAuthenticated(c *gin.Context, role RoleType, token string) bool {
+func isTokenAuthenticated(c *gin.Context, role RoleType, token string) (bool, *Claims) {
 	var (
 		ctx = c.Request.Context()
 		le  = logger.FromContext(ctx).WithFields(logger.Fields{
@@ -275,39 +210,37 @@ func isTokenAuthenticated(c *gin.Context, role RoleType, token string) bool {
 
 	if role == RoleAnonymous {
 		le.Debugf("skip authentication")
-		return true
+		return true, nil
 	}
 
 	if token == "" {
 		le.Warnf("missing token")
-		return false
+		return false, nil
 	}
 
 	claims, err := VerifyToken(token)
 	if err != nil {
 		le.WithError(err).Warnf("error parsing token")
-		return false
+		return false, nil
 	}
 
 	if claims.Type != TokenTypeAccess {
 		le.Warnf("invalid token type")
-		return false
+		return false, nil
 	}
 
 	if role == RoleAdmin && claims.Role != RoleAdmin {
 		le.Warnf("require admin role")
-		return false
+		return false, nil
 	}
 
 	if claims.Role == RoleAdmin || role&claims.Role > 0 {
 		le.Debugf("authenticated")
-		c.Set("userid", claims.Userid)
-		c.Set("role", claims.Role)
-		return true
+		return true, claims
 	}
 
 	le.Debugf("role not match")
-	return false
+	return false, nil
 }
 
 // IsAuthenticateRest is a middleware to check if user is authenticated by token in Authorization header
@@ -325,7 +258,15 @@ func IsAuthenticateRest(c *gin.Context, role RoleType) bool {
 	}
 
 	tokenString := c.GetHeader("Authorization")
-	return isTokenAuthenticated(c, role, tokenString)
+	authed, claims := isTokenAuthenticated(c, role, tokenString)
+	if !authed {
+		le.Warnf("unauthorized")
+		return false
+	}
+
+	c.Set("userid", claims.Userid)
+	c.Set("role", claims.Role)
+	return true
 }
 
 // IsAuthenticateCookie is a middleware to check if user is authenticated by token in cookie
@@ -348,7 +289,26 @@ func IsAuthenticateCookie(c *gin.Context, role RoleType) bool {
 		return false
 	}
 
-	return isTokenAuthenticated(c, role, tokenString)
+	authed, claims := isTokenAuthenticated(c, role, tokenString)
+	if !authed {
+		le.Warnf("unauthorized")
+		return false
+	}
+
+	c.Set("userid", claims.Userid)
+	c.Set("role", claims.Role)
+
+	// refresh token
+	expiredAt := time.Now().Add(ExpiresInMinutes * time.Minute)
+	newToken, err := GenerateToken(claims.Userid, claims.Role, TokenTypeAccess, expiredAt)
+	if err != nil {
+		le.WithError(err).Warnf("failed to generate token")
+		return false
+	}
+
+	c.SetCookie("token", newToken, ExpiresInMinutes*60, "/", "", false, true)
+
+	return true
 }
 
 // GenerateToken generates a token with userid, role, token type and expired time
