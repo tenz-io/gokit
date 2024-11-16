@@ -34,6 +34,8 @@ use (
 	./logger
 	./logger/example
 	./monitor
+	./notionx
+	./notionx/example
 	./protoc-gen-go-gin
 	./protoc-gen-go-gin/example
 	./retriever
