@@ -7,7 +7,7 @@
 package v1
 
 import (
-	_ "github.com/tenz-io/gokit/genproto/go/custom/common"
+	_ "github.com/tenz-io/gokit/genproto/v2/go/custom/common"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
