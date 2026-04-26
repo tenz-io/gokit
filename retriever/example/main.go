@@ -4,35 +4,27 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/tenz-io/gokit/retriever"
 )
 
 func main() {
-	retr := retriever.NewRetrieverWithConfig(
-		retriever.WithBackoff(retriever.NewLinearBackoff(50)),
+	r := retriever.New(
 		retriever.WithMaxAttempt(3),
-		retriever.WithMaxTotalAttemptTime(350*time.Millisecond),
+		retriever.WithBackoff(retriever.NewLinearBackoff(50)),
 	)
 
 	var count int
-	result, err := retr.DoAlwaysRetry(context.Background(), func(ctx context.Context) (any, error) {
-		defer func() {
-			count++
-		}()
-		log.Println("count:", count)
+	result, err := r.DoAlwaysRetry(context.Background(), func(ctx context.Context) (any, error) {
+		count++
+		log.Println("attempt:", count)
 		if count < 3 {
-			return nil, fmt.Errorf("error in count-%d", count)
+			return nil, fmt.Errorf("error at attempt %d", count)
 		}
-
 		return "success", nil
 	})
 	if err != nil {
-		log.Println("error:", err)
-		return
+		log.Fatal(err)
 	}
-
 	log.Println("result:", result)
-
 }

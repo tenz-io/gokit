@@ -362,7 +362,7 @@ func TestValidateStruct(t *testing.T) {
 	}
 }
 
-func Test_matchString(t *testing.T) {
+func Test_matchPattern(t *testing.T) {
 	tests := []struct {
 		pattern string
 		s       string
@@ -410,10 +410,10 @@ func Test_matchString(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.s, func(t *testing.T) {
-			got, msg := matchString(tt.pattern, tt.s)
+			got, msg := matchPattern(tt.pattern, tt.s)
 			t.Logf("got: %v, msg: %v", got, msg)
 			if got != tt.want {
-				t.Errorf("matchString(%q, %q) = %v, want %v", tt.pattern, tt.s, got, tt.want)
+				t.Errorf("matchPattern(%q, %q) = %v, want %v", tt.pattern, tt.s, got, tt.want)
 			}
 		})
 	}

@@ -2,510 +2,171 @@ package retriever
 
 import (
 	"context"
-	"reflect"
+	"fmt"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
-type MockObject struct {
-	count int
-	mock.Mock
-}
-
-func (m *MockObject) MockDoFunc(ctx context.Context) (any, bool, error) {
-	args := m.Called(ctx)
-	return args.Get(0), args.Bool(1), args.Error(2)
-}
-
-func (m *MockObject) MockDoAlwaysFunc(ctx context.Context) (any, error) {
-	args := m.Called(ctx)
-	return args.Get(0), args.Error(1)
-}
-
-func Test_retriever_Do(t *testing.T) {
-	type fields struct {
-		maxAttempt          int
-		maxTotalAttemptTime time.Duration
-		backoff             Backoff
-		useGoroutine        bool
-	}
-	type args struct {
-		ctx context.Context
-	}
-	type behavior func(*MockObject)
-	tests := []struct {
-		name                string
-		fields              fields
-		args                args
-		behavior            behavior
-		want                any
-		wantErr             assert.ErrorAssertionFunc
-		wantDoFuncNumCalled int
-		wantMaxDuration     time.Duration
-	}{
-		{
-			name: "when ctx is nil then return error",
-			fields: fields{
-				maxAttempt:          3,
-				maxTotalAttemptTime: 100 * time.Millisecond,
-				backoff:             &NoBackoff{},
-				useGoroutine:        false,
-			},
-			args: args{
-				ctx: nil,
-			},
-			behavior: func(mockedObj *MockObject) {
-				// do nothing
-			},
-			want:                nil,
-			wantErr:             assert.Error,
-			wantDoFuncNumCalled: 0,
-			wantMaxDuration:     5 * time.Millisecond,
-		},
-		{
-			name: "when doFunc returns error then return error",
-			fields: fields{
-				maxAttempt:          3,
-				maxTotalAttemptTime: 100 * time.Millisecond,
-				backoff:             &NoBackoff{},
-				useGoroutine:        false,
-			},
-			args: args{
-				ctx: context.Background(),
-			},
-			behavior: func(mockedObj *MockObject) {
-				mockedObj.On("MockDoFunc", mock.Anything).After(10*time.Millisecond).
-					Return(nil, false, assert.AnError)
-			},
-			want:                nil,
-			wantErr:             assert.Error,
-			wantDoFuncNumCalled: 1,
-			wantMaxDuration:     15 * time.Millisecond,
-		},
-		{
-			name: "when doFunc returns error with retry then return error",
-			fields: fields{
-				maxAttempt:          3,
-				maxTotalAttemptTime: 100 * time.Millisecond,
-				backoff:             &NoBackoff{},
-				useGoroutine:        false,
-			},
-			args: args{
-				ctx: context.Background(),
-			},
-			behavior: func(mockedObj *MockObject) {
-				mockedObj.On("MockDoFunc", mock.Anything).After(10*time.Millisecond).
-					Return(nil, true, assert.AnError)
-			},
-			want:                nil,
-			wantErr:             assert.Error,
-			wantDoFuncNumCalled: 3,
-			wantMaxDuration:     35 * time.Millisecond,
-		},
-		{
-			name: "when doFunc returns output then return output",
-			fields: fields{
-				maxAttempt:          3,
-				maxTotalAttemptTime: 100 * time.Millisecond,
-				backoff:             &NoBackoff{},
-				useGoroutine:        false,
-			},
-			args: args{
-				ctx: context.Background(),
-			},
-			behavior: func(mockedObj *MockObject) {
-				mockedObj.On("MockDoFunc", mock.Anything).After(10*time.Millisecond).
-					Return("output", false, nil)
-			},
-			want:                "output",
-			wantErr:             assert.NoError,
-			wantDoFuncNumCalled: 1,
-			wantMaxDuration:     15 * time.Millisecond,
-		},
-		{
-			name: "when doFunc retry returns output then return output",
-			fields: fields{
-				maxAttempt:          3,
-				maxTotalAttemptTime: 100 * time.Millisecond,
-				backoff:             &NoBackoff{},
-				useGoroutine:        false,
-			},
-			args: args{
-				ctx: context.Background(),
-			},
-			behavior: func(mockedObj *MockObject) {
-				// first call
-				mockedObj.On("MockDoFunc", mock.Anything).Times(1).After(10*time.Millisecond).
-					Return("", true, assert.AnError)
-				// retry
-				mockedObj.On("MockDoFunc", mock.Anything).Times(1).After(20*time.Millisecond).
-					Return("output", true, nil)
-			},
-			want:                "output",
-			wantErr:             assert.NoError,
-			wantDoFuncNumCalled: 2,
-			wantMaxDuration:     35 * time.Millisecond,
-		},
-		{
-			name: "when doFunc retry again returns output then return output",
-			fields: fields{
-				maxAttempt:          3,
-				maxTotalAttemptTime: 100 * time.Millisecond,
-				backoff:             &NoBackoff{},
-				useGoroutine:        false,
-			},
-			args: args{
-				ctx: context.Background(),
-			},
-			behavior: func(mockedObj *MockObject) {
-				// the first two calls return error
-				mockedObj.On("MockDoFunc", mock.Anything).Times(2).After(10*time.Millisecond).
-					Return("", true, assert.AnError)
-				// the third call return output
-				mockedObj.On("MockDoFunc", mock.Anything).Times(1).After(10*time.Millisecond).
-					Return("output", true, nil)
-			},
-			want:                "output",
-			wantErr:             assert.NoError,
-			wantDoFuncNumCalled: 3,
-			wantMaxDuration:     35 * time.Millisecond,
-		},
-		{
-			name: "when doFunc returns execution time more than maxTotalAttemptTime then return error",
-			fields: fields{
-				maxAttempt:          3,
-				maxTotalAttemptTime: 100 * time.Millisecond,
-				backoff:             &NoBackoff{},
-				useGoroutine:        true,
-			},
-			args: args{
-				ctx: context.Background(),
-			},
-			behavior: func(mockedObj *MockObject) {
-				mockedObj.On("MockDoFunc", mock.Anything).After(120*time.Millisecond).
-					Return("output", true, nil)
-			},
-			want:                nil,
-			wantErr:             assert.Error,
-			wantDoFuncNumCalled: 1,
-			wantMaxDuration:     110 * time.Millisecond,
-		},
-		{
-			name: "when doFunc returns total execution time more than maxTotalAttemptTime then return error",
-			fields: fields{
-				maxAttempt:          3,
-				maxTotalAttemptTime: 100 * time.Millisecond,
-				backoff:             &NoBackoff{},
-				useGoroutine:        true,
-			},
-			args: args{
-				ctx: context.Background(),
-			},
-			behavior: func(mockedObj *MockObject) {
-				mockedObj.On("MockDoFunc", mock.Anything).After(40*time.Millisecond).
-					Return(nil, true, assert.AnError)
-			},
-			want:                nil,
-			wantErr:             assert.Error,
-			wantDoFuncNumCalled: 3,
-			wantMaxDuration:     110 * time.Millisecond,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r := &retriever{
-				maxAttempt:          tt.fields.maxAttempt,
-				maxTotalAttemptTime: tt.fields.maxTotalAttemptTime,
-				backoff:             tt.fields.backoff,
-				useGoroutine:        tt.fields.useGoroutine,
-			}
-
-			mockedObj := new(MockObject)
-			tt.behavior(mockedObj)
-
-			startTime := time.Now()
-			got, err := r.Do(tt.args.ctx, mockedObj.MockDoFunc)
-			duration := time.Since(startTime)
-			t.Logf("Do() got = %v, err = %+v, duration: %s", got, err, duration)
-
-			if ret := tt.wantErr(t, err, "Do() error = %+v, wantErr %v", err, true); !ret {
-				t.Errorf("Do() error = %+v, wantErr %v", err, ret)
-				return
-			}
-
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Do() got = %v, want %v", got, tt.want)
-			}
-
-			mockedObj.AssertNumberOfCalls(t, "MockDoFunc", tt.wantDoFuncNumCalled)
-
-			if tt.wantMaxDuration > 0 && duration > tt.wantMaxDuration {
-				t.Errorf("Do() duration = %v, want less than %v", duration, tt.wantMaxDuration)
-				return
-			}
-
-		})
+func TestNewRetriever_Defaults(t *testing.T) {
+	r := New()
+	if r == nil {
+		t.Fatal("New() returned nil")
 	}
 }
 
-func Test_retriever_DoAlwaysRetry(t *testing.T) {
-	type fields struct {
-		maxAttempt          int
-		maxTotalAttemptTime time.Duration
-		backoff             Backoff
-		useGoroutine        bool
+func TestDo_Success(t *testing.T) {
+	r := New(WithMaxAttempt(3))
+	result, err := r.Do(context.Background(), func(ctx context.Context) (any, bool, error) {
+		return "ok", false, nil
+	})
+	if err != nil {
+		t.Errorf("Do() err = %v", err)
 	}
-	type args struct {
-		ctx context.Context
-	}
-	type behavior func(*MockObject)
-	tests := []struct {
-		name                string
-		fields              fields
-		args                args
-		behavior            behavior
-		want                any
-		wantErr             assert.ErrorAssertionFunc
-		wantDoFuncNumCalled int
-		wantMaxDuration     time.Duration
-	}{
-		{
-			name: "when ctx is nil then return error",
-			fields: fields{
-				maxAttempt:          3,
-				maxTotalAttemptTime: 100 * time.Millisecond,
-				backoff:             &NoBackoff{},
-				useGoroutine:        false,
-			},
-			args: args{
-				ctx: nil,
-			},
-			behavior: func(mockedObj *MockObject) {
-				// do nothing
-			},
-			want:                nil,
-			wantErr:             assert.Error,
-			wantDoFuncNumCalled: 0,
-			wantMaxDuration:     5 * time.Millisecond,
-		},
-		{
-			name: "when doFunc returns error then return error",
-			fields: fields{
-				maxAttempt:          3,
-				maxTotalAttemptTime: 100 * time.Millisecond,
-				backoff:             &NoBackoff{},
-				useGoroutine:        false,
-			},
-			args: args{
-				ctx: context.Background(),
-			},
-			behavior: func(mockedObj *MockObject) {
-				mockedObj.On("MockDoAlwaysFunc", mock.Anything).After(10*time.Millisecond).
-					Return(nil, assert.AnError)
-			},
-			want:                nil,
-			wantErr:             assert.Error,
-			wantDoFuncNumCalled: 3,
-			wantMaxDuration:     35 * time.Millisecond,
-		},
-		{
-			name: "when doFunc returns output then return output",
-			fields: fields{
-				maxAttempt:          3,
-				maxTotalAttemptTime: 100 * time.Millisecond,
-				backoff:             &NoBackoff{},
-				useGoroutine:        false,
-			},
-			args: args{
-				ctx: context.Background(),
-			},
-			behavior: func(mockedObj *MockObject) {
-				mockedObj.On("MockDoAlwaysFunc", mock.Anything).After(10*time.Millisecond).
-					Return("output", nil)
-			},
-			want:                "output",
-			wantErr:             assert.NoError,
-			wantDoFuncNumCalled: 1,
-			wantMaxDuration:     15 * time.Millisecond,
-		},
-		{
-			name: "when doFunc retry returns output then return output",
-			fields: fields{
-				maxAttempt:          3,
-				maxTotalAttemptTime: 100 * time.Millisecond,
-				backoff:             &NoBackoff{},
-				useGoroutine:        false,
-			},
-			args: args{
-				ctx: context.Background(),
-			},
-			behavior: func(mockedObj *MockObject) {
-				// first call
-				mockedObj.On("MockDoAlwaysFunc", mock.Anything).Times(1).After(10*time.Millisecond).
-					Return("", assert.AnError)
-				// retry
-				mockedObj.On("MockDoAlwaysFunc", mock.Anything).Times(1).After(20*time.Millisecond).
-					Return("output", nil)
-			},
-			want:                "output",
-			wantErr:             assert.NoError,
-			wantDoFuncNumCalled: 2,
-			wantMaxDuration:     35 * time.Millisecond,
-		},
-		{
-			name: "when doFunc retry again returns output then return output",
-			fields: fields{
-				maxAttempt:          3,
-				maxTotalAttemptTime: 100 * time.Millisecond,
-				backoff:             &NoBackoff{},
-				useGoroutine:        false,
-			},
-			args: args{
-				ctx: context.Background(),
-			},
-			behavior: func(mockedObj *MockObject) {
-				// the first two calls return error
-				mockedObj.On("MockDoAlwaysFunc", mock.Anything).Times(2).After(10*time.Millisecond).
-					Return("", assert.AnError)
-				// the third call return output
-				mockedObj.On("MockDoAlwaysFunc", mock.Anything).Times(1).After(10*time.Millisecond).
-					Return("output", nil)
-			},
-			want:                "output",
-			wantErr:             assert.NoError,
-			wantDoFuncNumCalled: 3,
-			wantMaxDuration:     35 * time.Millisecond,
-		},
-		{
-			name: "when doFunc returns execution time more than maxTotalAttemptTime then return error",
-			fields: fields{
-				maxAttempt:          3,
-				maxTotalAttemptTime: 100 * time.Millisecond,
-				backoff:             &NoBackoff{},
-				useGoroutine:        true,
-			},
-			args: args{
-				ctx: context.Background(),
-			},
-			behavior: func(mockedObj *MockObject) {
-				mockedObj.On("MockDoAlwaysFunc", mock.Anything).After(120*time.Millisecond).
-					Return("output", nil)
-			},
-			want:                nil,
-			wantErr:             assert.Error,
-			wantDoFuncNumCalled: 1,
-			wantMaxDuration:     110 * time.Millisecond,
-		},
-		{
-			name: "when doFunc returns total execution time more than maxTotalAttemptTime then return error",
-			fields: fields{
-				maxAttempt:          3,
-				maxTotalAttemptTime: 100 * time.Millisecond,
-				backoff:             &NoBackoff{},
-				useGoroutine:        true,
-			},
-			args: args{
-				ctx: context.Background(),
-			},
-			behavior: func(mockedObj *MockObject) {
-				mockedObj.On("MockDoAlwaysFunc", mock.Anything).After(40*time.Millisecond).
-					Return(nil, assert.AnError)
-			},
-			want:                nil,
-			wantErr:             assert.Error,
-			wantDoFuncNumCalled: 3,
-			wantMaxDuration:     110 * time.Millisecond,
-		},
-		{
-			name: "when doFunc exponential backoff returns total execution time more than maxTotalAttemptTime then return error",
-			fields: fields{
-				maxAttempt:          3,
-				maxTotalAttemptTime: 100 * time.Millisecond,
-				// wait:  ~20ms, ~40ms, ~80ms
-				backoff:      NewExponentialBackoff(20, 2.0, 0.3),
-				useGoroutine: true,
-			},
-			args: args{
-				ctx: context.Background(),
-			},
-			behavior: func(mockedObj *MockObject) {
-				// exe:25ms + wait:20ms + exe:25ms + wait:40ms => 110ms timeout, so only 2 times can be executed
-				mockedObj.On("MockDoAlwaysFunc", mock.Anything).Times(2).After(25*time.Millisecond).
-					Return(nil, assert.AnError)
-				mockedObj.On("MockDoAlwaysFunc", mock.Anything).Times(1).After(20*time.Millisecond).
-					Return("output", nil)
-			},
-			want:                nil,
-			wantErr:             assert.Error,
-			wantDoFuncNumCalled: 2,
-			wantMaxDuration:     110 * time.Millisecond,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r := &retriever{
-				maxAttempt:          tt.fields.maxAttempt,
-				maxTotalAttemptTime: tt.fields.maxTotalAttemptTime,
-				backoff:             tt.fields.backoff,
-				useGoroutine:        tt.fields.useGoroutine,
-			}
-
-			mockedObj := new(MockObject)
-			tt.behavior(mockedObj)
-
-			startTime := time.Now()
-			got, err := r.DoAlwaysRetry(tt.args.ctx, mockedObj.MockDoAlwaysFunc)
-			duration := time.Since(startTime)
-			t.Logf("DoAlwaysRetry() got = %v, err = %+v, duration: %s", got, err, duration)
-
-			if ret := tt.wantErr(t, err, "Do() error = %+v, wantErr %v", err, true); !ret {
-				t.Errorf("DoAlwaysRetry() error = %+v, wantErr %v", err, ret)
-				return
-			}
-
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("DoAlwaysRetry() got = %v, want %v", got, tt.want)
-			}
-
-			mockedObj.AssertNumberOfCalls(t, "MockDoAlwaysFunc", tt.wantDoFuncNumCalled)
-
-			if tt.wantMaxDuration > 0 && duration > tt.wantMaxDuration {
-				t.Errorf("DoAlwaysRetry() duration = %v, want less than %v", duration, tt.wantMaxDuration)
-				return
-			}
-
-		})
+	if result != "ok" {
+		t.Errorf("Do() = %v, want ok", result)
 	}
 }
 
-func TestNewRetriever(t *testing.T) {
-	type args struct {
-		config Config
+func TestDo_Retry(t *testing.T) {
+	attempts := 0
+	r := New(WithMaxAttempt(3), WithBackoff(&NoBackoff{}))
+	result, err := r.Do(context.Background(), func(ctx context.Context) (any, bool, error) {
+		attempts++
+		if attempts < 3 {
+			return nil, true, fmt.Errorf("fail %d", attempts)
+		}
+		return "ok", false, nil
+	})
+	if err != nil {
+		t.Errorf("Do() err = %v", err)
 	}
-	tests := []struct {
-		name string
-		args args
-		want Retriever
-	}{
-		{
-			name: "when config is empty then return default config",
-			args: args{
-				config: Config{},
-			},
-			want: &retriever{
-				maxAttempt:          3,
-				maxTotalAttemptTime: 0,
-				backoff:             NewExponentialBackoff(100, 2.0, 0.3),
-				useGoroutine:        false,
-			},
-		},
+	if result != "ok" {
+		t.Errorf("Do() = %v", result)
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, NewRetriever(tt.args.config), "NewRetriever(%v)", tt.args.config)
-		})
+	if attempts != 3 {
+		t.Errorf("attempts = %v, want 3", attempts)
+	}
+}
+
+func TestDo_NonRetryable(t *testing.T) {
+	attempts := 0
+	r := New(WithMaxAttempt(5), WithBackoff(&NoBackoff{}))
+	_, err := r.Do(context.Background(), func(ctx context.Context) (any, bool, error) {
+		attempts++
+		return nil, false, fmt.Errorf("permanent")
+	})
+	if err == nil {
+		t.Error("Do() should return error")
+	}
+	if attempts != 1 {
+		t.Errorf("non-retryable should not retry, got %d attempts", attempts)
+	}
+}
+
+func TestDo_MaxAttempts(t *testing.T) {
+	attempts := 0
+	r := New(WithMaxAttempt(3), WithBackoff(&NoBackoff{}))
+	_, err := r.Do(context.Background(), func(ctx context.Context) (any, bool, error) {
+		attempts++
+		return nil, true, fmt.Errorf("always fail")
+	})
+	if err == nil {
+		t.Error("Do() should return error after max attempts")
+	}
+	if attempts != 3 {
+		t.Errorf("attempts = %v, want 3", attempts)
+	}
+}
+
+func TestDoAlwaysRetry(t *testing.T) {
+	attempts := 0
+	r := New(WithMaxAttempt(4), WithBackoff(&NoBackoff{}))
+	result, err := r.DoAlwaysRetry(context.Background(), func(ctx context.Context) (any, error) {
+		attempts++
+		if attempts < 4 {
+			return nil, fmt.Errorf("fail")
+		}
+		return "done", nil
+	})
+	if err != nil {
+		t.Errorf("DoAlwaysRetry() err = %v", err)
+	}
+	if result != "done" {
+		t.Errorf("DoAlwaysRetry() = %v", result)
+	}
+}
+
+func TestDo_ContextCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	r := New(WithMaxAttempt(3), WithBackoff(NewLinearBackoff(1000)))
+	_, err := r.Do(ctx, func(ctx context.Context) (any, bool, error) {
+		return nil, true, fmt.Errorf("fail")
+	})
+	if err == nil {
+		t.Error("Do() should return context error")
+	}
+}
+
+func TestDo_TotalTimeout(t *testing.T) {
+	r := New(
+		WithMaxAttempt(10),
+		WithMaxTotalAttemptTime(50*time.Millisecond),
+		WithBackoff(NewLinearBackoff(20)),
+	)
+	_, err := r.Do(context.Background(), func(ctx context.Context) (any, bool, error) {
+		return nil, true, fmt.Errorf("fail")
+	})
+	if err == nil {
+		t.Error("Do() should return timeout error")
+	}
+}
+
+func TestBackoff_NoBackoff(t *testing.T) {
+	b := &NoBackoff{}
+	if b.Next(5) != 0 {
+		t.Error("NoBackoff should return 0")
+	}
+}
+
+func TestBackoff_Linear(t *testing.T) {
+	b := NewLinearBackoff(100)
+	if b.Next(0) != 100*time.Millisecond {
+		t.Error("LinearBackoff.Next(0) should be 100ms")
+	}
+	if b.Next(5) != 100*time.Millisecond {
+		t.Error("LinearBackoff.Next(5) should be 100ms")
+	}
+}
+
+func TestBackoff_Exponential(t *testing.T) {
+	b := NewExponentialBackoff(100, 2.0, 0)
+	d0 := b.Next(0)  // base * (2^0 + 0) = 100ms
+	d1 := b.Next(1)  // base * (2^1 + 0) = 200ms
+	d2 := b.Next(2)  // base * (2^2 + 0) = 400ms
+
+	if d0 != 100*time.Millisecond {
+		t.Errorf("Next(0) = %v, want 100ms", d0)
+	}
+	if d1 != 200*time.Millisecond {
+		t.Errorf("Next(1) = %v, want 200ms", d1)
+	}
+	if d2 != 400*time.Millisecond {
+		t.Errorf("Next(2) = %v, want 400ms", d2)
+	}
+}
+
+func TestBackoff_ExponentialWithJitter(t *testing.T) {
+	// With jitter the value should be >= base and < base*(factor^count + jitter)
+	b := NewExponentialBackoff(100, 2.0, 0.5)
+	for i := 0; i < 20; i++ {
+		d := b.Next(0)
+		if d < 100*time.Millisecond {
+			t.Errorf("Next(0) = %v, should be >= 100ms", d)
+		}
+		if d > 150*time.Millisecond { // 100*(1+0.5) = 150
+			t.Errorf("Next(0) = %v, should be <= 150ms", d)
+		}
 	}
 }

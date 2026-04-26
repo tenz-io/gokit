@@ -1,3 +1,4 @@
+// Package async provides generic concurrent job execution with panic recovery.
 package async
 
 import (
@@ -6,232 +7,173 @@ import (
 	"log"
 	"runtime/debug"
 	"sync"
-
-	"golang.org/x/sync/errgroup"
 )
 
+// Fn is a generic async function.
+type Fn[T any] func(context.Context) (T, error)
+
+// Holder holds a single result from AllOf, preserving input order.
 type Holder[T any] struct {
 	idx int
 	Val T
 	Err error
 }
 
-type Fn[T any] func(context.Context) (T, error)
-
-// job is an interface that represents a job that can be run concurrently.
-// make it private to prevent other package to implement it.
-type job interface {
-	run(ctx context.Context) error
-}
-
-type Job[T any] struct {
-	fn  Fn[T]
-	Val T
-	Err error
-}
-
-func NewJob[T any](fn Fn[T]) *Job[T] {
-	return &Job[T]{
-		fn: fn,
+// Run runs all functions concurrently and returns the first error encountered.
+// Uses errgroup semantics: the context is not cancelled on first error.
+func Run[T any](ctx context.Context, fns ...Fn[T]) error {
+	if len(fns) == 0 {
+		return nil
 	}
-}
+	var wg sync.WaitGroup
+	errCh := make(chan error, len(fns))
 
-func (j *Job[T]) run(ctx context.Context) error {
-	result, err := withPanicProof(j.fn)(ctx)
-	if err != nil {
-		j.Err = err
+	for _, fn := range fns {
+		if fn == nil {
+			continue
+		}
+		wg.Add(1)
+		go func(f Fn[T]) {
+			defer wg.Done()
+			_, err := panicProof(f)(ctx)
+			if err != nil {
+				errCh <- err
+			}
+		}(fn)
+	}
+
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case err := <-errCh:
 		return err
-	}
-
-	j.Val = result
-	return nil
-}
-
-type Builder struct {
-	jobList []job
-}
-
-func NewBuilder() *Builder {
-	return &Builder{
-		jobList: make([]job, 0),
+	case <-done:
+		return nil
 	}
 }
 
-func (p *Builder) AddJob(jobs ...job) {
-	p.jobList = append(p.jobList, jobs...)
-}
-
-// Run runs all jobs concurrently and returns the first error encountered if any.
-func (p *Builder) Run(ctx context.Context) (err error) {
-	return Run(ctx, p.jobList...)
-}
-
-// Wait runs all jobs concurrently and returns when all jobs are done.
-func (p *Builder) Wait(ctx context.Context) {
-	Wait(ctx, p.jobList...)
-}
-
-// Wait runs all jobs concurrently and returns when all jobs are done.
-func Wait(ctx context.Context, jobs ...job) {
-	if len(jobs) == 0 {
+// Wait runs all functions concurrently and waits for all to complete, ignoring errors.
+func Wait[T any](ctx context.Context, fns ...Fn[T]) {
+	if len(fns) == 0 {
 		return
 	}
-
-	wg := sync.WaitGroup{}
-	for _, jb := range jobs {
-		if jb == nil {
-			continue
-		}
-
-		newCtx := context.WithoutCancel(ctx)
-		wg.Add(1)
-		go func(j job) {
-			defer wg.Done()
-			_ = j.run(newCtx)
-		}(jb)
-	}
-
-	wg.Wait()
-
-}
-
-// Run runs all jobs concurrently and returns the first error encountered if any.
-func Run(ctx context.Context, jobs ...job) (err error) {
-	if len(jobs) == 0 {
-		return fmt.Errorf("empty job list")
-	}
-
-	wg := errgroup.Group{}
-	for _, jb := range jobs {
-		if jb == nil {
-			continue
-		}
-
-		tempJob := jb
-		newCtx := context.WithoutCancel(ctx)
-		wg.Go(func() (innerErr error) {
-			return tempJob.run(newCtx)
-		})
-	}
-
-	return wg.Wait()
-}
-
-// AllOf runs all jobs concurrently and returns the results.
-// The order of the results is the same as the order of the input functions.
-func AllOf[T any](ctx context.Context, fnList []Fn[T]) (results []Holder[T]) {
-	var (
-		count = len(fnList)
-	)
-
-	if count == 0 {
-		return []Holder[T]{}
-	}
-
-	resultC := make(chan *Holder[T], count)
-	for idx, fn := range fnList {
+	var wg sync.WaitGroup
+	for _, fn := range fns {
 		if fn == nil {
-			var zero T
-			resultC <- &Holder[T]{
-				idx: idx,
-				Val: zero,
-				Err: fmt.Errorf("nil function"),
-			}
 			continue
 		}
+		wg.Add(1)
+		go func(f Fn[T]) {
+			defer wg.Done()
+			panicProof(f)(ctx) //nolint:errcheck
+		}(fn)
+	}
+	wg.Wait()
+}
 
-		newCtx := context.WithoutCancel(ctx)
-		go func(i int, f Fn[T]) {
-			result, err := withPanicProof(f)(newCtx)
-			resultC <- &Holder[T]{
-				idx: i,
-				Val: result,
-				Err: err,
-			}
-		}(idx, fn)
+// AllOf runs all functions concurrently and returns results in input order.
+func AllOf[T any](ctx context.Context, fns []Fn[T]) []Holder[T] {
+	if len(fns) == 0 {
+		return nil
 	}
 
-	results = make([]Holder[T], count)
-	for i := 0; i < count; i++ {
-		select {
-		case result := <-resultC:
-			results[result.idx] = *result
+	var wg sync.WaitGroup
+	results := make([]Holder[T], len(fns))
+
+	for i, fn := range fns {
+		if fn == nil {
+			results[i] = Holder[T]{idx: i, Err: fmt.Errorf("nil function")}
+			continue
 		}
+		wg.Add(1)
+		go func(idx int, f Fn[T]) {
+			defer wg.Done()
+			val, err := panicProof(f)(ctx)
+			results[idx] = Holder[T]{idx: idx, Val: val, Err: err}
+		}(i, fn)
 	}
-
+	wg.Wait()
 	return results
 }
 
-// AnyOf runs all jobs concurrently and returns the fastest job result that is not error.
-func AnyOf[T any](ctx context.Context, fnList ...Fn[T]) (T, error) {
-	var (
-		zero T
-	)
-
-	if len(fnList) == 0 {
-		return zero, fmt.Errorf("empty function list")
+// AnyOf runs all functions concurrently and returns the first successful result.
+// Cancels remaining goroutines via context cancellation on first success.
+// If all fail, returns a combined error.
+func AnyOf[T any](ctx context.Context, fns ...Fn[T]) (T, error) {
+	var zero T
+	if len(fns) == 0 {
+		return zero, fmt.Errorf("async.AnyOf: empty function list")
 	}
 
 	allCtx, cancelAll := context.WithCancel(ctx)
 	defer cancelAll()
 
-	resultC := make(chan T, len(fnList))
-	errC := make(chan error, len(fnList))
-	for _, fn := range fnList {
-		if fn == nil {
-			return zero, fmt.Errorf("has nil function")
-		}
+	var wg sync.WaitGroup
+	resultCh := make(chan T, 1)
+	errCh := make(chan error, len(fns))
 
-		newCtx := context.WithoutCancel(allCtx)
+	for _, fn := range fns {
+		if fn == nil {
+			return zero, fmt.Errorf("async.AnyOf: nil function")
+		}
+		wg.Add(1)
 		go func(f Fn[T]) {
-			result, err := withPanicProof(f)(newCtx)
+			defer wg.Done()
+			result, err := panicProof(f)(allCtx)
 			if err != nil {
-				errC <- err
+				errCh <- err
 				return
 			}
-			resultC <- result
+			select {
+			case resultCh <- result:
+				cancelAll()
+			default:
+			}
 		}(fn)
 	}
 
-	errCount := 0
+	go func() {
+		wg.Wait()
+		close(errCh)
+	}()
+
+	var errs []error
 	for {
 		select {
-		case result := <-resultC:
+		case result := <-resultCh:
 			return result, nil
-		case err := <-errC:
-			errCount++
-			if errCount == len(fnList) {
-				return zero, fmt.Errorf("all jobs are failed, one of error: %w", err)
+		case err, ok := <-errCh:
+			if !ok {
+				return zero, fmt.Errorf("async.AnyOf: all %d jobs failed: %v", len(fns), errs)
 			}
+			errs = append(errs, err)
 		}
 	}
 }
 
-// withPanicProof is a wrapper function to catch panic and convert it to error.
-// It is useful to prevent the application from crashing due to panic.
-// The panic message and stack trace will be logged.
-func withPanicProof[T any](fn Fn[T]) Fn[T] {
+func panicProof[T any](fn Fn[T]) Fn[T] {
 	return func(ctx context.Context) (result T, err error) {
 		defer func() {
 			if rec := recover(); rec != nil {
-				log.Printf("panic recovery: %s, stacktrace: %s\n", rec, string(debug.Stack()))
-				err = errorFromPanic(rec)
+				log.Printf("async: panic recovered: %v\n%s", rec, string(debug.Stack()))
+				err = panicToError(rec)
 			}
 		}()
-
-		result, err = fn(ctx)
-		return
+		return fn(ctx)
 	}
 }
 
-// errorFromPanic converts panic to error.
-func errorFromPanic(rec any) error {
-	switch rt := rec.(type) {
+func panicToError(rec any) error {
+	switch r := rec.(type) {
 	case string:
-		return fmt.Errorf(rt)
+		return fmt.Errorf("panic: %s", r)
 	case error:
-		return rt
+		return fmt.Errorf("panic: %w", r)
 	default:
-		return fmt.Errorf("unknown panic")
+		return fmt.Errorf("panic: %v", r)
 	}
 }

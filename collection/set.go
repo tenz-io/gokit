@@ -1,132 +1,133 @@
 package collection
 
-// Set is a set data structure
+// Set is a set data structure backed by a map.
 type Set[T comparable] map[T]struct{}
 
-// NewSet creates a new set
-func NewSet[T comparable]() Set[T] {
-	return make(Set[T])
-}
-
-// NewSetWithValues creates a new set with values
-func NewSetWithValues[T comparable](values ...T) Set[T] {
-	s := make(Set[T])
+// NewSet creates a set, optionally pre-populated with values.
+func NewSet[T comparable](values ...T) Set[T] {
+	s := make(Set[T], len(values))
 	for _, v := range values {
-		s.Add(v)
+		s[v] = struct{}{}
 	}
 	return s
 }
 
-// Add adds an element to the set
-func (s Set[T]) Add(val T) {
-	s[val] = struct{}{}
+// NewSetWithCap creates an empty set with a capacity hint.
+func NewSetWithCap[T comparable](cap int) Set[T] {
+	return make(Set[T], cap)
 }
 
-// AddAll adds multiple elements to the set
-func (s Set[T]) AddAll(values ...T) {
+// Add inserts elements into the set.
+func (s Set[T]) Add(values ...T) {
 	for _, v := range values {
-		s.Add(v)
+		s[v] = struct{}{}
 	}
 }
 
-// Remove removes an element from the set
-func (s Set[T]) Remove(a T) {
-	delete(s, a)
+// Remove deletes an element from the set. No-op if not present.
+func (s Set[T]) Remove(v T) {
+	delete(s, v)
 }
 
-// Contains checks if the set contains an element
-func (s Set[T]) Contains(a T) bool {
-	_, ok := s[a]
+// Contains returns true if the element is in the set.
+func (s Set[T]) Contains(v T) bool {
+	_, ok := s[v]
 	return ok
 }
 
-// Size returns the size of the set
-func (s Set[T]) Size() int {
-	return len(s)
-}
+// Len returns the number of elements in the set.
+func (s Set[T]) Len() int { return len(s) }
 
-// Clear clears the set
+// Size is an alias for Len.
+func (s Set[T]) Size() int { return s.Len() }
+
+// IsEmpty returns true if the set has no elements.
+func (s Set[T]) IsEmpty() bool { return len(s) == 0 }
+
+// Clear removes all elements from the set.
 func (s Set[T]) Clear() {
-	for k := range s {
-		delete(s, k)
-	}
+	clear(s)
 }
 
-// Values returns the values of the set
+// Values returns all elements as a slice (order is non-deterministic).
 func (s Set[T]) Values() []T {
-	values := make([]T, 0, len(s))
+	out := make([]T, 0, len(s))
 	for k := range s {
-		values = append(values, k)
+		out = append(out, k)
 	}
-	return values
+	return out
 }
 
-// Intersection returns the intersection of two sets;
-// elements in both a and b
-//
-// a ∩ b
+// Clone returns a shallow copy of the set.
+func Clone[T comparable](s Set[T]) Set[T] {
+	out := make(Set[T], len(s))
+	for k := range s {
+		out[k] = struct{}{}
+	}
+	return out
+}
+
+// --- Set algebra ---
+
+// Intersection returns elements present in both sets (a ∩ b).
 func Intersection[T comparable](a, b Set[T]) Set[T] {
-	result := NewSet[T]()
+	// iterate the smaller set for efficiency
+	if len(a) > len(b) {
+		a, b = b, a
+	}
+	out := make(Set[T], len(a))
 	for k := range a {
 		if b.Contains(k) {
-			result.Add(k)
+			out[k] = struct{}{}
 		}
 	}
-	return result
+	return out
 }
 
-// Union returns the union of two sets;
-// all elements in a and b
-//
-// a ∪ b
+// Union returns all elements from both sets (a ∪ b).
 func Union[T comparable](a, b Set[T]) Set[T] {
-	result := NewSet[T]()
+	out := make(Set[T], len(a)+len(b))
 	for k := range a {
-		result.Add(k)
+		out[k] = struct{}{}
 	}
 	for k := range b {
-		result.Add(k)
+		out[k] = struct{}{}
 	}
-	return result
+	return out
 }
 
-// Difference returns the difference of two sets;
-// elements in a but not in b
-//
-// a - b
+// Difference returns elements in a but not in b (a - b).
 func Difference[T comparable](a, b Set[T]) Set[T] {
-	result := NewSet[T]()
+	out := make(Set[T], len(a))
 	for k := range a {
 		if !b.Contains(k) {
-			result.Add(k)
+			out[k] = struct{}{}
 		}
 	}
-	return result
+	return out
 }
 
-// SymmetricDifference returns the symmetric difference of two sets;
-// elements in a or b but not in both
-//
-// a ∆ b
+// SymmetricDifference returns elements in exactly one of the sets (a ∆ b).
 func SymmetricDifference[T comparable](a, b Set[T]) Set[T] {
-	result := NewSet[T]()
+	out := make(Set[T], len(a)+len(b))
 	for k := range a {
 		if !b.Contains(k) {
-			result.Add(k)
+			out[k] = struct{}{}
 		}
 	}
 	for k := range b {
 		if !a.Contains(k) {
-			result.Add(k)
+			out[k] = struct{}{}
 		}
 	}
-	return result
+	return out
 }
 
-// IsSubset checks if a is a subset of b
-//
-// a ⊆ b
+// IsSubset returns true if every element of a is in b (a ⊆ b).
 func IsSubset[T comparable](a, b Set[T]) bool {
+	if len(a) > len(b) {
+		return false
+	}
 	for k := range a {
 		if !b.Contains(k) {
 			return false
@@ -135,17 +136,17 @@ func IsSubset[T comparable](a, b Set[T]) bool {
 	return true
 }
 
-// IsSuperset checks if a is a superset of b
-//
-// a ⊇ b
+// IsSuperset returns true if every element of b is in a (a ⊇ b).
 func IsSuperset[T comparable](a, b Set[T]) bool {
 	return IsSubset(b, a)
 }
 
-// IsDisjoint checks if a and b are disjoint
-//
-// a ∩ b = ∅
+// IsDisjoint returns true if the sets share no elements (a ∩ b = ∅).
 func IsDisjoint[T comparable](a, b Set[T]) bool {
+	// iterate the smaller set
+	if len(a) > len(b) {
+		a, b = b, a
+	}
 	for k := range a {
 		if b.Contains(k) {
 			return false
@@ -154,105 +155,14 @@ func IsDisjoint[T comparable](a, b Set[T]) bool {
 	return true
 }
 
-// Equal checks if a and b are equal
-//
-// a = b
+// Equal returns true if both sets contain the same elements.
 func Equal[T comparable](a, b Set[T]) bool {
-	return IsSubset(a, b) && IsSuperset(a, b)
+	return len(a) == len(b) && IsSubset(a, b)
 }
 
-// Clone returns a shallow copy of the set
-func Clone[T comparable](s Set[T]) Set[T] {
-	result := NewSet[T]()
-	for k := range s {
-		result.Add(k)
-	}
-	return result
-}
+// --- Functional operations on sets ---
 
-// Filter returns a new set with elements that satisfy the predicate
-// predicate is a function that takes an element and returns a boolean
-// e.g. filter all even elements in the set
-func Filter[T comparable](s Set[T], predicate func(T) bool) Set[T] {
-	result := NewSet[T]()
-	for k := range s {
-		if predicate(k) {
-			result.Add(k)
-		}
-	}
-	return result
-}
-
-// Map returns a new set with elements that are transformed by the function
-// function is a function that takes an element and returns a new element
-// e.g. square all elements in the set
-func Map[T comparable, U comparable](s Set[T], function func(T) U) Set[U] {
-	result := NewSet[U]()
-	for k := range s {
-		result.Add(function(k))
-	}
-	return result
-}
-
-// Reduce reduces the set to a single value
-// function is a function that takes an accumulator and an element and returns a new accumulator
-// e.g. sum all elements in the set
-func Reduce[T comparable, U comparable](s Set[T], function func(U, T) U, initial U) U {
-	accumulator := initial
-	for k := range s {
-		accumulator = function(accumulator, k)
-	}
-	return accumulator
-}
-
-// ForEach applies the function to each element in the set
-// function is a function that takes an element
-// e.g. print all elements in the set
-func ForEach[T comparable](s Set[T], function func(T)) {
-	for k := range s {
-		function(k)
-	}
-}
-
-// Any checks if any element in the set satisfies the predicate
-// predicate is a function that takes an element and returns a boolean
-// e.g. check if any element is even in the set
-func Any[T comparable](s Set[T], predicate func(T) bool) bool {
-	for k := range s {
-		if predicate(k) {
-			return true
-		}
-	}
-	return false
-}
-
-// All checks if all elements in the set satisfy the predicate
-// predicate is a function that takes an element and returns a boolean
-// e.g. check if all elements are even in the set
-func All[T comparable](s Set[T], predicate func(T) bool) bool {
-	for k := range s {
-		if !predicate(k) {
-			return false
-		}
-	}
-	return true
-}
-
-// None checks if no elements in the set satisfy the predicate
-// predicate is a function that takes an element and returns a boolean
-// e.g. check if no elements are even in the set
-func None[T comparable](s Set[T], predicate func(T) bool) bool {
-	for k := range s {
-		if predicate(k) {
-			return false
-		}
-	}
-	return true
-}
-
-// Find returns the first element that satisfies the predicate
-// predicate is a function that takes an element and returns a boolean
-// e.g. find the first even element in the set
+// Find returns the first element (arbitrary order) satisfying the predicate.
 func Find[T comparable](s Set[T], predicate func(T) bool) (T, bool) {
 	for k := range s {
 		if predicate(k) {
@@ -263,31 +173,84 @@ func Find[T comparable](s Set[T], predicate func(T) bool) (T, bool) {
 	return zero, false
 }
 
-// FindAll returns all elements that satisfy the predicate
-// predicate is a function that takes an element and returns a boolean
-// e.g. find all even elements in the set
+// FindAll returns all elements satisfying the predicate.
 func FindAll[T comparable](s Set[T], predicate func(T) bool) Set[T] {
-	result := NewSet[T]()
+	out := make(Set[T], len(s))
 	for k := range s {
 		if predicate(k) {
-			result.Add(k)
+			out[k] = struct{}{}
 		}
 	}
-	return result
+	return out
 }
 
-// Partition partitions the set into two sets based on the predicate
-// predicate is a function that takes an element and returns a boolean
-// e.g. partition the set into even and odd elements
-func Partition[T comparable](s Set[T], predicate func(T) bool) (Set[T], Set[T]) {
-	a := NewSet[T]()
-	b := NewSet[T]()
+// Partition splits the set into two based on the predicate.
+func Partition[T comparable](s Set[T], predicate func(T) bool) (matched, unmatched Set[T]) {
+	matched = make(Set[T], len(s))
+	unmatched = make(Set[T], len(s))
 	for k := range s {
 		if predicate(k) {
-			a.Add(k)
+			matched[k] = struct{}{}
 		} else {
-			b.Add(k)
+			unmatched[k] = struct{}{}
 		}
 	}
-	return a, b
+	return
+}
+
+// Map transforms each element and returns a new set.
+// Duplicates (multiple source elements mapping to the same value) are collapsed.
+func Map[T comparable, U comparable](s Set[T], fn func(T) U) Set[U] {
+	out := make(Set[U], len(s))
+	for k := range s {
+		out[fn(k)] = struct{}{}
+	}
+	return out
+}
+
+// Reduce folds the set into a single value.
+func Reduce[T comparable, U any](s Set[T], reducer func(acc U, elem T) U, initial U) U {
+	acc := initial
+	for k := range s {
+		acc = reducer(acc, k)
+	}
+	return acc
+}
+
+// ForEach applies fn to each element.
+func ForEach[T comparable](s Set[T], fn func(T)) {
+	for k := range s {
+		fn(k)
+	}
+}
+
+// Any returns true if at least one element satisfies the predicate.
+func Any[T comparable](s Set[T], predicate func(T) bool) bool {
+	for k := range s {
+		if predicate(k) {
+			return true
+		}
+	}
+	return false
+}
+
+// All returns true if every element satisfies the predicate.
+// Returns true for an empty set (vacuous truth).
+func All[T comparable](s Set[T], predicate func(T) bool) bool {
+	for k := range s {
+		if !predicate(k) {
+			return false
+		}
+	}
+	return true
+}
+
+// None returns true if no element satisfies the predicate.
+func None[T comparable](s Set[T], predicate func(T) bool) bool {
+	for k := range s {
+		if predicate(k) {
+			return false
+		}
+	}
+	return true
 }

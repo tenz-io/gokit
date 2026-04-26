@@ -1,3 +1,4 @@
+// Package tracer provides context-based request ID propagation and debug/stress/shadow flag management.
 package tracer
 
 import (
@@ -7,101 +8,96 @@ import (
 	"github.com/google/uuid"
 )
 
-var (
-	requestIdCtxKey = requestIdCtxKeyType("_requestId_ctx_key")
-)
-
-type requestIdCtxKeyType string
-
-// Flag is a type to represent the trace flag of traffic.
+// Flag is a bitmask for traffic mode flags.
 type Flag int
 
 const (
 	FlagNone Flag = 0
-)
-
-const (
-	// FlagDebug is a flag to enable debug mode.
-	FlagDebug Flag = 1 << iota // 1
-	// FlagStress is a flag to enable stress test mode.
+	// FlagDebug enables debug mode.
+	FlagDebug Flag = 1 << iota
+	// FlagStress enables stress test mode.
 	FlagStress
-	// FlagShadow is a flag to enable shadow mode.
-	// used for traffic dumping and replaying.
+	// FlagShadow enables shadow mode (traffic dumping and replaying).
 	FlagShadow
 )
 
-type flagCtxKey string
+// Is reports whether all bits in flagToCheck are set in f.
+func (f Flag) Is(flagToCheck Flag) bool { return f&flagToCheck == flagToCheck }
 
-const (
-	flagCtxKeyFlag = flagCtxKey("_flag_ctx_key_flag")
+// HasAll reports whether all specified flags are set.
+func (f Flag) HasAll(flags Flag) bool { return f&flags == flags }
+
+// IsDebug reports whether FlagDebug is set.
+func (f Flag) IsDebug() bool { return f.Is(FlagDebug) }
+
+// IsStress reports whether FlagStress is set.
+func (f Flag) IsStress() bool { return f.Is(FlagStress) }
+
+// IsShadow reports whether FlagShadow is set.
+func (f Flag) IsShadow() bool { return f.Is(FlagShadow) }
+
+// Context keys are unexported to prevent collisions.
+type (
+	flagCtxKey      string
+	requestIDCtxKey string
 )
 
-// FromContext returns the trace flag from the context.
-func FromContext(ctx context.Context) (flag Flag) {
+const (
+	flagKey      flagCtxKey      = "_flag_ctx_key"
+	requestIDKey requestIDCtxKey = "_requestId_ctx_key"
+)
+
+// FromContext returns the trace flag from the context, or FlagNone if not set.
+func FromContext(ctx context.Context) Flag {
 	if ctx == nil {
 		return FlagNone
 	}
-	if f, ok := ctx.Value(flagCtxKeyFlag).(Flag); ok {
+	if f, ok := ctx.Value(flagKey).(Flag); ok {
 		return f
 	}
 	return FlagNone
 }
 
-// WithFlag returns a new context with the trace flag.
-// flag can be combined with bitwise OR.
-// e.g. WithFlag(ctx, FlagDebug), WithFlag(ctx, FlagDebug|FlagStress), etc.
+// WithFlag returns a new context with the given flag set.
 func WithFlag(ctx context.Context, flag Flag) context.Context {
-	return context.WithValue(ctx, flagCtxKeyFlag, flag)
+	return context.WithValue(ctx, flagKey, flag)
 }
 
-// WithFlags returns a new context with the trace flag.
+// WithFlags combines multiple flags and sets them in the context.
 func WithFlags(ctx context.Context, flags ...Flag) context.Context {
-	var flag = FlagNone
-	for _, f := range flags {
-		flag |= f
+	var f Flag
+	for _, fl := range flags {
+		f |= fl
 	}
-	return WithFlag(ctx, flag)
+	return WithFlag(ctx, f)
 }
 
-// Is returns true if the trace flag is set.
-func (f Flag) Is(flagToCheck Flag) bool {
-	return f&flagToCheck == flagToCheck
-}
-
-// IsDebug returns true if the trace flag is set.
-func (f Flag) IsDebug() bool {
-	return f.Is(FlagDebug)
-}
-
-// IsStress returns true if the trace flag is set.
-func (f Flag) IsStress() bool {
-	return f.Is(FlagStress)
-}
-
-// IsShadow returns true if the trace flag is set.
-func (f Flag) IsShadow() bool {
-	return f.Is(FlagShadow)
-}
-
-// RequestIdFromCtx returns the value associated with this context for key, or nil
+// RequestIdFromCtx returns the request ID from the context.
+// If none is set, a new UUID-based ID is generated and returned.
 func RequestIdFromCtx(ctx context.Context) string {
-	if ctx == nil {
-		return ""
+	if ctx != nil {
+		if id, ok := ctx.Value(requestIDKey).(string); ok && id != "" {
+			return id
+		}
 	}
-
-	if requestId, ok := ctx.Value(requestIdCtxKey).(string); ok {
-		return requestId
-	}
-
-	return newRequestId()
+	return newRequestID()
 }
 
-// WithRequestId returns a copy of parent in which the value associated with key is val.
+// RequestIdFromCtxOr returns the request ID from the context, or empty string if not set.
+func RequestIdFromCtxOr(ctx context.Context) string {
+	if ctx != nil {
+		if id, ok := ctx.Value(requestIDKey).(string); ok {
+			return id
+		}
+	}
+	return ""
+}
+
+// WithRequestId sets the request ID in the context.
 func WithRequestId(ctx context.Context, requestID string) context.Context {
-	ctx = context.WithValue(ctx, requestIdCtxKey, requestID)
-	return ctx
+	return context.WithValue(ctx, requestIDKey, requestID)
 }
 
-func newRequestId() string {
+func newRequestID() string {
 	return strings.ReplaceAll(uuid.NewString(), "-", "")
 }

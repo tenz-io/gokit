@@ -2,116 +2,90 @@ package bloom
 
 import "testing"
 
-func Test_optimalSize(t *testing.T) {
-	type args struct {
-		n uint64
-		p float64
-	}
+func Test_optimalParams(t *testing.T) {
 	tests := []struct {
 		name        string
-		args        args
+		n           uint64
+		p           float64
 		wantSize    uint64
 		wantHashNum int
 	}{
-		{
-			name:        "10 elements, 0.01 false positive probability",
-			args:        args{n: 10, p: 0.001},
-			wantSize:    144,
-			wantHashNum: 10,
-		},
-		{
-			name:        "100 elements, 0.01 false positive probability",
-			args:        args{n: 100, p: 0.01},
-			wantSize:    959,
-			wantHashNum: 7,
-		},
-		{
-			name:        "500 elements, 0.05 false positive probability",
-			args:        args{n: 500, p: 0.05},
-			wantSize:    3118,
-			wantHashNum: 5,
-		},
-		{
-			name:        "1000 elements, 0.01 false positive probability",
-			args:        args{n: 1000, p: 0.01},
-			wantSize:    9586,
-			wantHashNum: 7,
-		},
-		{
-			name:        "2000 elements, 0.01 false positive probability",
-			args:        args{n: 2000, p: 0.01},
-			wantSize:    19171, // ~ 2.34106445 KB
-			wantHashNum: 7,
-		},
-		{
-			name:        "millions elements, 0.01 false positive probability",
-			args:        args{n: 1e6, p: 0.01},
-			wantSize:    9585059, // ~ 1.14903259 MB
-			wantHashNum: 7,
-		},
-		{
-			name:        "billions elements, 0.01 false positive probability",
-			args:        args{n: 1e9, p: 0.01},
-			wantSize:    9585058378, // ~ 1.11584766 GB
-			wantHashNum: 7,
-		},
+		{"10 elements, 0.001 FP", 10, 0.001, 144, 10},
+		{"100 elements, 0.01 FP", 100, 0.01, 959, 7},
+		{"500 elements, 0.05 FP", 500, 0.05, 3118, 5},
+		{"1000 elements, 0.01 FP", 1000, 0.01, 9586, 7},
+		{"2000 elements, 0.01 FP", 2000, 0.01, 19171, 7},
+		{"1e6 elements, 0.01 FP", 1e6, 0.01, 9585059, 7},
+		{"1e9 elements, 0.01 FP", 1e9, 0.01, 9585058378, 7},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotSize, gotHashNum := optimalSize(tt.args.n, tt.args.p)
-			t.Logf("gotSize: %v, gotHashNum: %v", gotSize, gotHashNum)
+			gotSize, gotHashNum := optimalParams(tt.n, tt.p)
 			if gotSize != tt.wantSize {
-				t.Errorf("optimalSize() gotSize = %v, want %v", gotSize, tt.wantSize)
+				t.Errorf("optimalParams() size = %v, want %v", gotSize, tt.wantSize)
 			}
 			if gotHashNum != tt.wantHashNum {
-				t.Errorf("optimalSize() gotHashNum = %v, want %v", gotHashNum, tt.wantHashNum)
+				t.Errorf("optimalParams() hashes = %v, want %v", gotHashNum, tt.wantHashNum)
 			}
 		})
+	}
+}
+
+func TestNewFilter_Invalid(t *testing.T) {
+	if NewFilter(0, 0.01) != nil {
+		t.Error("NewFilter(0, ...) should return nil")
+	}
+	if NewFilter(100, 0) != nil {
+		t.Error("NewFilter(..., 0) should return nil")
+	}
+	if NewFilter(100, 1) != nil {
+		t.Error("NewFilter(..., 1) should return nil")
+	}
+	if NewFilter(100, -0.1) != nil {
+		t.Error("NewFilter(..., -0.1) should return nil")
 	}
 }
 
 func TestFilter_AddAndExists(t *testing.T) {
 	bf := NewFilter(1000, 0.01)
-
-	tests := []struct {
-		name     string
-		element  []byte
-		expected bool
-	}{
-		{
-			name:     "Element 1",
-			element:  []byte("element1"),
-			expected: true,
-		},
-		{
-			name:     "Element 2",
-			element:  []byte("element2"),
-			expected: true,
-		},
-		{
-			name:     "Non-existent Element",
-			element:  []byte("nonexistent"),
-			expected: false,
-		},
+	if bf == nil {
+		t.Fatal("NewFilter returned nil")
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.expected {
-				bf.Add(tt.element)
-			}
-			exists := bf.Exists(tt.element)
-			if exists != tt.expected {
-				t.Errorf("Exists() = %v, want %v", exists, tt.expected)
-			}
-		})
+	bf.Add([]byte("hello"))
+	bf.AddString("world")
+
+	if !bf.Exists([]byte("hello")) {
+		t.Error("Exists(hello) should be true")
+	}
+	if !bf.ExistsString("world") {
+		t.Error("ExistsString(world) should be true")
+	}
+	if bf.Exists([]byte("missing")) {
+		t.Error("Exists(missing) should be false")
+	}
+	if bf.ApproxCount() != 2 {
+		t.Errorf("ApproxCount() = %v, want 2", bf.ApproxCount())
 	}
 }
 
-func Test_filter_hashWithSeed(t *testing.T) {
+func TestFilter_FalsePositiveRate(t *testing.T) {
+	bf := NewFilter(1000, 0.01)
+	if bf.FalsePositiveRate() != 0 {
+		t.Error("FP rate should be 0 for empty filter")
+	}
+	bf.Add([]byte("a"))
+	if bf.FalsePositiveRate() <= 0 {
+		t.Error("FP rate should increase after insert")
+	}
+}
+
+func TestFilter_hashWithSeed(t *testing.T) {
 	f := &filter{}
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 5; i++ {
 		got := f.hashWithSeed([]byte("hello"), uint32(i))
-		t.Logf("hashWithSeed( %d ) = %v", i, got)
+		if got == 0 {
+			t.Errorf("hashWithSeed(%d) returned 0", i)
+		}
 	}
 }

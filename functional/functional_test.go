@@ -1,619 +1,292 @@
 package function
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
-	"time"
 )
 
 func TestMap(t *testing.T) {
-	type args[T any, U any] struct {
-		list []T
-		fn   func(T) U
-	}
-	type testCase[T any, U any] struct {
-		name string
-		args args[T, U]
-		want []U
-	}
-	tests := []testCase[int, string]{
+	tests := []struct {
+		name   string
+		list   []int
+		mapper func(int) string
+		want   []string
+	}{
 		{
-			name: "when empty list then return empty list",
-			args: args[int, string]{
-				list: []int{},
-				fn:   func(i int) string { return fmt.Sprintf("%d", i) },
-			},
-			want: []string{},
+			name:   "nil slice",
+			list:   nil,
+			mapper: func(i int) string { return string(rune('0' + i)) },
+			want:   []string{},
 		},
 		{
-			name: "when list has elements then return list of results",
-			args: args[int, string]{
-				list: []int{1, 2, 3},
-				fn:   func(i int) string { return fmt.Sprintf("%d", i) },
-			},
-			want: []string{"1", "2", "3"},
+			name:   "empty slice",
+			list:   []int{},
+			mapper: func(i int) string { return string(rune('0' + i)) },
+			want:   []string{},
+		},
+		{
+			name:   "single element",
+			list:   []int{5},
+			mapper: func(i int) string { return string(rune('0' + i)) },
+			want:   []string{"5"},
+		},
+		{
+			name:   "multiple elements",
+			list:   []int{1, 2, 3},
+			mapper: func(i int) string { return string(rune('0' + i)) },
+			want:   []string{"1", "2", "3"},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			start := time.Now()
-			got := Map(tt.args.list, tt.args.fn)
-			duration := time.Since(start)
-			t.Logf("duration: %v, got: %+v", duration, got)
-
+			got := Map(tt.list, tt.mapper)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Map() = %v, want %v", got, tt.want)
-				return
 			}
-
 		})
 	}
 }
 
 func TestFilter(t *testing.T) {
-	type args[T any] struct {
-		list      []T
-		predicate func(T) bool
-	}
-	type testCase[T any] struct {
-		name string
-		args args[T]
-		want []T
-	}
-	tests := []testCase[int]{
+	tests := []struct {
+		name      string
+		list      []int
+		predicate func(int) bool
+		want      []int
+	}{
 		{
-			name: "when empty list then return empty list",
-			args: args[int]{
-				list: []int{},
-				predicate: func(i int) bool {
-					return i%2 == 0
-				},
-			},
-			want: []int{},
+			name:      "nil slice",
+			list:      nil,
+			predicate: func(i int) bool { return i%2 == 0 },
+			want:      []int{},
 		},
 		{
-			name: "when list has elements then return list of results",
-			args: args[int]{
-				list: []int{1, 2, 3, 4, 5},
-				predicate: func(i int) bool {
-					return i%2 == 0
-				},
-			},
-			want: []int{2, 4},
+			name:      "empty slice",
+			list:      []int{},
+			predicate: func(i int) bool { return i%2 == 0 },
+			want:      []int{},
+		},
+		{
+			name:      "no match",
+			list:      []int{1, 3, 5},
+			predicate: func(i int) bool { return i%2 == 0 },
+			want:      []int{},
+		},
+		{
+			name:      "all match",
+			list:      []int{2, 4, 6},
+			predicate: func(i int) bool { return i%2 == 0 },
+			want:      []int{2, 4, 6},
+		},
+		{
+			name:      "some match",
+			list:      []int{1, 2, 3, 4, 5},
+			predicate: func(i int) bool { return i%2 == 0 },
+			want:      []int{2, 4},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := Filter(tt.args.list, tt.args.predicate); !reflect.DeepEqual(got, tt.want) {
+			got := Filter(tt.list, tt.predicate)
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Filter() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestGroupBy(t *testing.T) {
-	type args[T any, K comparable] struct {
-		list  []T
-		keyFn func(T) K
+func TestReduce(t *testing.T) {
+	// int reduction
+	if got := Reduce([]int{1, 2, 3, 4}, func(acc, e int) int { return acc + e }, 0); got != 10 {
+		t.Errorf("Reduce sum = %v, want 10", got)
 	}
-	type testCase[T any, K comparable] struct {
-		name string
-		args args[T, K]
-		want map[K][]T
+	// nil slice returns initial
+	if got := Reduce([]int(nil), func(acc, e int) int { return acc + e }, 10); got != 10 {
+		t.Errorf("Reduce nil = %v, want 10", got)
 	}
-	tests := []testCase[int, string]{
-		{
-			name: "when empty list then return empty map",
-			args: args[int, string]{
-				list: []int{},
-				keyFn: func(i int) string {
-					if i%2 == 0 {
-						return "even"
-					} else {
-						return "odd"
-					}
-				},
-			},
-			want: map[string][]int{},
-		},
-		{
-			name: "when list has elements then return map of results",
-			args: args[int, string]{
-				list: []int{1, 2, 3, 4, 5},
-				keyFn: func(i int) string {
-					if i%2 == 0 {
-						return "even"
-					} else {
-						return "odd"
-					}
-				},
-			},
-			want: map[string][]int{
-				"even": {2, 4},
-				"odd":  {1, 3, 5},
-			},
-		},
+	// empty slice returns initial
+	if got := Reduce([]int{}, func(acc, e int) int { return acc + e }, 5); got != 5 {
+		t.Errorf("Reduce empty = %v, want 5", got)
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := GroupBy(tt.args.list, tt.args.keyFn)
-			t.Logf("got: %+v", got)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GroupBy() = %v, want %v", got, tt.want)
-			}
-		})
+	// string concat
+	if got := Reduce([]string{"a", "b", "c"}, func(acc string, e string) string { return acc + e }, ""); got != "abc" {
+		t.Errorf("Reduce concat = %v, want abc", got)
 	}
 }
 
+func TestForEach(t *testing.T) {
+	var sum int
+	ForEach([]int{1, 2, 3}, func(i int) { sum += i })
+	if sum != 6 {
+		t.Errorf("ForEach() sum = %v, want 6", sum)
+	}
+
+	// nil slice should not panic
+	ForEach([]int(nil), func(i int) { sum += i })
+}
+
 func TestFlatten(t *testing.T) {
-	type args[T any] struct {
-		list [][]T
-	}
-	type testCase[T any] struct {
+	tests := []struct {
 		name string
-		args args[T]
-		want []T
-	}
-	tests := []testCase[int]{
+		list [][]int
+		want []int
+	}{
 		{
-			name: "when empty list then return empty list",
-			args: args[int]{
-				list: [][]int{},
-			},
+			name: "nil slice",
+			list: nil,
 			want: []int{},
 		},
 		{
-			name: "when list has elements then return list of results",
-			args: args[int]{
-				list: [][]int{{1, 2}, {3, 4}, {5}},
-			},
+			name: "empty outer",
+			list: [][]int{},
+			want: []int{},
+		},
+		{
+			name: "empty inner",
+			list: [][]int{{}, {}},
+			want: []int{},
+		},
+		{
+			name: "single group",
+			list: [][]int{{1, 2, 3}},
+			want: []int{1, 2, 3},
+		},
+		{
+			name: "multiple groups",
+			list: [][]int{{1, 2}, {3, 4}, {5}},
 			want: []int{1, 2, 3, 4, 5},
+		},
+		{
+			name: "mixed empty",
+			list: [][]int{{1}, {}, {2, 3}},
+			want: []int{1, 2, 3},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := Flatten(tt.args.list); !reflect.DeepEqual(got, tt.want) {
+			got := Flatten(tt.list)
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Flatten() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestIf(t *testing.T) {
-	type args[T any] struct {
-		cond    bool
-		ifVal   T
-		elseVal T
-	}
-	type testCase[T any] struct {
-		name string
-		args args[T]
-		want T
-	}
-	tests := []testCase[int]{
-		{
-			name: "when condition is true then return ifVal",
-			args: args[int]{
-				cond:    true,
-				ifVal:   1,
-				elseVal: 2,
-			},
-			want: 1,
-		},
-		{
-			name: "when condition is false then return elseVal",
-			args: args[int]{
-				cond:    false,
-				ifVal:   1,
-				elseVal: 2,
-			},
-			want: 2,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := If(tt.args.cond, tt.args.ifVal, tt.args.elseVal); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("If() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestIfThen(t *testing.T) {
-	type args[T any] struct {
-		cond  bool
-		val   T
-		apply func(T) T
-	}
-	type testCase[T any] struct {
-		name string
-		args args[T]
-		want T
-	}
-	tests := []testCase[int]{
-		{
-			name: "when condition is true then apply function",
-			args: args[int]{
-				cond: true,
-				val:  1,
-				apply: func(i int) int {
-					return i + 1
-				},
-			},
-			want: 2,
-		},
-		{
-			name: "when condition is false then return value",
-			args: args[int]{
-				cond: false,
-				val:  1,
-				apply: func(i int) int {
-					return i + 1
-				},
-			},
-			want: 1,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := IfThen(tt.args.cond, tt.args.val, tt.args.apply); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("IfThen() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestIfElse(t *testing.T) {
-	type args[T any] struct {
-		cond   bool
-		ifFn   func() T
-		elseFn func() T
-	}
-	type testCase[T any] struct {
-		name string
-		args args[T]
-		want T
-	}
-	tests := []testCase[int]{
-		{
-			name: "when condition is true then return ifFn result",
-			args: args[int]{
-				cond: true,
-				ifFn: func() int {
-					return 1
-				},
-				elseFn: func() int {
-					return 2
-				},
-			},
-			want: 1,
-		},
-		{
-			name: "when condition is false then return elseFn result",
-			args: args[int]{
-				cond: false,
-				ifFn: func() int {
-					return 1
-				},
-				elseFn: func() int {
-					return 2
-				},
-			},
-			want: 2,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := IfElse(tt.args.cond, tt.args.ifFn, tt.args.elseFn); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("IfElse() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestDeduplicate(t *testing.T) {
-	type args[T comparable] struct {
-		list []T
-	}
-	type testCase[T comparable] struct {
-		name string
-		args args[T]
-		want []T
-	}
-	tests := []testCase[int]{
-		{
-			name: "when empty list then return empty list",
-			args: args[int]{
-				list: []int{},
-			},
-			want: []int{},
-		},
-		{
-			name: "when list has elements then return list of results",
-			args: args[int]{
-				list: []int{1, 2, 2, 3, 2, 1},
-			},
-			want: []int{1, 2, 3},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := Deduplicate(tt.args.list); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Deduplicate() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestDeduplicateWith(t *testing.T) {
-	type item struct {
-		id   int
-		desc string
-	}
-	type args[T any, K comparable] struct {
-		list  []T
-		keyFn func(T) K
-	}
-	type testCase[T any, K comparable] struct {
-		name string
-		args args[T, K]
-		want []T
-	}
-	tests := []testCase[item, int]{
-		{
-			name: "when empty list then return empty list",
-			args: args[item, int]{
-				list: []item{},
-				keyFn: func(i item) int {
-					return i.id
-				},
-			},
-			want: []item{},
-		},
-		{
-			name: "when list has elements then return list of results",
-			args: args[item, int]{
-				list: []item{
-					{1, "one"},
-					{2, "two"},
-					{2, "two"},
-					{3, "three"},
-					{2, "two"},
-					{1, "one"},
-				},
-				keyFn: func(i item) int {
-					return i.id
-				},
-			},
-			want: []item{
-				{1, "one"},
-				{2, "two"},
-				{3, "three"},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := DeduplicateWith(tt.args.list, tt.args.keyFn); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("DeduplicateWith() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestReverse(t *testing.T) {
-	type args[T any] struct {
-		list []T
-	}
-	type testCase[T any] struct {
+	tests := []struct {
 		name string
-		args args[T]
-		want []T
-	}
-	tests := []testCase[int]{
-		{
-			name: "when empty list then return empty list",
-			args: args[int]{
-				list: []int{},
-			},
-			want: []int{},
-		},
-		{
-			name: "when list has one element then return same list",
-			args: args[int]{
-				list: []int{1},
-			},
-			want: []int{1},
-		},
-		{
-			name: "when list has two elements then return reversed list",
-			args: args[int]{
-				list: []int{1, 2},
-			},
-			want: []int{2, 1},
-		},
-		{
-			name: "when list has odd elements then return reversed list",
-			args: args[int]{
-				list: []int{1, 2, 3},
-			},
-			want: []int{3, 2, 1},
-		},
-		{
-			name: "when list has even elements then return reversed list",
-			args: args[int]{
-				list: []int{1, 2, 3, 4},
-			},
-			want: []int{4, 3, 2, 1},
-		},
+		list []int
+		want []int
+	}{
+		{"nil slice", nil, []int{}},
+		{"empty", []int{}, []int{}},
+		{"single", []int{1}, []int{1}},
+		{"two elements", []int{1, 2}, []int{2, 1}},
+		{"odd count", []int{1, 2, 3}, []int{3, 2, 1}},
+		{"even count", []int{1, 2, 3, 4}, []int{4, 3, 2, 1}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := Reverse(tt.args.list); !reflect.DeepEqual(got, tt.want) {
+			got := Reverse(tt.list)
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Reverse() = %v, want %v", got, tt.want)
 			}
-		})
-	}
-}
-
-func TestContains(t *testing.T) {
-	type args[T comparable] struct {
-		list []T
-		elem T
-	}
-	type testCase[T comparable] struct {
-		name string
-		args args[T]
-		want bool
-	}
-	tests := []testCase[int]{
-		{
-			name: "when empty list then return false",
-			args: args[int]{
-				list: []int{},
-				elem: 1,
-			},
-			want: false,
-		},
-		{
-			name: "when list has elements then return true if element is in list",
-			args: args[int]{
-				list: []int{1, 2, 3},
-				elem: 2,
-			},
-			want: true,
-		},
-		{
-			name: "when list has elements then return false if element is not in list",
-			args: args[int]{
-				list: []int{1, 2, 3},
-				elem: 4,
-			},
-			want: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := Contains(tt.args.list, tt.args.elem); got != tt.want {
-				t.Errorf("Contains() = %v, want %v", got, tt.want)
+			// original must be unchanged
+			if len(tt.list) > 0 {
+				reversed := Reverse(got)
+				if !reflect.DeepEqual(reversed, tt.list) {
+					t.Errorf("Reverse() not reversible: reversed=%v, original=%v", reversed, tt.list)
+				}
 			}
 		})
 	}
 }
 
-func TestContainsWith(t *testing.T) {
-	type item struct {
-		id   int
-		desc string
-	}
-	type args[T any, K comparable] struct {
-		list  []T
-		elem  T
-		keyFn func(T) K
-	}
-	type testCase[T any, K comparable] struct {
+func TestReverseInPlace(t *testing.T) {
+	tests := []struct {
 		name string
-		args args[T, K]
-		want bool
-	}
-	tests := []testCase[item, int]{
-		{
-			name: "when empty list then return false",
-			args: args[item, int]{
-				list: []item{},
-				elem: item{1, "one"},
-				keyFn: func(i item) int {
-					return i.id
-				},
-			},
-			want: false,
-		},
-		{
-			name: "when list has elements then return true if element is in list",
-			args: args[item, int]{
-				list: []item{
-					{1, "one"},
-					{2, "two"},
-					{3, "three"},
-				},
-				elem: item{2, "two"},
-				keyFn: func(i item) int {
-					return i.id
-				},
-			},
-			want: true,
-		},
-		{
-			name: "when list has elements then return false if element is not in list",
-			args: args[item, int]{
-				list: []item{
-					{1, "one"},
-					{2, "two"},
-					{3, "three"},
-				},
-				elem: item{4, "four"},
-				keyFn: func(i item) int {
-					return i.id
-				},
-			},
-			want: false,
-		},
+		list []int
+		want []int
+	}{
+		{"nil slice", nil, nil},
+		{"empty", []int{}, []int{}},
+		{"single", []int{1}, []int{1}},
+		{"two", []int{1, 2}, []int{2, 1}},
+		{"odd", []int{1, 2, 3}, []int{3, 2, 1}},
+		{"even", []int{1, 2, 3, 4}, []int{4, 3, 2, 1}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := ContainsWith(tt.args.list, tt.args.elem, tt.args.keyFn); got != tt.want {
-				t.Errorf("ContainsWith() = %v, want %v", got, tt.want)
+			ReverseInPlace(tt.list)
+			if !reflect.DeepEqual(tt.list, tt.want) {
+				t.Errorf("ReverseInPlace() = %v, want %v", tt.list, tt.want)
+			}
+		})
+	}
+}
+
+func TestFind(t *testing.T) {
+	tests := []struct {
+		name      string
+		list      []int
+		predicate func(int) bool
+		wantVal   int
+		wantOk    bool
+	}{
+		{"nil slice", nil, func(i int) bool { return i > 2 }, 0, false},
+		{"empty", []int{}, func(i int) bool { return i > 2 }, 0, false},
+		{"found first", []int{1, 3, 5}, func(i int) bool { return i > 2 }, 3, true},
+		{"found middle", []int{1, 2, 3, 4}, func(i int) bool { return i%2 == 0 }, 2, true},
+		{"not found", []int{1, 3, 5}, func(i int) bool { return i > 10 }, 0, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := Find(tt.list, tt.predicate)
+			if got != tt.wantVal || ok != tt.wantOk {
+				t.Errorf("Find() = (%v, %v), want (%v, %v)", got, ok, tt.wantVal, tt.wantOk)
+			}
+		})
+	}
+}
+
+func TestCount(t *testing.T) {
+	tests := []struct {
+		name      string
+		list      []int
+		predicate func(int) bool
+		want      int
+	}{
+		{"nil slice", nil, func(i int) bool { return i%2 == 0 }, 0},
+		{"empty", []int{}, func(i int) bool { return i%2 == 0 }, 0},
+		{"none match", []int{1, 3, 5}, func(i int) bool { return i%2 == 0 }, 0},
+		{"all match", []int{2, 4, 6}, func(i int) bool { return i%2 == 0 }, 3},
+		{"some match", []int{1, 2, 3, 4, 5}, func(i int) bool { return i%2 == 0 }, 2},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := Count(tt.list, tt.predicate); got != tt.want {
+				t.Errorf("Count() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
 func TestAll(t *testing.T) {
-	type args[T any] struct {
-		list      []T
-		predicate func(T) bool
-	}
-	type testCase[T any] struct {
-		name string
-		args args[T]
-		want bool
-	}
-	tests := []testCase[int]{
-		{
-			name: "when empty list then return false",
-			args: args[int]{
-				list: []int{},
-				predicate: func(i int) bool {
-					return i%2 == 0
-				},
-			},
-			want: false,
-		},
-		{
-			name: "when all elements satisfy predicate then return true",
-			args: args[int]{
-				list: []int{2, 4, 6},
-				predicate: func(i int) bool {
-					return i%2 == 0
-				},
-			},
-			want: true,
-		},
-		{
-			name: "when some elements do not satisfy predicate then return false",
-			args: args[int]{
-				list: []int{2, 3, 4},
-				predicate: func(i int) bool {
-					return i%2 == 0
-				},
-			},
-			want: false,
-		},
+	tests := []struct {
+		name      string
+		list      []int
+		predicate func(int) bool
+		want      bool
+	}{
+		{"nil slice vacuous truth", nil, func(i int) bool { return i%2 == 0 }, true},
+		{"empty vacuous truth", []int{}, func(i int) bool { return i%2 == 0 }, true},
+		{"all satisfy", []int{2, 4, 6}, func(i int) bool { return i%2 == 0 }, true},
+		{"one fails", []int{2, 3, 4}, func(i int) bool { return i%2 == 0 }, false},
+		{"none satisfy", []int{1, 3, 5}, func(i int) bool { return i%2 == 0 }, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := All(tt.args.list, tt.args.predicate); got != tt.want {
+			if got := All(tt.list, tt.predicate); got != tt.want {
 				t.Errorf("All() = %v, want %v", got, tt.want)
 			}
 		})
@@ -621,50 +294,21 @@ func TestAll(t *testing.T) {
 }
 
 func TestAny(t *testing.T) {
-	type args[T any] struct {
-		list      []T
-		predicate func(T) bool
-	}
-	type testCase[T any] struct {
-		name string
-		args args[T]
-		want bool
-	}
-	tests := []testCase[int]{
-		{
-			name: "when empty list then return false",
-			args: args[int]{
-				list: []int{},
-				predicate: func(i int) bool {
-					return i%2 == 0
-				},
-			},
-			want: false,
-		},
-		{
-			name: "when some elements satisfy predicate then return true",
-			args: args[int]{
-				list: []int{1, 2, 3},
-				predicate: func(i int) bool {
-					return i%2 == 0
-				},
-			},
-			want: true,
-		},
-		{
-			name: "when no elements satisfy predicate then return false",
-			args: args[int]{
-				list: []int{1, 3, 5},
-				predicate: func(i int) bool {
-					return i%2 == 0
-				},
-			},
-			want: false,
-		},
+	tests := []struct {
+		name      string
+		list      []int
+		predicate func(int) bool
+		want      bool
+	}{
+		{"nil slice", nil, func(i int) bool { return i%2 == 0 }, false},
+		{"empty", []int{}, func(i int) bool { return i%2 == 0 }, false},
+		{"one matches", []int{1, 2, 3}, func(i int) bool { return i%2 == 0 }, true},
+		{"all match", []int{2, 4, 6}, func(i int) bool { return i%2 == 0 }, true},
+		{"none match", []int{1, 3, 5}, func(i int) bool { return i%2 == 0 }, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := Any(tt.args.list, tt.args.predicate); got != tt.want {
+			if got := Any(tt.list, tt.predicate); got != tt.want {
 				t.Errorf("Any() = %v, want %v", got, tt.want)
 			}
 		})
@@ -672,51 +316,192 @@ func TestAny(t *testing.T) {
 }
 
 func TestNone(t *testing.T) {
-	type args[T any] struct {
-		list      []T
-		predicate func(T) bool
-	}
-	type testCase[T any] struct {
-		name string
-		args args[T]
-		want bool
-	}
-	tests := []testCase[int]{
-		{
-			name: "when empty list then return true",
-			args: args[int]{
-				list: []int{},
-				predicate: func(i int) bool {
-					return i%2 == 0
-				},
-			},
-			want: true,
-		},
-		{
-			name: "when no elements satisfy predicate then return true",
-			args: args[int]{
-				list: []int{1, 3, 5},
-				predicate: func(i int) bool {
-					return i%2 == 0
-				},
-			},
-			want: true,
-		},
-		{
-			name: "when some elements satisfy predicate then return false",
-			args: args[int]{
-				list: []int{1, 2, 3},
-				predicate: func(i int) bool {
-					return i%2 == 0
-				},
-			},
-			want: false,
-		},
+	tests := []struct {
+		name      string
+		list      []int
+		predicate func(int) bool
+		want      bool
+	}{
+		{"nil slice", nil, func(i int) bool { return i%2 == 0 }, true},
+		{"empty", []int{}, func(i int) bool { return i%2 == 0 }, true},
+		{"none match", []int{1, 3, 5}, func(i int) bool { return i%2 == 0 }, true},
+		{"one matches", []int{1, 2, 3}, func(i int) bool { return i%2 == 0 }, false},
+		{"all match", []int{2, 4, 6}, func(i int) bool { return i%2 == 0 }, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := None(tt.args.list, tt.args.predicate); got != tt.want {
+			if got := None(tt.list, tt.predicate); got != tt.want {
 				t.Errorf("None() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestContains(t *testing.T) {
+	tests := []struct {
+		name string
+		list []int
+		elem int
+		want bool
+	}{
+		{"nil slice", nil, 1, false},
+		{"empty", []int{}, 1, false},
+		{"found first", []int{1, 2, 3}, 1, true},
+		{"found middle", []int{1, 2, 3}, 2, true},
+		{"found last", []int{1, 2, 3}, 3, true},
+		{"not found", []int{1, 2, 3}, 4, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := Contains(tt.list, tt.elem); got != tt.want {
+				t.Errorf("Contains() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestContainsBy(t *testing.T) {
+	type user struct {
+		ID   int
+		Name string
+	}
+	keyFn := func(u user) int { return u.ID }
+	list := []user{{1, "alice"}, {2, "bob"}, {3, "carol"}}
+
+	if got := ContainsBy(list, 2, keyFn); !got {
+		t.Errorf("ContainsBy() should find key 2")
+	}
+	if got := ContainsBy(list, 4, keyFn); got {
+		t.Errorf("ContainsBy() should not find key 4")
+	}
+	if got := ContainsBy([]user{}, 1, keyFn); got {
+		t.Errorf("ContainsBy() on empty should return false")
+	}
+	if got := ContainsBy([]user(nil), 1, keyFn); got {
+		t.Errorf("ContainsBy() on nil should return false")
+	}
+}
+
+func TestMin(t *testing.T) {
+	tests := []struct {
+		name    string
+		list    []int
+		wantVal int
+		wantOk  bool
+	}{
+		{"nil slice", nil, 0, false},
+		{"empty", []int{}, 0, false},
+		{"single", []int{5}, 5, true},
+		{"ascending", []int{1, 2, 3}, 1, true},
+		{"descending", []int{3, 2, 1}, 1, true},
+		{"mixed", []int{3, 1, 2}, 1, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := Min(tt.list)
+			if got != tt.wantVal || ok != tt.wantOk {
+				t.Errorf("Min() = (%v, %v), want (%v, %v)", got, ok, tt.wantVal, tt.wantOk)
+			}
+		})
+	}
+}
+
+func TestMax(t *testing.T) {
+	tests := []struct {
+		name    string
+		list    []int
+		wantVal int
+		wantOk  bool
+	}{
+		{"nil slice", nil, 0, false},
+		{"empty", []int{}, 0, false},
+		{"single", []int{5}, 5, true},
+		{"ascending", []int{1, 2, 3}, 3, true},
+		{"descending", []int{3, 2, 1}, 3, true},
+		{"mixed", []int{1, 3, 2}, 3, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := Max(tt.list)
+			if got != tt.wantVal || ok != tt.wantOk {
+				t.Errorf("Max() = (%v, %v), want (%v, %v)", got, ok, tt.wantVal, tt.wantOk)
+			}
+		})
+	}
+}
+
+func TestSum(t *testing.T) {
+	tests := []struct {
+		name string
+		list []int
+		want int
+	}{
+		{"nil slice", nil, 0},
+		{"empty", []int{}, 0},
+		{"single", []int{5}, 5},
+		{"multiple", []int{1, 2, 3, 4}, 10},
+		{"negative", []int{-1, 1}, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := Sum(tt.list); got != tt.want {
+				t.Errorf("Sum() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestMinBy(t *testing.T) {
+	type user struct {
+		ID   int
+		Name string
+	}
+	less := func(a, b user) bool { return a.ID < b.ID }
+
+	tests := []struct {
+		name    string
+		list    []user
+		wantVal user
+		wantOk  bool
+	}{
+		{"nil slice", nil, user{}, false},
+		{"empty", []user{}, user{}, false},
+		{"single", []user{{1, "a"}}, user{1, "a"}, true},
+		{"multiple", []user{{3, "c"}, {1, "a"}, {2, "b"}}, user{1, "a"}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := MinBy(tt.list, less)
+			if got != tt.wantVal || ok != tt.wantOk {
+				t.Errorf("MinBy() = (%v, %v), want (%v, %v)", got, ok, tt.wantVal, tt.wantOk)
+			}
+		})
+	}
+}
+
+func TestMaxBy(t *testing.T) {
+	type user struct {
+		ID   int
+		Name string
+	}
+	less := func(a, b user) bool { return a.ID < b.ID }
+
+	tests := []struct {
+		name    string
+		list    []user
+		wantVal user
+		wantOk  bool
+	}{
+		{"nil slice", nil, user{}, false},
+		{"empty", []user{}, user{}, false},
+		{"single", []user{{1, "a"}}, user{1, "a"}, true},
+		{"multiple", []user{{3, "c"}, {1, "a"}, {2, "b"}}, user{3, "c"}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := MaxBy(tt.list, less)
+			if got != tt.wantVal || ok != tt.wantOk {
+				t.Errorf("MaxBy() = (%v, %v), want (%v, %v)", got, ok, tt.wantVal, tt.wantOk)
 			}
 		})
 	}
@@ -724,388 +509,300 @@ func TestNone(t *testing.T) {
 
 func TestTopK(t *testing.T) {
 	type item struct {
-		id   int
-		desc string
+		ID   int
+		Name string
 	}
-	type args[T any] struct {
-		list []T
-		k    int
-		less func(t1, t2 T) int
-	}
-	type testCase[T any] struct {
+	less := func(a, b item) bool { return a.ID < b.ID }
+
+	tests := []struct {
 		name string
-		args args[T]
-		want []T
-	}
-	tests := []testCase[item]{
+		list []item
+		k    int
+		want []item
+	}{
 		{
-			name: "when empty list then return empty list",
-			args: args[item]{
-				list: []item{},
-				k:    1,
-				less: func(t1, t2 item) int {
-					return t1.id - t2.id
-				},
-			},
+			name: "nil slice",
+			list: nil,
+			k:    3,
 			want: []item{},
 		},
 		{
-			name: "when k is greater than list length then return sorted list",
-			args: args[item]{
-				list: []item{
-					{1, "one"},
-					{3, "three"},
-					{2, "two"},
-					{4, "four"},
-				},
-				k: 5,
-				less: func(t1, t2 item) int {
-					return t1.id - t2.id
-				},
-			},
-			want: []item{
-				{4, "four"},
-				{3, "three"},
-				{2, "two"},
-				{1, "one"},
-			},
+			name: "empty",
+			list: []item{},
+			k:    3,
+			want: []item{},
 		},
 		{
-			name: "when k is cmp than list length then return top k elements",
-			args: args[item]{
-				list: []item{
-					{1, "one"},
-					{3, "three"},
-					{2, "two"},
-					{4, "four"},
-				},
-				k: 3,
-				less: func(t1, t2 item) int {
-					return t1.id - t2.id
-				},
-			},
-			want: []item{
-				{4, "four"},
-				{3, "three"},
-				{2, "two"},
-			},
+			name: "k zero",
+			list: []item{{1, "a"}, {2, "b"}},
+			k:    0,
+			want: []item{},
+		},
+		{
+			name: "k negative",
+			list: []item{{1, "a"}, {2, "b"}},
+			k:    -1,
+			want: []item{},
+		},
+		{
+			name: "k larger than list",
+			list: []item{{1, "a"}, {3, "c"}, {2, "b"}},
+			k:    5,
+			want: []item{{3, "c"}, {2, "b"}, {1, "a"}},
+		},
+		{
+			name: "k equals list",
+			list: []item{{1, "a"}, {3, "c"}, {2, "b"}},
+			k:    3,
+			want: []item{{3, "c"}, {2, "b"}, {1, "a"}},
+		},
+		{
+			name: "top 2 of 5",
+			list: []item{{3, "c"}, {1, "a"}, {5, "e"}, {2, "b"}, {4, "d"}},
+			k:    2,
+			want: []item{{5, "e"}, {4, "d"}},
+		},
+		{
+			name: "top 3 of 5",
+			list: []item{{3, "c"}, {1, "a"}, {5, "e"}, {2, "b"}, {4, "d"}},
+			k:    3,
+			want: []item{{5, "e"}, {4, "d"}, {3, "c"}},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := TopK(tt.args.list, tt.args.k, tt.args.less); !reflect.DeepEqual(got, tt.want) {
+			got := TopK(tt.list, tt.k, less)
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("TopK() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestPartition(t *testing.T) {
-	type args[T any] struct {
-		list      []T
-		predicate func(T) bool
-	}
-	type testCase[T any] struct {
-		name        string
-		args        args[T]
-		satisfied   []T
-		unsatisfied []T
-	}
-	tests := []testCase[int]{
-		{
-			name: "when empty list then return empty lists",
-			args: args[int]{
-				list: []int{},
-				predicate: func(i int) bool {
-					return i%2 == 0
-				},
-			},
-			satisfied:   []int{},
-			unsatisfied: []int{},
-		},
-		{
-			name: "when list has elements then return partitioned lists",
-			args: args[int]{
-				list: []int{1, 2, 3, 4, 5},
-				predicate: func(i int) bool {
-					return i%2 == 0
-				},
-			},
-			satisfied:   []int{2, 4},
-			unsatisfied: []int{1, 3, 5},
-		},
-		{
-			name: "when list has elements split then return partitioned lists",
-			args: args[int]{
-				list: []int{1, 2, 3, 4, 5},
-				predicate: func(i int) bool {
-					return i > 3
-				},
-			},
-			satisfied:   []int{4, 5},
-			unsatisfied: []int{1, 2, 3},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, got1 := Partition(tt.args.list, tt.args.predicate)
-			if !reflect.DeepEqual(got, tt.satisfied) {
-				t.Errorf("Partition() got = %v, want %v", got, tt.satisfied)
-			}
-			if !reflect.DeepEqual(got1, tt.unsatisfied) {
-				t.Errorf("Partition() got1 = %v, want %v", got1, tt.unsatisfied)
-			}
-		})
+func TestTopK_Strings(t *testing.T) {
+	list := []string{"banana", "apple", "cherry", "date", "elderberry"}
+	less := func(a, b string) bool { return a < b }
+	got := TopK(list, 3, less)
+	want := []string{"elderberry", "date", "cherry"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("TopK() = %v, want %v", got, want)
 	}
 }
 
-func TestSum(t *testing.T) {
-	type args[T number] struct {
-		list []T
+func TestIf(t *testing.T) {
+	if got := If(true, 1, 2); got != 1 {
+		t.Errorf("If(true) = %v, want 1", got)
 	}
-	type testCase[T number] struct {
+	if got := If(false, 1, 2); got != 2 {
+		t.Errorf("If(false) = %v, want 2", got)
+	}
+}
+
+func TestWhen(t *testing.T) {
+	double := func(i int) int { return i * 2 }
+	if got := When(true, 5, double); got != 10 {
+		t.Errorf("When(true) = %v, want 10", got)
+	}
+	if got := When(false, 5, double); got != 5 {
+		t.Errorf("When(false) = %v, want 5", got)
+	}
+}
+
+func TestIfElse(t *testing.T) {
+	if got := IfElse(true, func() int { return 1 }, func() int { return 2 }); got != 1 {
+		t.Errorf("IfElse(true) = %v, want 1", got)
+	}
+	if got := IfElse(false, func() int { return 1 }, func() int { return 2 }); got != 2 {
+		t.Errorf("IfElse(false) = %v, want 2", got)
+	}
+
+	// Verify lazy evaluation: elseFn should not be called when cond is true
+	called := false
+	IfElse(true, func() int { return 0 }, func() int { called = true; return 1 })
+	if called {
+		t.Error("IfElse(true) should not call elseFn")
+	}
+}
+
+func TestDeduplicate(t *testing.T) {
+	tests := []struct {
 		name string
-		args args[T]
-		want T
-	}
-	tests := []testCase[int]{
-		{
-			name: "when empty list then return 0",
-			args: args[int]{
-				list: []int{},
-			},
-			want: 0,
-		},
-		{
-			name: "when list has elements then return sum",
-			args: args[int]{
-				list: []int{1, 2, 3},
-			},
-			want: 6,
-		},
+		list []int
+		want []int
+	}{
+		{"nil slice", nil, []int{}},
+		{"empty", []int{}, []int{}},
+		{"no duplicates", []int{1, 2, 3}, []int{1, 2, 3}},
+		{"duplicates", []int{1, 2, 2, 3, 1}, []int{1, 2, 3}},
+		{"all same", []int{1, 1, 1}, []int{1}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := Sum(tt.args.list); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Sum() = %v, want %v", got, tt.want)
+			got := Deduplicate(tt.list)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Deduplicate() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestMin(t *testing.T) {
-	type args[T number] struct {
-		list []T
+func TestDeduplicateBy(t *testing.T) {
+	type user struct {
+		ID   int
+		Name string
 	}
-	type testCase[T number] struct {
-		name    string
-		args    args[T]
-		wantVal T
-		wantOk  bool
-	}
-	tests := []testCase[int]{
+	keyFn := func(u user) int { return u.ID }
+
+	tests := []struct {
+		name string
+		list []user
+		want []user
+	}{
+		{"nil slice", nil, []user{}},
+		{"empty", []user{}, []user{}},
+		{"no dup keys", []user{{1, "a"}, {2, "b"}}, []user{{1, "a"}, {2, "b"}}},
 		{
-			name: "when empty list then return false",
-			args: args[int]{
-				list: []int{},
-			},
-			wantVal: 0,
-			wantOk:  false,
-		},
-		{
-			name: "when list has elements then return min",
-			args: args[int]{
-				list: []int{1, 2, 3},
-			},
-			wantVal: 1,
-			wantOk:  true,
-		},
-		{
-			name: "when list has elements then return min",
-			args: args[int]{
-				list: []int{3, 2, 1},
-			},
-			wantVal: 1,
-			wantOk:  true,
+			"dup keys keeps first",
+			[]user{{1, "a"}, {2, "b"}, {1, "c"}},
+			[]user{{1, "a"}, {2, "b"}},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotVal, gotOk := Min(tt.args.list)
-			if !reflect.DeepEqual(gotVal, tt.wantVal) {
-				t.Errorf("Min() gotVal = %v, want %v", gotVal, tt.wantVal)
-			}
-			if gotOk != tt.wantOk {
-				t.Errorf("Min() gotOk = %v, want %v", gotOk, tt.wantOk)
+			got := DeduplicateBy(tt.list, keyFn)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("DeduplicateBy() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestMinWith(t *testing.T) {
-	type item struct {
-		id   int
-		desc string
+func TestGroupBy(t *testing.T) {
+	type order struct {
+		Product string
+		Amount  int
 	}
-	type args[T any] struct {
-		list []T
-		less func(t1, t2 T) bool
+	list := []order{
+		{"apple", 1},
+		{"banana", 2},
+		{"apple", 3},
+		{"cherry", 4},
+		{"banana", 5},
 	}
-	type testCase[T any] struct {
-		name    string
-		args    args[T]
-		wantVal T
-		wantOk  bool
+	keyFn := func(o order) string { return o.Product }
+
+	got := GroupBy(list, keyFn)
+	if len(got) != 3 {
+		t.Errorf("GroupBy() len = %v, want 3", len(got))
 	}
-	tests := []testCase[item]{
+	if len(got["apple"]) != 2 {
+		t.Errorf("GroupBy() apple count = %v, want 2", len(got["apple"]))
+	}
+	if len(got["banana"]) != 2 {
+		t.Errorf("GroupBy() banana count = %v, want 2", len(got["banana"]))
+	}
+	if len(got["cherry"]) != 1 {
+		t.Errorf("GroupBy() cherry count = %v, want 1", len(got["cherry"]))
+	}
+}
+
+func TestGroupBy_Empty(t *testing.T) {
+	got := GroupBy([]int{}, func(i int) string { return "key" })
+	if len(got) != 0 {
+		t.Errorf("GroupBy() on empty should return empty map, got %v", got)
+	}
+}
+
+func TestPartition(t *testing.T) {
+	tests := []struct {
+		name      string
+		list      []int
+		predicate func(int) bool
+		matched   []int
+		unmatched []int
+	}{
 		{
-			name: "when empty list then return false",
-			args: args[item]{
-				list: []item{},
-				less: func(t1, t2 item) bool {
-					return t1.id < t2.id
-				},
-			},
-			wantVal: item{},
-			wantOk:  false,
+			name:      "nil slice",
+			list:      nil,
+			predicate: func(i int) bool { return i%2 == 0 },
+			matched:   []int{},
+			unmatched: []int{},
 		},
 		{
-			name: "when list has elements then return min",
-			args: args[item]{
-				list: []item{
-					{1, "one"},
-					{2, "two"},
-					{3, "three"},
-				},
-				less: func(t1, t2 item) bool {
-					return t1.id < t2.id
-				},
-			},
-			wantVal: item{1, "one"},
-			wantOk:  true,
+			name:      "empty",
+			list:      []int{},
+			predicate: func(i int) bool { return i%2 == 0 },
+			matched:   []int{},
+			unmatched: []int{},
 		},
 		{
-			name: "when list has raffled elements then return min",
-			args: args[item]{
-				list: []item{
-					{3, "three"},
-					{1, "one"},
-					{2, "two"},
-				},
-				less: func(t1, t2 item) bool {
-					return t1.id < t2.id
-				},
-			},
-			wantVal: item{1, "one"},
-			wantOk:  true,
+			name:      "all match",
+			list:      []int{2, 4, 6},
+			predicate: func(i int) bool { return i%2 == 0 },
+			matched:   []int{2, 4, 6},
+			unmatched: []int{},
+		},
+		{
+			name:      "none match",
+			list:      []int{1, 3, 5},
+			predicate: func(i int) bool { return i%2 == 0 },
+			matched:   []int{},
+			unmatched: []int{1, 3, 5},
+		},
+		{
+			name:      "mixed",
+			list:      []int{1, 2, 3, 4, 5},
+			predicate: func(i int) bool { return i%2 == 0 },
+			matched:   []int{2, 4},
+			unmatched: []int{1, 3, 5},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotVal, gotOk := MinWith(tt.args.list, tt.args.less)
-			if !reflect.DeepEqual(gotVal, tt.wantVal) {
-				t.Errorf("MinWith() gotVal = %v, want %v", gotVal, tt.wantVal)
+			gotMatched, gotUnmatched := Partition(tt.list, tt.predicate)
+			if !reflect.DeepEqual(gotMatched, tt.matched) {
+				t.Errorf("Partition() matched = %v, want %v", gotMatched, tt.matched)
 			}
-			if gotOk != tt.wantOk {
-				t.Errorf("MinWith() gotOk = %v, want %v", gotOk, tt.wantOk)
+			if !reflect.DeepEqual(gotUnmatched, tt.unmatched) {
+				t.Errorf("Partition() unmatched = %v, want %v", gotUnmatched, tt.unmatched)
 			}
 		})
 	}
 }
 
-func TestMax(t *testing.T) {
-	type args[T number] struct {
-		list []T
+// Benchmarks
+func BenchmarkMap(b *testing.B) {
+	list := make([]int, 1000)
+	for i := range list {
+		list[i] = i
 	}
-	type testCase[T number] struct {
-		name    string
-		args    args[T]
-		wantVal T
-		wantOk  bool
-	}
-	tests := []testCase[int]{
-		{
-			name: "when empty list then return false",
-			args: args[int]{
-				list: []int{},
-			},
-			wantVal: 0,
-			wantOk:  false,
-		},
-		{
-			name: "when list has elements then return max",
-			args: args[int]{
-				list: []int{1, 3, 1, 2},
-			},
-			wantVal: 3,
-			wantOk:  true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotVal, gotOk := Max(tt.args.list)
-			if !reflect.DeepEqual(gotVal, tt.wantVal) {
-				t.Errorf("Max() gotVal = %v, want %v", gotVal, tt.wantVal)
-			}
-			if gotOk != tt.wantOk {
-				t.Errorf("Max() gotOk = %v, want %v", gotOk, tt.wantOk)
-			}
-		})
+	mapper := func(i int) string { return string(rune('0' + i%10)) }
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		Map(list, mapper)
 	}
 }
 
-func TestMaxWith(t *testing.T) {
-	type item struct {
-		id   int
-		desc string
+func BenchmarkFilter(b *testing.B) {
+	list := make([]int, 1000)
+	for i := range list {
+		list[i] = i
 	}
-	type args[T any] struct {
-		list []T
-		less func(t1, t2 T) bool
+	pred := func(i int) bool { return i%2 == 0 }
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		Filter(list, pred)
 	}
-	type testCase[T any] struct {
-		name    string
-		args    args[T]
-		wantVal T
-		wantOk  bool
+}
+
+func BenchmarkTopK(b *testing.B) {
+	list := make([]int, 10000)
+	for i := range list {
+		list[i] = (i * 7) % 10000
 	}
-	tests := []testCase[item]{
-		{
-			name: "when empty list then return false",
-			args: args[item]{
-				list: []item{},
-				less: func(t1, t2 item) bool {
-					return t1.id < t2.id
-				},
-			},
-			wantVal: item{},
-			wantOk:  false,
-		},
-		{
-			name: "when list has elements then return max",
-			args: args[item]{
-				list: []item{
-					{1, "one"},
-					{3, "three"},
-					{2, "two"},
-				},
-				less: func(t1, t2 item) bool {
-					return t1.id < t2.id
-				},
-			},
-			wantVal: item{3, "three"},
-			wantOk:  true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotVal, gotOk := MaxWith(tt.args.list, tt.args.less)
-			if !reflect.DeepEqual(gotVal, tt.wantVal) {
-				t.Errorf("MaxWith() gotVal = %v, want %v", gotVal, tt.wantVal)
-			}
-			if gotOk != tt.wantOk {
-				t.Errorf("MaxWith() gotOk = %v, want %v", gotOk, tt.wantOk)
-			}
-		})
+	less := func(a, b int) bool { return a < b }
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		TopK(list, 100, less)
 	}
 }
