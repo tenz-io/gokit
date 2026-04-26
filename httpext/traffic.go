@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/tenz-io/gokit/logger"
+	"github.com/tenz-io/gokit/logger/v2"
 	"github.com/tenz-io/gokit/tracer"
 )
 

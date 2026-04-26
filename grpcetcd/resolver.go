@@ -11,7 +11,7 @@ import (
 	gresolver "google.golang.org/grpc/resolver"
 	"google.golang.org/grpc/status"
 
-	"github.com/tenz-io/gokit/logger"
+	"github.com/tenz-io/gokit/logger/v2"
 )
 
 const (

@@ -3,9 +3,9 @@ module github.com/tenz-io/gokit/gormext
 go 1.21
 
 require (
-	github.com/tenz-io/gokit/logger v1.5.3
+	github.com/tenz-io/gokit/logger/v2 v2.0.0
 	github.com/tenz-io/gokit/monitor v1.5.0
-	github.com/tenz-io/gokit/tracer v1.0.1
+	github.com/tenz-io/gokit/tracer v1.0.0
 	gorm.io/gorm v1.25.10
 )
 

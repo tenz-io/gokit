@@ -6,11 +6,11 @@ require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/stretchr/testify v1.9.0
-	github.com/tenz-io/gokit/annotation v1.0.8
+	github.com/tenz-io/gokit/annotation v1.0.0
 	github.com/tenz-io/gokit/functional v1.0.0
-	github.com/tenz-io/gokit/logger v1.5.3
+	github.com/tenz-io/gokit/logger/v2 v2.0.0
 	github.com/tenz-io/gokit/monitor v1.5.0
-	github.com/tenz-io/gokit/tracer v1.0.1
+	github.com/tenz-io/gokit/tracer v1.0.0
 )
 
 require (

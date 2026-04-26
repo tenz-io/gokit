@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/tenz-io/gokit/app"
-	"github.com/tenz-io/gokit/logger"
+	"github.com/tenz-io/gokit/logger/v2"
 )
 
 var flags = []app.Flag{

@@ -2,7 +2,7 @@ module logger-example
 
 go 1.21
 
-require github.com/tenz-io/gokit/logger v0.0.0
+require github.com/tenz-io/gokit/logger/v2 v2.0.0
 
 require (
 	go.uber.org/multierr v1.10.0 // indirect
@@ -11,4 +11,4 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
 
-replace github.com/tenz-io/gokit/logger => ./..
+replace github.com/tenz-io/gokit/logger/v2 => ./..

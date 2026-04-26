@@ -12,7 +12,7 @@ import (
 	"github.com/tenz-io/gokit/grpcetcd"
 	"github.com/tenz-io/gokit/grpcext"
 	pb "github.com/tenz-io/gokit/grpcext/proto"
-	"github.com/tenz-io/gokit/logger"
+	"github.com/tenz-io/gokit/logger/v2"
 )
 
 const (
@@ -30,11 +30,7 @@ func init() {
 		logger.WithSetAsDefaultLvl(true),
 		logger.WithCallerEnabled(true),
 		logger.WithCallerSkip(1),
-	)
-	logger.ConfigureTrafficWithOpts(
-		logger.WithTrafficEnabled(true),
-	)
-}
+	)}
 
 func main() {
 	lis, err := net.Listen("tcp", port)

@@ -31,8 +31,8 @@ use (
 	./grpcext/example-server
 	./httpext
 	./httpext/example
-	./logger
-	./logger/example
+	./logger/v2
+	./logger/v2/example
 	./monitor
 	./notionx
 	./notionx/example

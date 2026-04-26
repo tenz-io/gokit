@@ -10,7 +10,7 @@ import (
 
 	"github.com/tenz-io/gokit/ginext/errcode"
 	"github.com/tenz-io/gokit/ginext/metadata"
-	"github.com/tenz-io/gokit/logger"
+	"github.com/tenz-io/gokit/logger/v2"
 	"github.com/tenz-io/gokit/monitor"
 	"github.com/tenz-io/gokit/tracer"
 )

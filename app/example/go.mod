@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/tenz-io/gokit/app v0.0.0
-	github.com/tenz-io/gokit/logger v1.5.3
+	github.com/tenz-io/gokit/logger/v2 v2.0.0
 )
 
 require (

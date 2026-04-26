@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/tenz-io/gokit/cmd"
-	"github.com/tenz-io/gokit/logger"
+	"github.com/tenz-io/gokit/logger/v2"
 )
 
 var flags = []cmd.Flag{

@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/tenz-io/gokit/ginext"
-	"github.com/tenz-io/gokit/logger"
+	"github.com/tenz-io/gokit/logger/v2"
 )
 
 func init() {
@@ -17,10 +17,6 @@ func init() {
 		logger.WithFileEnabled(true),
 		logger.WithCallerEnabled(true),
 		logger.WithCallerSkip(1),
-	)
-
-	logger.ConfigureTrafficWithOpts(
-		logger.WithTrafficEnabled(true),
 	)
 }
 

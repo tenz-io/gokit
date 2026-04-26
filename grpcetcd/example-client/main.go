@@ -12,7 +12,7 @@ import (
 	"github.com/tenz-io/gokit/grpcetcd"
 	"github.com/tenz-io/gokit/grpcext"
 	pb "github.com/tenz-io/gokit/grpcext/proto"
-	"github.com/tenz-io/gokit/logger"
+	"github.com/tenz-io/gokit/logger/v2"
 )
 
 const (
@@ -20,11 +20,7 @@ const (
 	path     = "/services/echo"
 )
 
-func init() {
-	logger.ConfigureTrafficWithOpts(
-		logger.WithTrafficEnabled(true),
-	)
-	logger.ConfigureWithOpts(
+func init() {logger.ConfigureWithOpts(
 		logger.WithConsoleEnabled(true),
 		logger.WithFileEnabled(false),
 		logger.WithLoggerLevel(logger.DebugLevel),

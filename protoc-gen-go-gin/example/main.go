@@ -14,7 +14,6 @@ import (
 	"github.com/tenz-io/gokit/ginext"
 	"github.com/tenz-io/gokit/ginext/errcode"
 	"github.com/tenz-io/gokit/ginext/metadata"
-	"github.com/tenz-io/gokit/logger"
 )
 
 var (
@@ -129,11 +128,7 @@ func (s *service) UploadImage(ctx context.Context, req *v1.UploadImageReq) (*v1.
 	}, nil
 }
 
-func init() {
-	logger.ConfigureTrafficWithOpts(
-		logger.WithTrafficEnabled(true),
-	)
-}
+func init() {}
 
 func main() {
 	e := gin.Default()

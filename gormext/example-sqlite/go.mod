@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/tenz-io/gokit/gormext v0.0.0
-	github.com/tenz-io/gokit/logger v1.5.3
+	github.com/tenz-io/gokit/logger/v2 v2.0.0
 	gorm.io/driver/sqlite v1.5.6
 	gorm.io/gorm v1.25.10
 )
@@ -21,7 +21,7 @@ require (
 	github.com/prometheus/common v0.48.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/tenz-io/gokit/monitor v1.5.0 // indirect
-	github.com/tenz-io/gokit/tracer v1.0.1 // indirect
+	github.com/tenz-io/gokit/tracer v1.0.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/sys v0.16.0 // indirect

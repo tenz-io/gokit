@@ -10,7 +10,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/tenz-io/gokit/gormext"
-	"github.com/tenz-io/gokit/logger"
+	"github.com/tenz-io/gokit/logger/v2"
 )
 
 func init() {
@@ -21,10 +21,6 @@ func init() {
 		logger.WithConsoleEnabled(true),
 		logger.WithCallerEnabled(true),
 		logger.WithCallerSkip(1),
-	)
-
-	logger.ConfigureTrafficWithOpts(
-		logger.WithTrafficEnabled(true),
 	)
 }
 

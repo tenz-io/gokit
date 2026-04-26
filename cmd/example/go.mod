@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/tenz-io/gokit/cmd v0.0.0
-	github.com/tenz-io/gokit/logger v1.5.3
+	github.com/tenz-io/gokit/logger/v2 v2.0.0
 )
 
 require (
@@ -17,7 +17,7 @@ require (
 	github.com/prometheus/common v0.48.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/tenz-io/gokit/annotation v1.0.8 // indirect
+	github.com/tenz-io/gokit/annotation v1.0.0 // indirect
 	github.com/urfave/cli/v2 v2.27.2 // indirect
 	github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913 // indirect
 	go.uber.org/multierr v1.10.0 // indirect

@@ -8,7 +8,7 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/tenz-io/gokit/logger"
+	"github.com/tenz-io/gokit/logger/v2"
 	"github.com/tenz-io/gokit/monitor"
 	"github.com/tenz-io/gokit/tracer"
 )

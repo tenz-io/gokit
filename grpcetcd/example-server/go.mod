@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/tenz-io/gokit/grpcetcd v0.0.0
 	github.com/tenz-io/gokit/grpcext v1.0.0
-	github.com/tenz-io/gokit/logger v1.5.3
+	github.com/tenz-io/gokit/logger/v2 v2.0.0
 	go.etcd.io/etcd/client/v3 v3.5.13
 	google.golang.org/grpc v1.63.2
 )
@@ -23,7 +23,7 @@ require (
 	github.com/prometheus/common v0.48.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/tenz-io/gokit/monitor v1.5.0 // indirect
-	github.com/tenz-io/gokit/tracer v1.0.1 // indirect
+	github.com/tenz-io/gokit/tracer v1.0.0 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.13 // indirect
 	go.etcd.io/etcd/client/pkg/v3 v3.5.13 // indirect
 	go.uber.org/multierr v1.10.0 // indirect

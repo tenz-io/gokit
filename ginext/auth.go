@@ -10,7 +10,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/tenz-io/gokit/ginext/errcode"
-	"github.com/tenz-io/gokit/logger"
+	"github.com/tenz-io/gokit/logger/v2"
 )
 
 var (

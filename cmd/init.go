@@ -12,7 +12,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/tenz-io/gokit/annotation"
-	"github.com/tenz-io/gokit/logger"
+	"github.com/tenz-io/gokit/logger/v2"
 )
 
 // WithYamlConfig will read the yaml config file and unmarshal it to the confPtr
