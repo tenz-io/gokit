@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 
-	"github.com/tenz-io/gokit/ginext/errcode"
+	"github.com/tenz-io/gokit/ginext/v2/errcode"
 	"github.com/tenz-io/gokit/logger/v2"
 )
 

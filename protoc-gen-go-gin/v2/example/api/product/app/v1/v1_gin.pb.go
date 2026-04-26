@@ -5,8 +5,8 @@ package v1
 import (
 	context "context"
 	gin "github.com/gin-gonic/gin"
-	ginext "github.com/tenz-io/gokit/ginext"
-	metadata "github.com/tenz-io/gokit/ginext/metadata"
+	ginext "github.com/tenz-io/gokit/ginext/v2"
+	metadata "github.com/tenz-io/gokit/ginext/v2/metadata"
 )
 
 // This is a compile-time assertion to ensure that this generated file

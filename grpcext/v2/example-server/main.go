@@ -7,8 +7,8 @@ import (
 
 	"google.golang.org/grpc"
 
-	"github.com/tenz-io/gokit/grpcext"
-	pb "github.com/tenz-io/gokit/grpcext/proto"
+	"github.com/tenz-io/gokit/grpcext/v2"
+	pb "github.com/tenz-io/gokit/grpcext/v2/proto"
 	"github.com/tenz-io/gokit/logger/v2"
 )
 

@@ -2,7 +2,6 @@ module example-tool
 
 go 1.21
 
-require github.com/tenz-io/gokit/cmd/v2 v2.0.0
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -14,7 +13,6 @@ require (
 	github.com/prometheus/common v0.48.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/tenz-io/gokit/annotation/v2 v2.0.0 // indirect
 	github.com/tenz-io/gokit/logger/v2 v2.0.0 // indirect
 	github.com/urfave/cli/v2 v2.27.2 // indirect
 	github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913 // indirect

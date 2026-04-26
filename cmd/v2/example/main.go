@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/tenz-io/gokit/cmd"
+	"github.com/tenz-io/gokit/cmd/v2"
 	"github.com/tenz-io/gokit/logger/v2"
 )
 

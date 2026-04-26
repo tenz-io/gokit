@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/tenz-io/gokit/tracer"
+	"github.com/tenz-io/gokit/tracer/v2"
 )
 
 const (

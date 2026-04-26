@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/tenz-io/gokit/cache/lru"
+	"github.com/tenz-io/gokit/cache/v2/lru"
 )
 
 type lruCache struct {

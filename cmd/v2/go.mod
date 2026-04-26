@@ -6,7 +6,6 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/prometheus/client_golang v1.19.0
 	github.com/stretchr/testify v1.9.0
-	github.com/tenz-io/gokit/annotation/v2 v2.0.0
 	github.com/tenz-io/gokit/logger/v2 v2.0.0
 	github.com/urfave/cli/v2 v2.27.2
 	gopkg.in/yaml.v2 v2.4.0

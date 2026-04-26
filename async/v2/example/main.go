@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/tenz-io/gokit/async"
+	"github.com/tenz-io/gokit/async/v2"
 )
 
 func main() {

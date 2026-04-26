@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/tenz-io/gokit/app"
+	"github.com/tenz-io/gokit/app/v2"
 	"github.com/tenz-io/gokit/logger/v2"
 )
 

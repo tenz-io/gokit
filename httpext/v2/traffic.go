@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/tenz-io/gokit/logger/v2"
-	"github.com/tenz-io/gokit/tracer"
+	"github.com/tenz-io/gokit/tracer/v2"
 )
 
 type trafficTransport struct {

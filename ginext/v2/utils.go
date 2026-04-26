@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/tenz-io/gokit/ginext/errcode"
-	"github.com/tenz-io/gokit/tracer"
+	"github.com/tenz-io/gokit/ginext/v2/errcode"
+	"github.com/tenz-io/gokit/tracer/v2"
 )
 
 // getStructFieldNames returns the field names of a struct

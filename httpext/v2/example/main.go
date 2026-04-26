@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/tenz-io/gokit/httpext"
+	"github.com/tenz-io/gokit/httpext/v2"
 	"github.com/tenz-io/gokit/logger/v2"
 )
 

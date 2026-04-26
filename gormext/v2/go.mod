@@ -4,8 +4,6 @@ go 1.21
 
 require (
 	github.com/tenz-io/gokit/logger/v2 v2.0.0
-	github.com/tenz-io/gokit/monitor/v2 v2.0.0
-	github.com/tenz-io/gokit/tracer/v2 v2.0.0
 	gorm.io/gorm v1.25.10
 )
 

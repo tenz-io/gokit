@@ -4,7 +4,6 @@ go 1.21
 
 require (
 	github.com/go-redis/redis/v8 v8.11.5
-	github.com/tenz-io/gokit/cache/v2 v2.0.0
 	github.com/tenz-io/gokit/logger/v2 v2.0.0
 )
 
@@ -21,8 +20,6 @@ require (
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/stretchr/testify v1.8.1 // indirect
-	github.com/tenz-io/gokit/monitor/v2 v2.0.0 // indirect
-	github.com/tenz-io/gokit/tracer/v2 v2.0.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/sys v0.16.0 // indirect

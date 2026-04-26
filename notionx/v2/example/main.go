@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/tenz-io/gokit/notionx"
+	"github.com/tenz-io/gokit/notionx/v2"
 )
 
 func main() {

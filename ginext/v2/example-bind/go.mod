@@ -4,7 +4,6 @@ go 1.21
 
 require (
 	github.com/gin-gonic/gin v1.9.1
-	github.com/tenz-io/gokit/ginext/v2 v2.0.0
 	github.com/tenz-io/gokit/logger/v2 v2.0.0
 )
 
@@ -32,10 +31,6 @@ require (
 	github.com/prometheus/client_model v0.5.0 // indirect
 	github.com/prometheus/common v0.48.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
-	github.com/tenz-io/gokit/annotation/v2 v2.0.0 // indirect
-	github.com/tenz-io/gokit/functional/v2 v2.0.0 // indirect
-	github.com/tenz-io/gokit/monitor/v2 v2.0.0 // indirect
-	github.com/tenz-io/gokit/tracer/v2 v2.0.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	go.uber.org/multierr v1.10.0 // indirect

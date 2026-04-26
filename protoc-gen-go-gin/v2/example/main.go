@@ -11,9 +11,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/tenz-io/gokit/ginext"
-	"github.com/tenz-io/gokit/ginext/errcode"
-	"github.com/tenz-io/gokit/ginext/metadata"
+	"github.com/tenz-io/gokit/ginext/v2"
+	"github.com/tenz-io/gokit/ginext/v2/errcode"
+	"github.com/tenz-io/gokit/ginext/v2/metadata"
 )
 
 var (

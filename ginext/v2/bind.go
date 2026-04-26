@@ -9,8 +9,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/tenz-io/gokit/annotation"
-	function "github.com/tenz-io/gokit/functional"
+	"github.com/tenz-io/gokit/annotation/v2"
+	function "github.com/tenz-io/gokit/functional/v2"
 )
 
 // BindAndValidate binds the passed struct pointer using the specified binding engine.

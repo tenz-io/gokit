@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/tenz-io/gokit/ginext"
+	"github.com/tenz-io/gokit/ginext/v2"
 	"github.com/tenz-io/gokit/logger/v2"
 )
 

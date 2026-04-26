@@ -7,7 +7,7 @@ import (
 	"google.golang.org/grpc/peer"
 
 	"github.com/tenz-io/gokit/logger/v2"
-	"github.com/tenz-io/gokit/monitor"
+	"github.com/tenz-io/gokit/monitor/v2"
 )
 
 func newTrafficUnaryClientInterceptor(clientInterceptor grpc.UnaryClientInterceptor, config Config) grpc.UnaryClientInterceptor {

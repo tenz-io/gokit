@@ -9,7 +9,7 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
-	"github.com/tenz-io/gokit/gormext"
+	"github.com/tenz-io/gokit/gormext/v2"
 	"github.com/tenz-io/gokit/logger/v2"
 )
 

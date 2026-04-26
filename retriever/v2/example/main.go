@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/tenz-io/gokit/retriever"
+	"github.com/tenz-io/gokit/retriever/v2"
 )
 
 func main() {

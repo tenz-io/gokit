@@ -3,8 +3,6 @@ module github.com/tenz-io/gokit/protoc-gen-go-gin/v2
 go 1.21
 
 require (
-	github.com/tenz-io/gokit/genproto/v2 v2.0.0
-	github.com/tenz-io/gokit/ginext/v2 v2.0.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20240610135401-a8a62080eff3
 	google.golang.org/protobuf v1.34.2
 )
@@ -34,11 +32,7 @@ require (
 	github.com/prometheus/client_model v0.5.0 // indirect
 	github.com/prometheus/common v0.48.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
-	github.com/tenz-io/gokit/annotation/v2 v2.0.0 // indirect
-	github.com/tenz-io/gokit/functional/v2 v2.0.0 // indirect
 	github.com/tenz-io/gokit/logger/v2 v2.0.0 // indirect
-	github.com/tenz-io/gokit/monitor/v2 v2.0.0 // indirect
-	github.com/tenz-io/gokit/tracer/v2 v2.0.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	go.uber.org/multierr v1.10.0 // indirect

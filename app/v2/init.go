@@ -11,7 +11,7 @@ import (
 
 	"github.com/joho/godotenv"
 
-	"github.com/tenz-io/gokit/annotation"
+	"github.com/tenz-io/gokit/annotation/v2"
 	"github.com/tenz-io/gokit/logger/v2"
 )
 

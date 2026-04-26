@@ -6,8 +6,8 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/tenz-io/gokit/logger/v2"
-	"github.com/tenz-io/gokit/monitor"
-	"github.com/tenz-io/gokit/tracer"
+	"github.com/tenz-io/gokit/monitor/v2"
+	"github.com/tenz-io/gokit/tracer/v2"
 )
 
 func newTrackingUnaryServerInterceptor(serverInterceptor grpc.UnaryServerInterceptor, _ Config) grpc.UnaryServerInterceptor {

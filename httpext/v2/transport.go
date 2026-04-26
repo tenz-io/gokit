@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/tenz-io/gokit/logger/v2"
-	"github.com/tenz-io/gokit/monitor"
+	"github.com/tenz-io/gokit/monitor/v2"
 )
 
 var (

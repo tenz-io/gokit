@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/tenz-io/gokit/cmd"
+	"github.com/tenz-io/gokit/cmd/v2"
 )
 
 var getCmd = &cmd.Command{

@@ -1,12 +1,12 @@
 package main
 
 import (
-	"github.com/tenz-io/gokit/ginext"
+	"github.com/tenz-io/gokit/ginext/v2"
 	"net/http"
 	"regexp"
 	"strings"
 
-	"github.com/tenz-io/gokit/genproto/go/custom/common"
+	"github.com/tenz-io/gokit/genproto/v2/go/custom/common"
 	"google.golang.org/genproto/googleapis/api/annotations"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
@@ -16,8 +16,8 @@ import (
 const (
 	contextPkg         = protogen.GoImportPath("context")
 	ginPkg             = protogen.GoImportPath("github.com/gin-gonic/gin")
-	metadataPkg        = protogen.GoImportPath("github.com/tenz-io/gokit/ginext/metadata")
-	ginextPkg          = protogen.GoImportPath("github.com/tenz-io/gokit/ginext")
+	metadataPkg        = protogen.GoImportPath("github.com/tenz-io/gokit/ginext/v2/metadata")
+	ginextPkg          = protogen.GoImportPath("github.com/tenz-io/gokit/ginext/v2")
 	deprecationComment = "// Deprecated: Do not use."
 )
 

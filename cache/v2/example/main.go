@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-redis/redis/v8"
 
-	"github.com/tenz-io/gokit/cache"
+	"github.com/tenz-io/gokit/cache/v2"
 	"github.com/tenz-io/gokit/logger/v2"
 )
 

@@ -9,7 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/tenz-io/gokit/ginext/metadata"
+	"github.com/tenz-io/gokit/ginext/v2/metadata"
 	"github.com/tenz-io/gokit/logger/v2"
 )
 

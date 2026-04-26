@@ -8,8 +8,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/tenz-io/gokit/annotation"
-	"github.com/tenz-io/gokit/ginext/errcode"
+	"github.com/tenz-io/gokit/annotation/v2"
+	"github.com/tenz-io/gokit/ginext/v2/errcode"
 )
 
 func warpError(_ *gin.Context, err error) error {
