@@ -101,19 +101,17 @@ func WithLogger(trafficEnabled bool) InitFunc {
 			loggingFile = false
 		}
 
-		logger.ConfigureWithOpts(
-			logger.WithLoggerLevel(lvl),
-			logger.WithDirectory(logDir),
-			logger.WithFileEnabled(loggingFile),
-			logger.WithConsoleEnabled(console),
-			logger.WithSetAsDefaultLvl(true),
-			logger.WithCallerEnabled(true),
+		var opts []logger.ConfigOption
+		opts = append(opts,
+			logger.WithLevel(lvl),
+			logger.WithConsole(console),
+			logger.WithCaller(true),
+			logger.WithTraffic(trafficEnabled),
 		)
-
-		logger.ConfigureTrafficWithOpts(
-			logger.WithTrafficEnabled(trafficEnabled),
-			logger.WithTrafficDirectory(logDir),
-		)
+		if loggingFile {
+			opts = append(opts, logger.WithFilePath(logDir))
+		}
+		logger.ConfigureWithOpts(opts...)
 
 		return cleanFn, nil
 	}

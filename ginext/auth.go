@@ -102,9 +102,7 @@ func AuthenticateRest(role RoleType) func(c *gin.Context) {
 
 	return func(c *gin.Context) {
 		var (
-			le = logger.FromContext(c.Request.Context()).WithFields(logger.Fields{
-				"required_role": role,
-			})
+			le = logger.FromContext(c.Request.Context()).With()
 		)
 		tokenString := c.GetHeader("Authorization")
 		if tokenString == "" {
@@ -143,9 +141,7 @@ func AuthenticateCookie(role RoleType) func(c *gin.Context) {
 
 	return func(c *gin.Context) {
 		var (
-			le = logger.FromContext(c.Request.Context()).WithFields(logger.Fields{
-				"required_role": role,
-			})
+			le = logger.FromContext(c.Request.Context()).With()
 		)
 
 		// get token from cookie
@@ -203,9 +199,7 @@ func IsAuthenticated(c *gin.Context, role RoleType, authType AuthType) bool {
 func isTokenAuthenticated(c *gin.Context, role RoleType, token string) (bool, *Claims) {
 	var (
 		ctx = c.Request.Context()
-		le  = logger.FromContext(ctx).WithFields(logger.Fields{
-			"role": role,
-		})
+		le  = logger.FromContext(ctx).With()
 	)
 
 	if role == RoleAnonymous {
@@ -247,9 +241,7 @@ func isTokenAuthenticated(c *gin.Context, role RoleType, token string) (bool, *C
 func IsAuthenticateRest(c *gin.Context, role RoleType) bool {
 	var (
 		ctx = c.Request.Context()
-		le  = logger.FromContext(ctx).WithFields(logger.Fields{
-			"role": role,
-		})
+		le  = logger.FromContext(ctx).With()
 	)
 
 	if role == RoleAnonymous {
@@ -273,9 +265,7 @@ func IsAuthenticateRest(c *gin.Context, role RoleType) bool {
 func IsAuthenticateCookie(c *gin.Context, role RoleType) bool {
 	var (
 		ctx = c.Request.Context()
-		le  = logger.FromContext(ctx).WithFields(logger.Fields{
-			"role": role,
-		})
+		le  = logger.FromContext(ctx).With()
 	)
 
 	if role == RoleAnonymous {

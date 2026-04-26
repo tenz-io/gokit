@@ -35,8 +35,8 @@ func setup(_ *testing.T) (teardown func(*testing.T)) {
 		logger.WithCallerSkip(1),
 	)
 
-	logger.ConfigureTrafficWithOpts(
-		logger.WithTrafficEnabled(true),
+	logger.ConfigureWithOpts(
+		logger.WithTraffic(true),
 	)
 
 	return func(t *testing.T) {
