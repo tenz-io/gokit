@@ -5,20 +5,32 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/tenz-io/gokit/annotation/v2"
-	function "github.com/tenz-io/gokit/functional/v2"
+	"github.com/tenz-io/gokit/annotation/v3"
 )
 
-// BindAndValidate binds the passed struct pointer using the specified binding engine.
-// e.g: /path/:id -> struct { ID int64 `bind:"uri,name=id"` }
-// e.g: /path?offset=1 -> struct { Offset int `bind:"query,name=offset" validate:"gt=0"` }
-// e.g. body json -> struct { Name string `json:"name"` }
-// e.g. body form -> struct { Name string `bind:"form,name=username"` }
-// e.g. body multipart -> struct { File []byte `bind:"file,name=file"` }
+// BindAndValidate binds a request into ptr and validates it.
+//
+// Binding sources are declared per field with the `bind` tag, e.g.
+//
+//	GET /path/:id?offset=1
+//	type Req struct {
+//	    ID     int64  `bind:"uri,name=id"   validate:"required,gt=0"`
+//	    Offset int    `bind:"query,name=offset" default:"0" validate:"gte=0"`
+//	    Auth   string `bind:"header,name=Authorization"`
+//	    Title  string `bind:"form,name=title" validate:"required,min_len=1"`
+//	    File   []byte `bind:"file,name=file" validate:"required"`
+//	}
+//
+// For JSON bodies (`Content-Type: application/json`) the body is unmarshalled
+// into ptr directly; the `json` tag controls field names.
+//
+// Defaults (`default` tag) are applied first, then each source is read and the
+// field set, then Validate runs and collects every failure.
 func BindAndValidate(c *gin.Context, ptr any) (err error) {
 	defer func() {
 		if err != nil {
@@ -26,317 +38,266 @@ func BindAndValidate(c *gin.Context, ptr any) (err error) {
 		}
 	}()
 
-	err = annotation.ParseDefault(ptr)
-	if err != nil {
-		return fmt.Errorf("error parsing default value: %s", err.Error())
+	if err = annotation.ApplyDefaults(ptr); err != nil {
+		return fmt.Errorf("parse default value: %w", err)
 	}
 
-	if has, err := tryBindUri(c, ptr); has && err != nil {
-		return annotation.NewValidationError("uri", err.Error())
+	if has, e := tryBindURI(c, ptr); has && e != nil {
+		return annotation.Err("uri", "", e.Error())
+	}
+	if has, e := tryBindQuery(c, ptr); has && e != nil {
+		return annotation.Err("query", "", e.Error())
+	}
+	if has, e := tryBindHeader(c, ptr); has && e != nil {
+		return annotation.Err("header", "", e.Error())
+	}
+	if has, e := tryBindMultipart(c, ptr); has && e != nil {
+		return annotation.Err("multipart", "", e.Error())
+	}
+	if has, e := tryBindForm(c, ptr); has && e != nil {
+		return annotation.Err("form", "", e.Error())
+	}
+	if has, e := tryBindJSON(c, ptr); has && e != nil {
+		return e
 	}
 
-	if has, err := tryBindQuery(c, ptr); has && err != nil {
-		return annotation.NewValidationError("query", err.Error())
-	}
-
-	if has, err := tryBindHeader(c, ptr); has && err != nil {
-		return annotation.NewValidationError("header", err.Error())
-	}
-	if has, err := tryBindMultipart(c, ptr); has && err != nil {
-		return annotation.NewValidationError("multipart", err.Error())
-	}
-
-	if has, err := tryBindForm(c, ptr); has && err != nil {
-		return annotation.NewValidationError("form", err.Error())
-	}
-
-	if has, err := tryBindJSON(c, ptr); has && err != nil {
-		return annotation.NewValidationError("json", err.Error())
-	}
-
-	err = annotation.ValidateStruct(ptr)
-	if err != nil {
+	if err = annotation.Validate(ptr); err != nil {
 		return err
 	}
-
 	return nil
 }
 
-// Validate the struct pointer using the specified binding engine.
+// Validate runs annotation validation on ptr.
 func Validate(c *gin.Context, ptr any) (err error) {
-	err = annotation.ValidateStruct(ptr)
-	if err != nil {
-		return warpError(c, err)
+	defer func() {
+		if err != nil {
+			err = warpError(c, err)
+		}
+	}()
+	if err = annotation.Validate(ptr); err != nil {
+		return err
 	}
 	return nil
-
 }
 
-// tryBindUri tries to bind a uri request to a struct
-// e.g: /path/:id -> struct { ID int64 `bind:"uri,name=id"` }
-func tryBindUri(c *gin.Context, ptr any) (isUri bool, err error) {
-	requestFields := annotation.GetRequestFields(ptr)
-	if len(requestFields.Values()) == 0 {
+// rootValue resolves the struct value behind ptr for field-by-index access.
+func rootValue(ptr any) (reflect.Value, error) {
+	rv := reflect.ValueOf(ptr)
+	if rv.Kind() != reflect.Ptr || rv.IsNil() {
+		return reflect.Value{}, fmt.Errorf("expected a non-nil pointer to a struct")
+	}
+	return rv.Elem(), nil
+}
+
+// fieldByIndex returns the settable value of f on root.
+func fieldByIndex(root reflect.Value, f *annotation.Field) reflect.Value {
+	return root.FieldByIndex(f.Index)
+}
+
+// tryBindURI binds route parameters, e.g. /path/:id -> ID int64 `bind:"uri,name=id"`.
+func tryBindURI(c *gin.Context, ptr any) (has bool, err error) {
+	plan, e := annotation.PlanFor(ptr)
+	if e != nil {
 		return false, nil
 	}
-
-	uriFields := function.Filter(requestFields.Values(), func(field annotation.RequestField) bool {
-		return field.IsUri
-	})
-
+	uriFields := plan.FieldsBySource(annotation.BindURI)
 	if len(uriFields) == 0 {
 		return false, nil
 	}
-
-	for _, field := range uriFields {
-		value := c.Param(field.TagName)
-		if value == "" {
+	root, e := rootValue(ptr)
+	if e != nil {
+		return true, e
+	}
+	for _, f := range uriFields {
+		val := c.Param(f.BindName)
+		if val == "" {
+			if f.IsRequired() {
+				return true, annotation.Err(f.BindName, "required", "is required")
+			}
 			continue
 		}
-		if err := field.SetString(value); field.IsRequired && err != nil {
-			return true, err
-		}
-
-	}
-
-	return true, nil
-}
-
-// tryBindQuery tries to bind a query request to a struct
-// e.g: /path?offset=1 -> struct { Offset int `bind:"query:name=offset"` }
-func tryBindQuery(c *gin.Context, ptr any) (isQuery bool, err error) {
-	requestFields := annotation.GetRequestFields(ptr)
-	if len(requestFields.Values()) == 0 {
-		return false, nil
-	}
-
-	queryFields := function.Filter(requestFields.Values(), func(field annotation.RequestField) bool {
-		return field.IsQuery
-	})
-
-	if len(queryFields) == 0 {
-		return false, nil
-	}
-
-	for _, field := range queryFields {
-		value := c.Query(field.TagName)
-		if value == "" {
-			continue
-		}
-		if err := field.SetString(value); field.IsRequired && err != nil {
-			return true, err
+		if e := annotation.SetString(fieldByIndex(root, f), val); e != nil {
+			return true, annotation.Err(f.BindName, "", e.Error())
 		}
 	}
 	return true, nil
 }
 
-// tryBindHeader tries to bind a header request to a struct
-// e.g: header: Authorization: Bearer token -> struct { Authorization string `bind:"header,name=Authorization"` }
-func tryBindHeader(c *gin.Context, ptr any) (isHeader bool, err error) {
-	requestFields := annotation.GetRequestFields(ptr)
-	if len(requestFields.Values()) == 0 {
+// tryBindQuery binds query parameters, e.g. ?offset=1 -> Offset `bind:"query,name=offset"`.
+func tryBindQuery(c *gin.Context, ptr any) (has bool, err error) {
+	plan, e := annotation.PlanFor(ptr)
+	if e != nil {
 		return false, nil
 	}
-
-	headerFields := function.Filter(requestFields.Values(), func(field annotation.RequestField) bool {
-		return field.IsHeader
-	})
-
-	if len(headerFields) == 0 {
+	qFields := plan.FieldsBySource(annotation.BindQuery)
+	if len(qFields) == 0 {
 		return false, nil
 	}
-
-	for _, field := range headerFields {
-		// get header value
-		value := c.GetHeader(field.TagName)
-		if value == "" {
+	root, e := rootValue(ptr)
+	if e != nil {
+		return true, e
+	}
+	for _, f := range qFields {
+		val := c.Query(f.BindName)
+		if val == "" {
+			if f.IsRequired() {
+				return true, annotation.Err(f.BindName, "required", "is required")
+			}
 			continue
 		}
-		if err := field.SetString(value); field.IsRequired && err != nil {
-			return true, err
+		if e := annotation.SetString(fieldByIndex(root, f), val); e != nil {
+			return true, annotation.Err(f.BindName, "", e.Error())
 		}
 	}
 	return true, nil
 }
 
-// tryBindForm tries to bind a form request to a struct
-// content-type: application/x-www-form-urlencoded
-func tryBindForm(c *gin.Context, ptr any) (isForm bool, err error) {
+// tryBindHeader binds headers, e.g. Authorization: Bearer ... -> Auth `bind:"header,name=Authorization"`.
+func tryBindHeader(c *gin.Context, ptr any) (has bool, err error) {
+	plan, e := annotation.PlanFor(ptr)
+	if e != nil {
+		return false, nil
+	}
+	hFields := plan.FieldsBySource(annotation.BindHeader)
+	if len(hFields) == 0 {
+		return false, nil
+	}
+	root, e := rootValue(ptr)
+	if e != nil {
+		return true, e
+	}
+	for _, f := range hFields {
+		val := c.GetHeader(f.BindName)
+		if val == "" {
+			if f.IsRequired() {
+				return true, annotation.Err(f.BindName, "required", "is required")
+			}
+			continue
+		}
+		if e := annotation.SetString(fieldByIndex(root, f), val); e != nil {
+			return true, annotation.Err(f.BindName, "", e.Error())
+		}
+	}
+	return true, nil
+}
+
+// tryBindForm binds application/x-www-form-urlencoded bodies (POST/PUT only).
+func tryBindForm(c *gin.Context, ptr any) (has bool, err error) {
 	if !strings.HasPrefix(c.Request.Header.Get("Content-Type"), "application/x-www-form-urlencoded") {
-		// is not form
 		return false, nil
 	}
-
 	if c.Request.Method != http.MethodPost && c.Request.Method != http.MethodPut {
-		return true, annotation.NewValidationError(
-			"method",
-			fmt.Sprintf("invalid method %s for form request, should be POST or PUT", c.Request.Method),
-		)
+		return true, annotation.Err("method", "",
+			fmt.Sprintf("invalid method %s for form request, should be POST or PUT", c.Request.Method))
 	}
 
-	// read form fields
-	requestFields := annotation.GetRequestFields(ptr)
-	if len(requestFields.Values()) == 0 {
+	plan, e := annotation.PlanFor(ptr)
+	if e != nil {
 		return false, nil
 	}
-	formFields := function.Filter(requestFields.Values(), func(field annotation.RequestField) bool {
-		return field.IsForm
-	})
+	formFields := plan.FieldsBySource(annotation.BindForm)
 	if len(formFields) == 0 {
 		return false, nil
 	}
-
-	for _, field := range formFields {
-		// ignore because the field maybe is optional
-		if err := readFormAndSetField(c, &field); field.IsRequired && err != nil {
-			return true, err
+	root, e := rootValue(ptr)
+	if e != nil {
+		return true, e
+	}
+	for _, f := range formFields {
+		if e := readFormAndSetField(c, root, f); e != nil && f.IsRequired() {
+			return true, e
 		}
 	}
-
 	return true, nil
-
 }
 
-// tryBindJSON tries to bind a json request to a struct
-// content-type: application/json
-func tryBindJSON(c *gin.Context, ptr any) (isJson bool, err error) {
+// tryBindJSON unmarshals a JSON body into ptr (POST/PUT/PATCH).
+func tryBindJSON(c *gin.Context, ptr any) (has bool, err error) {
 	if !strings.HasPrefix(c.Request.Header.Get("Content-Type"), "application/json") {
-		// is not json
 		return false, nil
 	}
-
-	// if method is GET, HEAD, DELETE, ignore json body
 	if c.Request.Method == http.MethodGet || c.Request.Method == http.MethodHead || c.Request.Method == http.MethodDelete {
 		return false, nil
 	}
-
-	// read request body into byte slice
-	body, err := io.ReadAll(c.Request.Body)
-	if err != nil {
-		return true, annotation.NewValidationError(
-			"body",
-			fmt.Sprintf("error reading request body: %s", err.Error()),
-		)
+	body, e := io.ReadAll(c.Request.Body)
+	if e != nil {
+		return true, annotation.Err("body", "", fmt.Sprintf("error reading request body: %s", e.Error()))
 	}
-
-	if err = json.Unmarshal(body, ptr); err != nil {
-		return true, annotation.NewValidationError(
-			"json_format",
-			fmt.Sprintf("error unmarshalling request body: %s", err.Error()),
-		)
+	if e = json.Unmarshal(body, ptr); e != nil {
+		return true, annotation.Err("json_format", "", fmt.Sprintf("error unmarshalling request body: %s", e.Error()))
 	}
-
 	return true, nil
 }
 
-// TryBindMultipart tries to bind a multipart request to a struct,
-// content-type: multipart/form-data
-func tryBindMultipart(c *gin.Context, ptr any) (isMultipart bool, err error) {
+// tryBindMultipart binds a multipart/form-data body (files + form fields).
+func tryBindMultipart(c *gin.Context, ptr any) (has bool, err error) {
 	if !strings.HasPrefix(c.Request.Header.Get("Content-Type"), "multipart/form-data") {
-		// is not multipart form
 		return false, nil
 	}
-
-	// if method is not POST or PUT, return error
 	if c.Request.Method != http.MethodPost && c.Request.Method != http.MethodPut {
-		return true, annotation.NewValidationError(
-			"method",
-			fmt.Sprintf("invalid method %s for multipart request, should be POST or PUT", c.Request.Method),
-		)
+		return true, annotation.Err("method", "",
+			fmt.Sprintf("invalid method %s for multipart request, should be POST or PUT", c.Request.Method))
 	}
 
-	requestFields := annotation.GetRequestFields(ptr)
-	var (
-		fileFields []annotation.RequestField
-		formFields []annotation.RequestField
-	)
-	fileFields = function.Filter(requestFields.Values(), func(field annotation.RequestField) bool {
-		return field.IsFile
-	})
-	formFields = function.Filter(requestFields.Values(), func(field annotation.RequestField) bool {
-		return field.IsForm
-	})
-
+	plan, e := annotation.PlanFor(ptr)
+	if e != nil {
+		return false, nil
+	}
+	fileFields := plan.FieldsBySource(annotation.BindFile)
+	formFields := plan.FieldsBySource(annotation.BindForm)
 	if len(fileFields) == 0 {
-		return true, annotation.NewProtoError("multipart", "no file field found in struct")
+		return true, annotation.Err("multipart", "", "no file field found in struct")
 	}
 
-	// Parse the multipart form
-	if err = c.Request.ParseMultipartForm(10 << 20); err != nil {
-		return true, annotation.NewValidationError(
-			"multipart",
-			fmt.Sprintf("error parsing multipart form: %s", err.Error()),
-		)
+	if e = c.Request.ParseMultipartForm(10 << 20); e != nil {
+		return true, annotation.Err("multipart", "", fmt.Sprintf("error parsing multipart form: %s", e.Error()))
 	}
 
-	// read files
-	for _, field := range fileFields {
-		if err = readFileAndSetField(c, &field); field.IsRequired && err != nil {
-			return true, err
+	root, e := rootValue(ptr)
+	if e != nil {
+		return true, e
+	}
+
+	for _, f := range fileFields {
+		if e = readFileAndSetField(c, root, f); e != nil && f.IsRequired() {
+			return true, e
 		}
 	}
-
-	// read form fields
-	for _, field := range formFields {
-		if err = readFormAndSetField(c, &field); field.IsRequired && err != nil {
-			return true, err
+	for _, f := range formFields {
+		if e = readFormAndSetField(c, root, f); e != nil && f.IsRequired() {
+			return true, e
 		}
 	}
-
 	return true, nil
 }
 
-func readFileAndSetField(c *gin.Context, field *annotation.RequestField) error {
-	if err := (*field).Validate(); err != nil {
-		return err
-	}
-
-	// Get the file from the form data
-	file, _, err := c.Request.FormFile(field.TagName)
+func readFileAndSetField(c *gin.Context, root reflect.Value, f *annotation.Field) error {
+	file, _, err := c.Request.FormFile(f.BindName)
 	if err != nil {
-		return annotation.NewValidationError(
-			field.TagName,
-			fmt.Sprintf("error getting file: %s, err: %s", field.TagName, err.Error()),
-		)
+		return annotation.Err(f.BindName, "", fmt.Sprintf("error getting file %s: %s", f.BindName, err.Error()))
 	}
-	defer func() {
-		_ = file.Close()
-	}()
+	defer func() { _ = file.Close() }()
 
-	// Read the file into a byte slice
-	fileBytes, err := io.ReadAll(file)
+	bs, err := io.ReadAll(file)
 	if err != nil {
-		return annotation.NewValidationError(
-			field.TagName,
-			fmt.Sprintf("error reading file: %s, err: %s", field.TagName, err.Error()),
-		)
+		return annotation.Err(f.BindName, "", fmt.Sprintf("error reading file %s: %s", f.BindName, err.Error()))
 	}
-
-	if len(fileBytes) == 0 {
+	if len(bs) == 0 {
 		return nil
 	}
-
-	err = field.Set(fileBytes)
-	if err != nil {
-		return err
+	if err := annotation.Set(fieldByIndex(root, f), bs); err != nil {
+		return annotation.Err(f.BindName, "", err.Error())
 	}
 	return nil
 }
 
-func readFormAndSetField(c *gin.Context, field *annotation.RequestField) error {
-	if err := (*field).Validate(); err != nil {
-		return err
-	}
-
-	// Get the form value from the form data
-	value := c.Request.FormValue(field.TagName)
-	if value == "" {
+func readFormAndSetField(c *gin.Context, root reflect.Value, f *annotation.Field) error {
+	val := c.Request.FormValue(f.BindName)
+	if val == "" {
 		return nil
 	}
-
-	if err := field.SetString(value); err != nil {
-		return err
-
+	if err := annotation.SetString(fieldByIndex(root, f), val); err != nil {
+		return annotation.Err(f.BindName, "", err.Error())
 	}
 	return nil
 }

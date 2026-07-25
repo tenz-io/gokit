@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/tenz-io/gokit/annotation/v2"
+	"github.com/tenz-io/gokit/annotation/v3"
 	"github.com/tenz-io/gokit/ginext/v2/errcode"
 )
 
@@ -24,10 +24,7 @@ func Test_warpError(t *testing.T) {
 			name: "when error is validation error",
 			args: args{
 				c: &gin.Context{},
-				err: &annotation.ValidationError{
-					Key:     "test",
-					Message: "oops",
-				},
+				err: annotation.Err("test", "required", "oops"),
 			},
 			assert: func(t *testing.T, err error) {
 				var codeErr *errcode.Error

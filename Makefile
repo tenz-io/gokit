@@ -27,23 +27,32 @@ gci:
 	done
 
 
-# Usage: make release VERSION=v2.0.5
+# Check version consistency across submodules before tagging.
+.PHONY: version-check
+version-check:
+	@./scripts/version-check.sh
+
+
+# Usage: make release VERSION=v2.0.5 V3VERSION=v3.0.1
 .PHONY: release
 release:
 	@if [ -z "$(VERSION)" ]; then \
-		echo "Usage: make release VERSION=v2.0.5"; \
-		echo "  make release VERSION=v2.0.5 DRY_RUN=1    # preview only"; \
-		echo "  make release VERSION=v2.0.5 RELEASE=1     # also create GitHub Releases"; \
+		echo "Usage: make release VERSION=v2.0.5 [V3VERSION=v3.0.1]"; \
+		echo "  make release VERSION=v2.0.5 V3VERSION=v3.0.1 DRY_RUN=1   # preview both tracks"; \
+		echo "  make release VERSION=v2.0.5 V3VERSION=v3.0.1 RELEASE=1    # also create GitHub Releases"; \
+		echo "  make release VERSION=v2.0.5                            # v2 only"; \
 		exit 1; \
 	fi
 	@echo "=== Running tests ==="
 	@$(MAKE) test
-	@echo "=== Creating tags for version $(VERSION) ==="
+	@echo "=== Running version-check ==="
+	@./scripts/version-check.sh
+	@echo "=== Creating tags: v2=$(VERSION) v3=$(V3VERSION) ==="
 	@if [ "$(DRY_RUN)" = "1" ]; then \
-		./scripts/tag-all.sh $(VERSION) --dry-run; \
+		./scripts/tag-all.sh $(VERSION) $(V3VERSION) --dry-run; \
 	elif [ "$(RELEASE)" = "1" ]; then \
-		./scripts/tag-all.sh $(VERSION) --release; \
+		./scripts/tag-all.sh $(VERSION) $(V3VERSION) --release; \
 	else \
-		./scripts/tag-all.sh $(VERSION) --push; \
+		./scripts/tag-all.sh $(VERSION) $(V3VERSION) --push; \
 	fi
 	@echo "=== Done ==="

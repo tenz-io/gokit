@@ -6,6 +6,7 @@ require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/stretchr/testify v1.9.0
+	github.com/tenz-io/gokit/annotation/v3 v3.0.0
 	github.com/tenz-io/gokit/logger/v2 v2.0.0
 )
 
@@ -48,3 +49,5 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/tenz-io/gokit/annotation/v3 => ../../annotation/v3

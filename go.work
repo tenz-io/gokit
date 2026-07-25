@@ -3,12 +3,12 @@ go 1.21
 toolchain go1.21
 
 use (
-	./annotation/v2
+	./annotation/v3
+	./annotation/v3/example
 	./app/v2
 	./app/v2/example
 	./async/v2
 	./async/v2/example
-	./bloom/v2
 	./cache/v2
 	./cache/v2/example
 	./cmd/v2
@@ -16,16 +16,12 @@ use (
 	./cmd/v2/example-tool
 	./collection/v2
 	./functional/v2
-	./genproto/v2
 	./ginext/v2
 	./ginext/v2/example
 	./ginext/v2/example-bind
 	./gormext/v2
 	./gormext/v2/example-mysql
 	./gormext/v2/example-sqlite
-	./grpcetcd/v2
-	./grpcetcd/v2/example-client
-	./grpcetcd/v2/example-server
 	./grpcext/v2
 	./grpcext/v2/example-client
 	./grpcext/v2/example-server
@@ -34,10 +30,6 @@ use (
 	./logger/v2
 	./logger/v2/example
 	./monitor/v2
-	./notionx/v2
-	./notionx/v2/example
-	./protoc-gen-go-gin/v2
-	./protoc-gen-go-gin/v2/example
 	./retriever/v2
 	./retriever/v2/example
 	./tracer/v2

@@ -11,7 +11,7 @@ import (
 
 	"github.com/joho/godotenv"
 
-	"github.com/tenz-io/gokit/annotation/v2"
+	"github.com/tenz-io/gokit/annotation/v3"
 	"github.com/tenz-io/gokit/logger/v2"
 )
 
@@ -179,7 +179,7 @@ func ReadConfig(confPath string, confPtr any, unmarshalFn func([]byte, any) erro
 		return fmt.Errorf("read config file %s fail, err: %w", confPath, err)
 	}
 
-	err = annotation.ParseDefault(confPtr)
+	err = annotation.ApplyDefaults(confPtr)
 	if err != nil {
 		return fmt.Errorf("parse default config fail, err: %w", err)
 	}
@@ -189,7 +189,7 @@ func ReadConfig(confPath string, confPtr any, unmarshalFn func([]byte, any) erro
 		return fmt.Errorf("unmarshal config file fail, err: %w", err)
 	}
 
-	err = annotation.ValidateStruct(confPtr)
+	err = annotation.Validate(confPtr)
 	if err != nil {
 		return fmt.Errorf("validate config fail, err: %w", err)
 	}

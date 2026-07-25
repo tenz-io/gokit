@@ -1,15 +1,62 @@
 # async
 
-泛型并发任务执行器。Run、Wait、AllOf、AnyOf 四种模式，内置 panic 恢复。
+泛型并发任务执行器：Run、Wait、AllOf、AnyOf，内置 panic 恢复和 errgroup 模式。
 
-```go
-import "github.com/tenz-io/gokit/async/v2"
-```
+## 功能特性
+
+- `Run`：并发执行多个任务，采用 errgroup 语义，返回首个出现的错误，但不会因某个任务失败而取消其余任务的 context
+- `Wait`：并发执行多个任务并等待全部完成，忽略所有错误，适合“fire and forget”场景
+- `AllOf`：并发执行多个任务，按输入顺序收集全部结果（含每个任务的返回值和错误），一个任务出错不影响其他任务继续执行
+- `AnyOf`：并发执行多个任务，只要有一个成功即返回该结果，并通过取消共享 context 让其余任务尽快退出；全部失败时返回汇总错误
+- 内置 `panic` 恢复机制：任意任务内部发生 panic 都会被捕获并转换为 `error`，同时打印堆栈日志，不会导致整个进程崩溃
+- 基于泛型的统一任务签名 `Fn[T]`，可直接复用同一批任务函数分别传给 `Run`、`Wait`、`AllOf`、`AnyOf`
+- `nil` 任务会被安全跳过（`Run`/`Wait`/`AllOf`）或返回明确错误（`AnyOf`），避免因误传空函数导致 panic
 
 ## 快速开始
 
 ```go
-async.Run(ctx, fetchUser, fetchOrder)
-result, err := async.AnyOf(ctx, fromCache, fromDB)
-results := async.AllOf(ctx, []async.Fn[int]{taskA, taskB})
+import "github.com/tenz-io/gokit/async/v2"
+
+func fetchUser(ctx context.Context) (string, error) {
+	return "user-1", nil
+}
+
+func fetchOrder(ctx context.Context) (string, error) {
+	return "order-1", nil
+}
+
+func main() {
+	ctx := context.Background()
+
+	// 并发执行，只关心是否出错
+	if err := async.Run(ctx, fetchUser, fetchOrder); err != nil {
+		log.Fatal(err)
+	}
+
+	// 并发执行，等待全部完成，忽略错误
+	async.Wait(ctx, fetchUser, fetchOrder)
+
+	// 并发执行，按顺序收集全部结果
+	results := async.AllOf(ctx, []async.Fn[string]{fetchUser, fetchOrder})
+	for _, r := range results {
+		fmt.Println(r.Val, r.Err)
+	}
+
+	// 并发执行，取最快成功的一个
+	val, err := async.AnyOf(ctx, fetchUser, fetchOrder)
+	fmt.Println(val, err)
+}
 ```
+
+## API 速查
+
+| 符号 | 说明 |
+|---|---|
+| `type Fn[T any] func(context.Context) (T, error)` | 统一的泛型异步任务签名 |
+| `type Holder[T any]` | `AllOf` 的单个结果容器，包含 `Val` 和 `Err`，按输入顺序保存 |
+| `func Run[T any](ctx, fns ...Fn[T]) error` | 并发执行所有任务，返回首个错误（errgroup 语义，不取消 context） |
+| `func Wait[T any](ctx, fns ...Fn[T])` | 并发执行所有任务并等待完成，忽略错误 |
+| `func AllOf[T any](ctx, fns []Fn[T]) []Holder[T]` | 并发执行所有任务，按顺序返回全部结果 |
+| `func AnyOf[T any](ctx, fns ...Fn[T]) (T, error)` | 并发执行所有任务，返回首个成功结果，全部失败则返回汇总错误 |
+
+使用前先 `import "github.com/tenz-io/gokit/async/v2"`。

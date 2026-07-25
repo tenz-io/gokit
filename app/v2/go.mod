@@ -5,6 +5,7 @@ go 1.21
 require (
 	github.com/joho/godotenv v1.5.1
 	github.com/prometheus/client_golang v1.19.0
+	github.com/tenz-io/gokit/annotation/v3 v3.0.0
 	github.com/tenz-io/gokit/logger/v2 v2.0.0
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -22,3 +23,5 @@ require (
 	google.golang.org/protobuf v1.32.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
+
+replace github.com/tenz-io/gokit/annotation/v3 => ../../annotation/v3

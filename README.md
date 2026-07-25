@@ -11,7 +11,6 @@ Go common kits — a monorepo of Go 1.21+ modules providing application bootstra
 | [functional](functional/)           | Generic functional programming utilities: `Map`, `Filter`, `Reduce`, `GroupBy`, `TopK` |
 | [collection](collection/)           | Generic data structures: `Stack`, `Queue`, `PriorityQueue`, `Set`                      |
 | [tracer](tracer/)                   | Context-based request ID propagation and debug/stress/shadow flags                      |
-| [bloom](bloom/)                     | Probabilistic Bloom filter with Murmur3 hashing, tunable false-positive rate            |
 | [annotation](annotation/)           | Struct tag-based binding (`bind`/`json`/`protobuf`), defaults, and validation rules     |
 
 ### Observability
@@ -34,9 +33,7 @@ Go common kits — a monorepo of Go 1.21+ modules providing application bootstra
 |-------------------------------------|-----------------------------------------------------------------------------------------------|
 | [ginext](ginext/)                   | Gin extension: request binding + validation, JWT auth, RPC interceptors, structured responses |
 | [grpcext](grpcext/)                 | gRPC unary/stream interceptors for request tracing, traffic logging, and metrics              |
-| [grpcetcd](grpcetcd/)               | etcd-based service registration (lease + keep-alive) and client-side resolver for gRPC        |
 | [httpext](httpext/)                 | HTTP client with composable transport interceptor chain: headers, metrics, traffic, slow-log  |
-| [genproto](genproto/)               | Shared protobuf types: `Auth`, `RequestHeader`, `ResponseHeader`                              |
 
 ### Data & Persistence
 
@@ -52,34 +49,16 @@ Go common kits — a monorepo of Go 1.21+ modules providing application bootstra
 | [async](async/)              | Generic concurrent job runner: `AllOf`, `AnyOf`, panic-safe, error-group-based termination  |
 | [retriever](retriever/)      | Configurable retry with pluggable backoff (exponential + jitter, linear, none)              |
 
-### Code Generation
-
-| Module                                    | Purpose                                                                                                   |
-|-------------------------------------------|-----------------------------------------------------------------------------------------------------------|
-| [protoc-gen-go-gin](protoc-gen-go-gin/)   | `protoc` plugin generating Gin HTTP handlers from protobuf services with `google.api.http` annotations    |
-
-### Integrations
-
-| Module                  | Purpose                                                                                     |
-|-------------------------|---------------------------------------------------------------------------------------------|
-| [notionx](notionx/)     | Markdown to Notion API block conversion for programmatic page creation                      |
-
 ## Dependency Graph
 
 ```
-                        protoc-gen-go-gin
-                           /         \
-                       ginext       genproto
-                      /  |   \
-        annotation  functional  logger -- monitor -- tracer
-           |                        |
-          app        ┌─────────────┼─────────────┐
-          cmd   grpcetcd         grpcext       cache
-         (CLI)  (etcd gRPC)   (gRPC metrics)  (Redis/LRU)
-                                 httpext
-                              (HTTP client)
-                                 gormext
-                               (GORM plugin)
+        annotation (v3)         functional
+              |                      |
+            app,cmd   ginext ──────────────── logger ── monitor ── tracer
+                      |  \
+                   grpcext  ┐
+                    │       ├─ httpext / gormext / cache
+                    └─ (gRPC metrics)  (observability backends)
 ```
 
 **Internal dependency summary** (direct edges):
@@ -88,40 +67,35 @@ Go common kits — a monorepo of Go 1.21+ modules providing application bootstra
 |----------------------|-------------------------------------------------|
 | `app`                | `annotation`, `logger`                          |
 | `cmd`                | `annotation`, `logger`                          |
-| `ginext`             | `annotation`, `functional`, `logger`, `monitor`, `tracer` |
+| `ginext`             | `annotation`, `logger`, `monitor`, `tracer`     |
 | `grpcext`            | `logger`, `monitor`, `tracer`                   |
-| `grpcetcd`           | `logger`                                         |
 | `httpext`            | `logger`, `monitor`, `tracer`                   |
 | `gormext`            | `logger`, `monitor`, `tracer`                   |
 | `cache`              | `logger`, `monitor`, `tracer`                   |
-| `protoc-gen-go-gin`  | `ginext`, `genproto`                            |
 | `functional`         | _(none)_                                         |
 | `collection`         | _(none)_                                         |
 | `tracer`             | _(none)_                                         |
-| `bloom`              | _(none)_                                         |
 | `annotation`         | _(none)_                                         |
 | `async`              | _(none)_                                         |
 | `retriever`          | _(none)_                                         |
-| `notionx`            | _(none)_                                         |
+
+> `annotation` has been upgraded to `v3`; all other modules remain on `v2`.
 
 **Layers:**
 
-1. **Foundation** — `functional`, `collection`, `tracer`, `bloom`, `annotation` have zero internal dependencies.
+1. **Foundation** — `functional`, `collection`, `tracer`, `annotation` have zero internal dependencies.
 2. **Observability** — `logger`, `monitor`, `tracer` form the observability backbone used by most mid-tier modules.
-3. **Mid-tier** — `app`, `cmd`, `ginext`, `grpcext`, `grpcetcd`, `httpext`, `gormext`, `cache` compose foundation + observability.
-4. **Top** — `protoc-gen-go-gin` sits at the highest level, depending on `ginext` and `genproto`.
+3. **Mid-tier** — `app`, `cmd`, `ginext`, `grpcext`, `httpext`, `gormext`, `cache` compose foundation + observability.
 
 **Key external dependencies:**
 
 - `go.uber.org/zap` — structured logging (`logger`)
 - `github.com/gin-gonic/gin` — HTTP framework (`ginext`)
-- `google.golang.org/grpc` — gRPC (`grpcext`, `grpcetcd`)
-- `go.etcd.io/etcd/client/v3` — service discovery (`grpcetcd`)
+- `google.golang.org/grpc` — gRPC (`grpcext`)
 - `gorm.io/gorm` — ORM (`gormext`)
 - `github.com/go-redis/redis/v8` — Redis client (`cache`)
 - `github.com/prometheus/client_golang` — metrics (`monitor`, `app`, `cmd`)
 - `github.com/urfave/cli/v2` — CLI framework (`cmd`)
-- `google.golang.org/protobuf` — protobuf runtime (`genproto`, `grpcext`, `protoc-gen-go-gin`)
 
 ## Development
 
