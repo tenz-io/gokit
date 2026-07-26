@@ -27,6 +27,11 @@ func WithRequestID(ctx context.Context, id string) context.Context {
 // When none is stored (or ctx is nil) it auto-generates a fresh ID via
 // [NewRequestID] so downstream never observes an empty ID — use this on the
 // read path of inbound handling.
+//
+// Note: the generated ID is NOT written back to ctx, so repeated reads of the
+// same ID-less context yield DIFFERENT ids. To pin one id for the whole
+// request, call [EnsureRequestID] once at the inbound boundary and thread the
+// returned context downstream.
 func RequestIDFromCtx(ctx context.Context) string {
 	if ctx != nil {
 		if id, ok := ctx.Value(requestIDCtxKey{}).(string); ok && id != "" {
@@ -34,6 +39,25 @@ func RequestIDFromCtx(ctx context.Context) string {
 		}
 	}
 	return NewRequestID()
+}
+
+// EnsureRequestID guarantees ctx carries a request ID. If one is already
+// stored, the stored id is returned and ctx is returned unchanged (no
+// re-derivation); otherwise a fresh ID is generated, stored on a derived
+// context, and both are returned. Call this once at the inbound boundary
+// (middleware) so the same id is observed by logs, response headers and
+// downstream calls for the lifetime of the request — unlike
+// [RequestIDFromCtx], which generates a fresh id per call when none is set.
+//
+// A nil ctx yields a generated id and a nil context.
+func EnsureRequestID(ctx context.Context) (context.Context, string) {
+	if ctx != nil {
+		if id, ok := ctx.Value(requestIDCtxKey{}).(string); ok && id != "" {
+			return ctx, id // already has one — don't re-derive
+		}
+	}
+	id := NewRequestID()
+	return WithRequestID(ctx, id), id
 }
 
 // RequestIDFromCtxOr returns the request ID stored on ctx, or "" when none

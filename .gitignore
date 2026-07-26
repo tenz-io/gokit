@@ -11,8 +11,11 @@
 # Test binary, built with `go test -c`
 *.test
 
-# Output of the go coverage tool, specifically when used with LiteIDE
-*.out
+# Go example binaries built by `go build`/`go run` inside any example/ dir.
+# Each example module's binary is named after the module (e.g.
+# tracer-v3-example, logger-v3-example), which the *.exe rule above does not
+# catch on macOS/Linux.
+**/example/*-example
 
 # Dependency directories (remove the comment below to include it)
 # vendor/

@@ -52,12 +52,17 @@ func TestFlagString(t *testing.T) {
 }
 
 func TestFlagString_StableForUnknownBits(t *testing.T) {
-	// A reserved/unknown bit is dropped from the rendered name, not panicked.
-	// 1<<6 sits outside allFlagBits (which only covers bits 0..2) yet stays
-	// inside int8's range.
-	unknown := Flag(1 << 6)
-	assert.Equal(t, "none", unknown.String())
-	assert.Equal(t, "debug", (FlagDebug | unknown).String())
+	// A reserved/unknown bit (outside allFlagBits, which covers bits 0..2)
+	// is preserved as a trailing 0xNN suffix rather than silently dropped,
+	// so a Flag carrying bits this build doesn't know about is never mistaken
+	// for FlagNone. uint8 makes 1<<7 a safe unknown-bit value.
+	unknown := Flag(1 << 7) // 0x80
+	assert.Equal(t, "0x80", unknown.String())
+	assert.Equal(t, "debug|0x80", (FlagDebug | unknown).String())
+
+	// A combination of several unknown bits shows the combined mask.
+	multi := Flag(1<<7 | 1<<6) // 0xc0
+	assert.Equal(t, "0xc0", multi.String())
 }
 
 func TestFlagGoString(t *testing.T) {
@@ -81,4 +86,53 @@ func TestFlagNames_IndependentOfBitOrder(t *testing.T) {
 		(FlagShadow | FlagDebug).Names(),
 		(FlagDebug | FlagShadow).Names(),
 	)
+}
+
+func TestParseFlagStrict_AcceptsKnown(t *testing.T) {
+	cases := map[string]Flag{
+		"":                    FlagNone,
+		"normal":              FlagNone,
+		"debug":               FlagDebug,
+		"DEBUG":               FlagDebug,
+		"debug|shadow":        FlagDebug | FlagShadow,
+		"debug|stress|shadow": FlagDebug | FlagStress | FlagShadow,
+		"|debug|":             FlagDebug,
+	}
+	for in, want := range cases {
+		got, err := ParseFlagStrict(in)
+		assert.NoError(t, err, "ParseFlagStrict(%q)", in)
+		assert.Equal(t, want, got, "ParseFlagStrict(%q)", in)
+	}
+}
+
+func TestParseFlagStrict_RejectsUnknown(t *testing.T) {
+	// A typo like "shdow" must surface, not silently degrade to FlagNone
+	// (which would run shadow traffic as real traffic).
+	f, err := ParseFlagStrict("shdow")
+	assert.Error(t, err)
+	assert.Equal(t, FlagNone, f) // nothing parsed before the error
+
+	// Known-then-unknown: the bits parsed so far are returned alongside the
+	// error so the caller still sees partial state if it wants.
+	f, err = ParseFlagStrict("debug|shdow")
+	assert.Error(t, err)
+	assert.Equal(t, FlagDebug, f)
+
+	// normal|debug is NOT a conflict at the parse layer: normal is the
+	// no-op token, debug is set.
+	f, err = ParseFlagStrict("normal|debug")
+	assert.NoError(t, err)
+	assert.Equal(t, FlagDebug, f)
+}
+
+func TestParseFlagStrict_RoundTripsString(t *testing.T) {
+	flags := []Flag{
+		FlagNone, FlagDebug, FlagStress, FlagShadow,
+		FlagDebug | FlagShadow, FlagDebug | FlagStress | FlagShadow,
+	}
+	for _, f := range flags {
+		got, err := ParseFlagStrict(f.String())
+		assert.NoError(t, err, "ParseFlagStrict(%q)", f.String())
+		assert.Equal(t, f, got)
+	}
 }

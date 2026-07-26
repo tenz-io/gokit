@@ -48,12 +48,48 @@ func TestRequestID_SurvivesContextNesting(t *testing.T) {
 }
 
 func TestFromContext_StandaloneNoMutate(t *testing.T) {
-	// Reading must never write back a generated id; this matters when the
-	// same ctx is read from many goroutines.
+	// Reading via RequestIDFromCtx must never write back a generated id: the
+	// original ctx is observed unchanged (RequestIDFromCtxOr still returns
+	// ""). This matters when the same ctx is read concurrently.
 	ctx := context.Background()
-	before := RequestIDFromCtxOr(ctx) // ""
-	_ = RequestIDFromCtx(ctx)         // would generate if it wrote back
-	assert.Equal(t, before, RequestIDFromCtxOr(ctx))
+	assert.Empty(t, RequestIDFromCtxOr(ctx)) // nothing stored
+	_ = RequestIDFromCtx(ctx)                // generates but must not write back
+	assert.Empty(t, RequestIDFromCtxOr(ctx)) // still nothing stored
+}
+
+func TestEnsureRequestID_PinsIDForTheRequest(t *testing.T) {
+	// The whole point of EnsureRequestID: reading the derived context twice
+	// (or N times, across goroutines) returns the SAME id, unlike the bare
+	// RequestIDFromCtx read of an id-less context.
+	base := context.Background()
+	ctx, id := EnsureRequestID(base)
+	assert.Len(t, id, 32)
+	assert.NotEmpty(t, id)
+
+	// Repeated reads of the derived context are stable.
+	assert.Equal(t, id, RequestIDFromCtx(ctx))
+	assert.Equal(t, id, RequestIDFromCtx(ctx))
+	assert.Equal(t, id, RequestIDFromCtxOr(ctx))
+
+	// And EnsureRequestID is idempotent: a second call keeps the stored id.
+	ctx2, id2 := EnsureRequestID(ctx)
+	assert.Equal(t, id, id2)
+	assert.Same(t, ctx, ctx2) // already had an id -> returned unchanged
+}
+
+func TestEnsureRequestID_BareCtxReadIsUnstable(t *testing.T) {
+	// Documenting the sharp edge that motivates EnsureRequestID: reading an
+	// id-less context via RequestIDFromCtx twice yields two different ids.
+	ctx := context.Background()
+	assert.NotEqual(t, RequestIDFromCtx(ctx), RequestIDFromCtx(ctx))
+}
+
+func TestEnsureRequestID_NilCtx(t *testing.T) {
+	// A nil ctx yields a generated id and a nil (re-derived) context rather
+	// than panicking.
+	ctx, id := EnsureRequestID(nil)
+	assert.Nil(t, ctx)
+	assert.Len(t, id, 32)
 }
 
 func TestWithRequestID_OverwritesPrior(t *testing.T) {

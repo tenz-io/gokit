@@ -23,9 +23,14 @@
 //	fmt.Println(tracer.FromContext(ctx)) // "debug|shadow"
 //
 // ID conventions:
-//   - WithRequestID / RequestIDFromCtx: set/read the request ID; reading an
-//     unset context auto-generates one (UUID with dashes stripped) so
-//     downstream never observes an empty ID.
+//   - EnsureRequestID: the inbound-boundary primitive — guarantees ctx
+//     carries an id (generates and stores one if absent) so the same id is
+//     seen by logs, response headers and downstream calls for the whole
+//     request. Prefer this in middleware.
+//   - WithRequestID / RequestIDFromCtx: explicitly set, or read the stored id
+//     with fallback generation. Note RequestIDFromCtx does NOT write the
+//     generated id back, so repeated reads of an id-less ctx yield different
+//     ids; use EnsureRequestID to pin one.
 //   - RequestIDFromCtxOr: read without auto-generation; returns "" when
 //     absent, for "is one already present?" checks.
 //
@@ -34,6 +39,6 @@
 //     real flag; test for it with f == FlagNone instead.
 //   - Request-id symbols are spelled RequestID (capital ID) to match the Go
 //     naming convention and logger/v3.
-//   - Flag is int8 (a small bitmask is all that is needed) and context keys
-//     are typed empty structs (zero collision, no string comparison).
+//   - Flag is uint8 (eight usable flag bits, no sign-bit overflow) and context
+//     keys are typed empty structs (zero collision, no string comparison).
 package tracer

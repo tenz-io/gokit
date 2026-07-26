@@ -3,15 +3,17 @@ package tracer
 // Flag is a bitmask of traffic-mode flags carried through a request's
 // context.
 //
-// A Flag is cheap (int8) and safe to share; the zero value FlagNone carries
+// A Flag is cheap (uint8) and safe to share; the zero value FlagNone carries
 // no mode. Build a combination with the bitwise OR operator:
 //
 //	f := tracer.FlagDebug | tracer.FlagShadow
 //
 // The known flags, their names and aliases live in flagTable — that single
 // table is the source of truth for parsing ([ParseFlag]) and rendering
-// ([Flag.String], [Flag.Names]) so adding a mode is a one-line change.
-type Flag int8
+// ([Flag.String], [Flag.Names]) so adding a mode is a one-line change. uint8
+// (unsigned) gives eight usable flag bits and avoids the sign-bit overflow
+// trap that a signed int8 would hit at bit 7.
+type Flag uint8
 
 // Predefined traffic-mode flags.
 const (
