@@ -211,4 +211,15 @@ func main() {
 - **为什么方法不能加类型参数**：Go 1.21 不允许方法声明类型参数，故类型变换（`MapTo`）、有序排序（`SortChain`）、链式去重（`DeduplicateByChain`）以自由函数提供。
 - **OrderedSet 的墓碑删除**：`Remove` 标记槽位为逻辑空而非搬运切片，使删除 O(1)；`ToSlice`/`ForEach` 跳过墓碑，墓碑由 `Clone` 回收。零值作为合法元素不会与墓碑冲突（判定以 `index` map 为准）。
 
+## 示例
+
+`example/` 下提供一份覆盖全部能力的可运行 demo：独立函数、key 提取器 TopK/Min/Max、流式 Chain、惰性 Seq 短路读、就地变体、Chunk/Window/Zip/FlatMap、GroupBy/Partition、OrderedSet 与条件表达式。
+
+```bash
+# 在仓库根目录运行
+go run ./functional/v3/example/
+# 或在模块内
+make run-example
+```
+
 引入路径：`github.com/tenz-io/gokit/functional/v3`（包名 `fn`）。

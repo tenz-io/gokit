@@ -13,12 +13,17 @@ use (
 	./async/v3/example
 	./cache/v2
 	./cache/v2/example
+	./cache/v3
+	./cache/v3/example
 	./cmd/v2
 	./cmd/v2/example
 	./cmd/v2/example-tool
 	./collection/v2
+	./collection/v3
+	./collection/v3/example
 	./functional/v2
 	./functional/v3
+	./functional/v3/example
 	./ginext/v2
 	./ginext/v2/example
 	./ginext/v2/example-bind
@@ -40,4 +45,6 @@ use (
 	./retriever/v2
 	./retriever/v2/example
 	./tracer/v2
+	./tracer/v3
+	./tracer/v3/example
 )
