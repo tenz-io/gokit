@@ -12,9 +12,10 @@ import (
 // time.Duration and []byte, peeling one pointer level. It is intended for
 // transport binders that receive raw strings (uri/query/header/form).
 func SetString(rv reflect.Value, s string) error {
-	rv = peelOnce(rv)
-	if !rv.CanSet() {
-		return fmt.Errorf("annotation.SetString: field %s is not settable", rv.Type())
+	var err error
+	rv, err = writableValue(rv, "annotation.SetString")
+	if err != nil {
+		return err
 	}
 	if rv.Type() == durationType {
 		d, err := time.ParseDuration(s)
@@ -28,19 +29,19 @@ func SetString(rv reflect.Value, s string) error {
 	case reflect.String:
 		rv.SetString(s)
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		v, err := strconv.ParseInt(s, 10, 64)
+		v, err := strconv.ParseInt(s, 10, rv.Type().Bits())
 		if err != nil {
 			return fmt.Errorf("invalid int %q: %w", s, err)
 		}
 		rv.SetInt(v)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		v, err := strconv.ParseUint(s, 10, 64)
+		v, err := strconv.ParseUint(s, 10, rv.Type().Bits())
 		if err != nil {
 			return fmt.Errorf("invalid uint %q: %w", s, err)
 		}
 		rv.SetUint(v)
 	case reflect.Float32, reflect.Float64:
-		v, err := strconv.ParseFloat(s, 64)
+		v, err := strconv.ParseFloat(s, rv.Type().Bits())
 		if err != nil {
 			return fmt.Errorf("invalid float %q: %w", s, err)
 		}
@@ -67,9 +68,10 @@ func SetString(rv reflect.Value, s string) error {
 // convertible. It is intended for transport binders that already have a typed
 // value (e.g. a file's []byte).
 func Set(rv reflect.Value, v any) error {
-	rv = peelOnce(rv)
-	if !rv.CanSet() {
-		return fmt.Errorf("annotation.Set: field is not settable")
+	var err error
+	rv, err = writableValue(rv, "annotation.Set")
+	if err != nil {
+		return err
 	}
 	if v == nil {
 		return nil
@@ -89,6 +91,25 @@ func Set(rv reflect.Value, v any) error {
 		return nil
 	}
 	return fmt.Errorf("annotation.Set: cannot convert %s to %s", val.Type(), rv.Type())
+}
+
+func writableValue(rv reflect.Value, operation string) (reflect.Value, error) {
+	if !rv.IsValid() {
+		return reflect.Value{}, fmt.Errorf("%s: invalid field", operation)
+	}
+	for rv.Kind() == reflect.Ptr {
+		if rv.IsNil() {
+			if !rv.CanSet() {
+				return reflect.Value{}, fmt.Errorf("%s: field %s is not settable", operation, rv.Type())
+			}
+			rv.Set(reflect.New(rv.Type().Elem()))
+		}
+		rv = rv.Elem()
+	}
+	if !rv.CanSet() {
+		return reflect.Value{}, fmt.Errorf("%s: field %s is not settable", operation, rv.Type())
+	}
+	return rv, nil
 }
 
 // peelOnce dereferences a single pointer level, allocating if nil, so callers

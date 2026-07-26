@@ -11,6 +11,20 @@
 - `CopyToContext` 在跨 goroutine/跨请求场景下，把已存在的监控器从源 context 拷贝到目标 context，避免丢失指标上下文
 - 未初始化时 `FromContext` 返回空实现（no-op），调用方无需做 nil 判断即可安全埋点
 
+## 能力清单
+
+| 能力 | 含义 |
+| --- | --- |
+| 仪表盘打点（Set/Incr/Decr） | 记录瞬时值或当前活跃数，如并发请求数、队列长度等实时状态 |
+| 计数器打点（Count/CountDelta） | 累计次数或按增量累加，如请求总数、成功/失败次数统计 |
+| 延迟直方图观测（Observe） | 以毫秒为单位记录耗时分布，用于统计接口/下游调用的延迟分布与分桶（内置从 0.1ms 到 10s 的分桶区间） |
+| 数据量摘要采样（Sample） | 以分位数（p50/p90/p95/p99）记录数据大小等数值分布，用于观察长尾情况 |
+| 一次调用计时（BeginRecord/Recorder） | 开始一次调用记录起始时间，通过 End 系列方法结束时自动异步写入耗时直方图、计数器，并维护活跃请求数 gauge |
+| 按结果结束记录（EndWithError/EndWithCode/EndWithOpt 等） | 根据 error 是否为 nil、自定义 code、opt 标签等多种方式结束记录，无需手动区分成功/失败分支 |
+| 指标导出器命名隔离（NewSingleFlight） | 以 cmd 作为标签维度创建独立的指标导出器，区分不同业务/服务的同类指标 |
+| Context 传递与复用（InitSingleFlight/WithMonitor/FromContext） | 将监控器绑定到 context 中随调用链传递，未初始化时自动降级为空实现，避免埋点代码判空 |
+| 跨 Context 拷贝（CopyToContext） | 在跨 goroutine 或跨请求场景下把已有监控器从源 context 复制到目标 context，避免指标上下文丢失 |
+
 ## 快速开始
 
 ```go

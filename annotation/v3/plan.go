@@ -136,15 +136,37 @@ func PlanFor(ptr any) (*Plan, error) {
 var planCache sync.Map // reflect.Type -> *Plan
 
 func planForType(t reflect.Type, parent string) (*Plan, error) {
-	if cached, ok := planCache.Load(t); ok {
-		return cached.(*Plan), nil
+	// Only root plans are cached. A nested field's Path depends on its parent,
+	// so caching nested plans by type alone would leak the first-seen path into
+	// every later use of that type.
+	if parent == "" {
+		if cached, ok := planCache.Load(t); ok {
+			return cached.(*Plan), nil
+		}
 	}
 
-	// Reserve a placeholder to break cycles (self-referential structs are
-	// rare but legal). The final plan replaces it.
-	p := &Plan{rootType: t}
-	planCache.Store(t, p)
+	p, err := buildPlan(t, parent, make(map[reflect.Type]bool))
+	if err != nil {
+		return nil, err
+	}
+	if parent != "" {
+		return p, nil
+	}
+	actual, _ := planCache.LoadOrStore(t, p)
+	return actual.(*Plan), nil
+}
 
+func buildPlan(t reflect.Type, parent string, ancestors map[reflect.Type]bool) (*Plan, error) {
+	if ancestors[t] {
+		// A recursive pointer (for example, a linked-list Next field) is a
+		// legitimate Go type. Stop expanding the static plan at the cycle rather
+		// than publishing an incomplete plan or recurring forever.
+		return &Plan{rootType: t}, nil
+	}
+	ancestors[t] = true
+	defer delete(ancestors, t)
+
+	p := &Plan{rootType: t}
 	var fields []*Field
 	for i := 0; i < t.NumField(); i++ {
 		sf := t.Field(i)
@@ -159,7 +181,7 @@ func planForType(t reflect.Type, parent string) (*Plan, error) {
 		structType := peelPtr(ft)
 		var children []*Field
 		if structType != nil {
-			cp, err := planForType(structType, fpath)
+			cp, err := buildPlan(structType, fpath, ancestors)
 			if err != nil {
 				return nil, err
 			}
@@ -183,7 +205,6 @@ func planForType(t reflect.Type, parent string) (*Plan, error) {
 		fields = append(fields, f)
 	}
 	p.fields = fields
-	planCache.Store(t, p)
 	return p, nil
 }
 
@@ -229,11 +250,13 @@ func resolveBindName(sf reflect.StructField) string {
 }
 
 func resolveBindSource(sf reflect.StructField) BindSource {
-	m := tagMap(sf.Tag, tagBind)
-	for k := range m {
-		switch BindSource(k) {
+	// Preserve declaration order. Iterating the map returned by tagMap made a
+	// malformed multi-source tag choose a different source nondeterministically.
+	for _, elem := range strings.Split(sf.Tag.Get(tagBind), ",") {
+		key, _, _ := strings.Cut(elem, "=")
+		switch BindSource(key) {
 		case BindURI, BindQuery, BindHeader, BindForm, BindFile:
-			return BindSource(k)
+			return BindSource(key)
 		}
 	}
 	return BindNone

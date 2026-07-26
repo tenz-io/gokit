@@ -12,6 +12,20 @@
 - `WithLogger`/`FromContext`/`CopyToContext` 支持把 `Entry` 挂载到 `context.Context` 并跨调用链传递
 - `SetLevel`/`GetLevel` 支持运行时动态调整全局日志级别
 
+## 能力清单
+
+| 能力 | 含义 |
+|------|------|
+| 分级输出到不同文件 | `FilePath` 配置后自动按 `info.log`/`error.log`/`debug.log` 拆分写入，同时可选 `Console` 输出到 stdout，便于线上按级别分类排查 |
+| 日志文件自动轮转与压缩 | 基于 lumberjack，按 `MaxSize`/`MaxAge`/`MaxBackups` 限制单文件大小、保留天数和备份数，超出后自动压缩旧文件，避免日志盘被写满 |
+| 运行时动态调级 | `SetLevel`/`GetLevel` 基于 `zap.AtomicLevel`，可在服务运行中不重启地临时调低/调高全局日志级别，方便线上排障 |
+| 链式附加结构化字段 | `With`/`WithField`/`WithFields`/`WithError`/`WithRequestID`/`WithTracing` 返回新的 `Entry`，不修改原实例，适合按请求/用户维度派生带上下文字段的日志器 |
+| 输出裁剪防止大字段刷屏 | `TrimConfig`（`ArrLimit`/`StrLimit`/`DeepLimit`/`Ignores`）对超长字符串、超深结构体/map/slice 自动截断或跳过指定字段，避免大请求体、长数组把日志刷爆 |
+| 独立的流量日志 | `Traffic`/`TrafficPath` 等配置开启后，`StartTraffic`+`TrafficRec.End`/`EndWithError` 会把每次请求的耗时、返回码、响应体写入单独的 `traffic.log`，与业务日志分离，方便统计接口耗时和成功率 |
+| Context 跨调用链传递日志实例 | `WithLogger`/`FromContext`/`CopyToContext` 把携带了字段的 `Entry` 挂载到 `context.Context`，在函数调用链、goroutine 之间传递而不丢失已附加的字段 |
+| 独立实例与全局实例并存 | `NewEntry`/`NewEntryWithOpts` 可创建不影响全局配置的独立日志实例，适合多租户或需要不同日志策略的子模块 |
+| 兼容旧版 API | 保留 `WithLoggerLevel`/`WithTrafficEnabled`/`ConfigureTrafficWithOpts`/`StartTrafficRec` 等旧函数别名，便于从历史版本平滑升级而不用大改调用代码 |
+
 ## 快速开始
 
 ```go

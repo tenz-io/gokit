@@ -12,6 +12,19 @@
 - 内置命令行 flag：`config`、`port`、`admin-port`、`log`、`logging-file`、`logging-console`、`verbose`
 - `WaitSignal` 监听系统信号 / context 取消 / 运行错误，统一触发清理钩子并退出进程
 
+## 能力清单
+
+| 能力 | 含义 |
+| --- | --- |
+| 统一应用编排 | `app.Run` 一次性完成命令行解析、`Inits` 初始化函数依次执行、`Run` 主逻辑启动、退出等待与清理，适合搭建标准化的服务/工具入口 |
+| 多格式配置加载 | `WithYamlConfig`/`WithJsonConfig` 读取 YAML/JSON 配置文件并反序列化到业务配置结构体，内置默认值填充与字段校验（依赖 `annotation`） |
+| dotenv 环境变量注入 | `WithDotEnvConfig` 加载 `.env` 文件到进程环境变量，适合本地开发或按环境区分配置 |
+| 全局日志初始化 | `WithLogger` 依据命令行 flag 一行配置全局日志，支持文件/控制台输出、verbose 级别切换、流量日志开关 |
+| Admin HTTP 端点暴露 | `WithAdminHTTPServer` 启动独立的管理端口，自动挂载 `/debug/pprof`、`/metrics`、`/ping`，用于线上性能诊断和指标采集 |
+| 健康检查探活 | `PingHandler`/`AddPingHandler` 返回主机名、启动时间与运行时长，供负载均衡器或编排系统做存活检测 |
+| 命令行 flag 管理 | `Flag`/`Flags`/`Parse` 提供 `config`、`port`、`admin-port`、`log` 等内置 flag 的定义、解析与按名称/类型取值 |
+| 优雅退出与清理 | `WaitSignal` 监听系统信号、context 取消及运行错误，统一触发各初始化函数返回的 `CleanFunc` 清理逻辑后退出进程 |
+
 ## 快速开始
 
 ```go

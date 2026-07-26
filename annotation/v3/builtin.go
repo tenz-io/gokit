@@ -1,9 +1,13 @@
 package annotation
 
 import (
+	"encoding/base64"
 	"fmt"
+	"math"
+	"math/big"
+	"net"
+	"net/url"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -101,68 +105,95 @@ func maxLenValidator(param string, _ reflect.StructField) (Rule, error) {
 
 // --- numeric comparisons ---
 
-func numericValidator(name, param string, op func(a, b float64) bool, sym string) (Rule, error) {
-	limit, err := strconv.ParseFloat(param, 64)
+func numericValidator(name, param, sym string) (Rule, error) {
+	limit, err := parseNumericLimit(param)
 	if err != nil {
 		return nil, fmt.Errorf("%s: invalid number %q", name, param)
 	}
 	return func(rv reflect.Value) (bool, string) {
+		rv, ok := indirectValue(rv)
+		if !ok {
+			return true, ""
+		}
 		if isSliceOrArray(rv.Kind()) {
 			// Compare every element.
 			for i := 0; i < rv.Len(); i++ {
-				if a, ok := numeric(rv.Index(i)); ok && !op(a, limit) {
-					return false, fmt.Sprintf("element %d must be %s %v", i, sym, limit)
+				if cmp, ok := compareNumeric(rv.Index(i), limit); ok && !orderedComparison(name, cmp) {
+					return false, fmt.Sprintf("element %d must be %s %s", i, sym, param)
 				}
 			}
 			return true, ""
 		}
-		a, ok := numeric(rv)
+		cmp, ok := compareNumeric(rv, limit)
 		if !ok {
 			return true, "" // not a numeric field; skip
 		}
-		if !op(a, limit) {
-			return false, fmt.Sprintf("must be %s %v", sym, limit)
+		if !orderedComparison(name, cmp) {
+			return false, fmt.Sprintf("must be %s %s", sym, param)
 		}
 		return true, ""
 	}, nil
 }
 
 func minValidator(param string, ft reflect.StructField) (Rule, error) {
-	return numericValidator("min", param, func(a, b float64) bool { return a >= b }, ">=")
+	return numericValidator("min", param, ">=")
 }
 func maxValidator(param string, ft reflect.StructField) (Rule, error) {
-	return numericValidator("max", param, func(a, b float64) bool { return a <= b }, "<=")
+	return numericValidator("max", param, "<=")
 }
 func gtValidator(param string, ft reflect.StructField) (Rule, error) {
-	return numericValidator("gt", param, func(a, b float64) bool { return a > b }, ">")
+	return numericValidator("gt", param, ">")
 }
 func ltValidator(param string, ft reflect.StructField) (Rule, error) {
-	return numericValidator("lt", param, func(a, b float64) bool { return a < b }, "<")
+	return numericValidator("lt", param, "<")
 }
 func gteValidator(param string, ft reflect.StructField) (Rule, error) {
-	return numericValidator("gte", param, func(a, b float64) bool { return a >= b }, ">=")
+	return numericValidator("gte", param, ">=")
 }
 func lteValidator(param string, ft reflect.StructField) (Rule, error) {
-	return numericValidator("lte", param, func(a, b float64) bool { return a <= b }, "<=")
+	return numericValidator("lte", param, "<=")
 }
 
-func eqValidator(param string, _ reflect.StructField) (Rule, error) {
+func eqValidator(param string, ft reflect.StructField) (Rule, error) {
+	limit, isNumber, err := equalityLimit(param, ft)
+	if err != nil {
+		return nil, err
+	}
 	return func(rv reflect.Value) (bool, string) {
-		if a, ok := numeric(rv); ok && a != mustFloat(param) {
-			return false, fmt.Sprintf("must equal %v", param)
+		if isNumber {
+			cmp, ok := compareNumeric(rv, limit)
+			if ok && cmp != 0 {
+				return false, fmt.Sprintf("must equal %v", param)
+			}
+			return true, ""
 		}
-		// For strings, compare directly.
+		rv, ok := indirectValue(rv)
+		if !ok {
+			return true, ""
+		}
 		if rv.Kind() == reflect.String && rv.String() != param {
-			return false, fmt.Sprintf("must equal %q", param)
+			return false, fmt.Sprintf("must equal %v", param)
 		}
 		return true, ""
 	}, nil
 }
 
-func neValidator(param string, _ reflect.StructField) (Rule, error) {
+func neValidator(param string, ft reflect.StructField) (Rule, error) {
+	limit, isNumber, err := equalityLimit(param, ft)
+	if err != nil {
+		return nil, err
+	}
 	return func(rv reflect.Value) (bool, string) {
-		if a, ok := numeric(rv); ok && a == mustFloat(param) {
-			return false, fmt.Sprintf("must not equal %v", param)
+		if isNumber {
+			cmp, ok := compareNumeric(rv, limit)
+			if ok && cmp == 0 {
+				return false, fmt.Sprintf("must not equal %v", param)
+			}
+			return true, ""
+		}
+		rv, ok := indirectValue(rv)
+		if !ok {
+			return true, ""
 		}
 		if rv.Kind() == reflect.String && rv.String() == param {
 			return false, fmt.Sprintf("must not equal %q", param)
@@ -171,11 +202,106 @@ func neValidator(param string, _ reflect.StructField) (Rule, error) {
 	}, nil
 }
 
+func equalityLimit(param string, ft reflect.StructField) (numericLimit, bool, error) {
+	t := ft.Type
+	for t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	switch t.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Uintptr, reflect.Float32, reflect.Float64:
+		limit, err := parseNumericLimit(param)
+		if err != nil {
+			return numericLimit{}, true, fmt.Errorf("invalid number %q", param)
+		}
+		return limit, true, nil
+	default:
+		return numericLimit{}, false, nil
+	}
+}
+
+type numericLimit struct {
+	float float64
+	exact *big.Float
+}
+
+func parseNumericLimit(param string) (numericLimit, error) {
+	f, err := strconv.ParseFloat(param, 64)
+	if err != nil {
+		return numericLimit{}, err
+	}
+	exact, _, err := big.ParseFloat(param, 10, 256, big.ToNearestEven)
+	if err != nil {
+		return numericLimit{}, err
+	}
+	return numericLimit{float: f, exact: exact}, nil
+}
+
+func compareNumeric(rv reflect.Value, limit numericLimit) (int, bool) {
+	rv, ok := indirectValue(rv)
+	if !ok {
+		return 0, false
+	}
+	var value *big.Float
+	switch rv.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		value = new(big.Float).SetPrec(256).SetInt64(rv.Int())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		value = new(big.Float).SetPrec(256).SetUint64(rv.Uint())
+	case reflect.Float32, reflect.Float64:
+		f := rv.Float()
+		if math.IsNaN(f) {
+			return 2, true
+		}
+		return compareFloat(f, limit.float), true
+	case reflect.String:
+		d, err := time.ParseDuration(rv.String())
+		if err != nil {
+			return 0, false
+		}
+		return compareFloat(d.Seconds(), limit.float), true
+	default:
+		return 0, false
+	}
+	return value.Cmp(limit.exact), true
+}
+
+func compareFloat(a, b float64) int {
+	switch {
+	case a < b:
+		return -1
+	case a > b:
+		return 1
+	default:
+		return 0
+	}
+}
+
+func orderedComparison(name string, cmp int) bool {
+	switch name {
+	case "min", "gte":
+		return cmp >= 0 && cmp != 2
+	case "max", "lte":
+		return cmp <= 0
+	case "gt":
+		return cmp > 0 && cmp != 2
+	case "lt":
+		return cmp < 0
+	default:
+		return false
+	}
+}
+
 // --- oneof ---
 
 func oneofValidator(param string, _ reflect.StructField) (Rule, error) {
 	options := strings.Split(param, " ")
 	return func(rv reflect.Value) (bool, string) {
+		rv, ok := indirectValue(rv)
+		if !ok {
+			return true, ""
+		}
 		cur := fmt.Sprintf("%v", rv.Interface())
 		for _, o := range options {
 			if o == cur {
@@ -190,6 +316,10 @@ func oneofValidator(param string, _ reflect.StructField) (Rule, error) {
 
 func nonBlankValidator(_ string, _ reflect.StructField) (Rule, error) {
 	return func(rv reflect.Value) (bool, string) {
+		rv, ok := indirectValue(rv)
+		if !ok {
+			return true, ""
+		}
 		switch {
 		case rv.Kind() == reflect.String:
 			if strings.TrimSpace(rv.String()) == "" {
@@ -214,6 +344,10 @@ func patternValidator(param string, _ reflect.StructField) (Rule, error) {
 		return nil, fmt.Errorf("pattern: %v", err)
 	}
 	return func(rv reflect.Value) (bool, string) {
+		rv, ok := indirectValue(rv)
+		if !ok {
+			return true, ""
+		}
 		if rv.Kind() != reflect.String {
 			return true, "" // skip non-strings
 		}
@@ -231,10 +365,15 @@ func namedPatternValidator(name string) Validator {
 			return nil, err
 		}
 		return func(rv reflect.Value) (bool, string) {
+			rv, ok := indirectValue(rv)
+			if !ok {
+				return true, ""
+			}
 			if rv.Kind() != reflect.String {
 				return true, ""
 			}
-			if !re.MatchString(rv.String()) {
+			value := rv.String()
+			if !re.MatchString(value) || !validNamedValue(name, value) {
 				return false, fmt.Sprintf("must be a valid %s", name)
 			}
 			return true, ""
@@ -242,10 +381,39 @@ func namedPatternValidator(name string) Validator {
 	}
 }
 
+func validNamedValue(name, value string) bool {
+	switch name {
+	case "url":
+		u, err := url.ParseRequestURI(value)
+		return err == nil && (u.Scheme == "http" || u.Scheme == "https") && u.Host != ""
+	case "ipv4":
+		ip := net.ParseIP(value)
+		return ip != nil && ip.To4() != nil
+	case "ipv6":
+		ip := net.ParseIP(value)
+		return ip != nil && ip.To4() == nil
+	case "date":
+		_, err := time.Parse("2006-01-02", value)
+		return err == nil
+	case "base64":
+		if _, err := base64.StdEncoding.DecodeString(value); err == nil {
+			return true
+		}
+		_, err := base64.RawStdEncoding.DecodeString(value)
+		return err == nil
+	default:
+		return true
+	}
+}
+
 // --- contains / prefix / suffix ---
 
 func containsValidator(param string, _ reflect.StructField) (Rule, error) {
 	return func(rv reflect.Value) (bool, string) {
+		rv, ok := indirectValue(rv)
+		if !ok {
+			return true, ""
+		}
 		if rv.Kind() != reflect.String {
 			return true, ""
 		}
@@ -258,6 +426,10 @@ func containsValidator(param string, _ reflect.StructField) (Rule, error) {
 
 func prefixValidator(param string, _ reflect.StructField) (Rule, error) {
 	return func(rv reflect.Value) (bool, string) {
+		rv, ok := indirectValue(rv)
+		if !ok {
+			return true, ""
+		}
 		if rv.Kind() != reflect.String {
 			return true, ""
 		}
@@ -270,6 +442,10 @@ func prefixValidator(param string, _ reflect.StructField) (Rule, error) {
 
 func suffixValidator(param string, _ reflect.StructField) (Rule, error) {
 	return func(rv reflect.Value) (bool, string) {
+		rv, ok := indirectValue(rv)
+		if !ok {
+			return true, ""
+		}
 		if rv.Kind() != reflect.String {
 			return true, ""
 		}
@@ -285,15 +461,20 @@ func suffixValidator(param string, _ reflect.StructField) (Rule, error) {
 // dive applies an element-level rule to every element of a slice/array/map.
 // e.g. validate:"min_len=1,dive:non_blank".
 func diveValidator(param string, ft reflect.StructField) (Rule, error) {
-	v, ok := lookupValidator(param)
-	if !ok {
-		return nil, fmt.Errorf("dive: unknown rule %q", param)
+	name, nestedParam, _ := splitRule(param)
+	v, ok := lookupValidator(name)
+	if !ok || v == nil {
+		return nil, fmt.Errorf("dive: unknown rule %q", name)
 	}
-	elemRule, err := v("", ft)
+	elemRule, err := v(nestedParam, ft)
 	if err != nil {
 		return nil, fmt.Errorf("dive: %v", err)
 	}
 	return func(rv reflect.Value) (bool, string) {
+		rv, ok := indirectValue(rv)
+		if !ok {
+			return true, ""
+		}
 		switch rv.Kind() {
 		case reflect.Slice, reflect.Array:
 			for i := 0; i < rv.Len(); i++ {
@@ -318,11 +499,12 @@ func diveValidator(param string, ft reflect.StructField) (Rule, error) {
 // '=' as the canonical separator and ':' as a convenience (so "dive:non_blank"
 // and "dive=non_blank" both work). A token with no separator is a bare rule.
 func splitRule(raw string) (name, param string, ok bool) {
-	if i := strings.Index(raw, "="); i >= 0 {
-		return raw[:i], raw[i+1:], true
-	}
-	if i := strings.Index(raw, ":"); i >= 0 {
-		return raw[:i], raw[i+1:], true
+	eq, colon := strings.Index(raw, "="), strings.Index(raw, ":")
+	switch {
+	case eq >= 0 && (colon < 0 || eq < colon):
+		return raw[:eq], raw[eq+1:], true
+	case colon >= 0:
+		return raw[:colon], raw[colon+1:], true
 	}
 	return raw, "", false
 }
@@ -332,7 +514,6 @@ func compileRules(f *Field) error {
 	if tag == "" {
 		return nil
 	}
-	var pendingMsg string
 	for _, raw := range strings.Split(tag, ",") {
 		raw = strings.TrimSpace(raw)
 		if raw == "" {
@@ -342,7 +523,6 @@ func compileRules(f *Field) error {
 
 		if name == "msg" {
 			// Applies to the previously compiled rule.
-			pendingMsg = param
 			if len(f.rules) > 0 {
 				f.rules[len(f.rules)-1].msg = param
 			}
@@ -358,15 +538,13 @@ func compileRules(f *Field) error {
 				param: param,
 				run:   func(reflect.Value) (bool, string) { return false, "unknown rule" },
 			})
-			pendingMsg = ""
 			continue
 		}
 		check, err := v(param, f.StructField)
 		if err != nil {
 			return fmt.Errorf("field %s: rule %s: %w", f.Path, name, err)
 		}
-		r := namedRule{name: name, param: param, run: check, msg: pendingMsg}
-		pendingMsg = ""
+		r := namedRule{name: name, param: param, run: check}
 		f.rules = append(f.rules, r)
 	}
 	return nil
@@ -394,6 +572,10 @@ func isEmptyValue(rv reflect.Value) bool {
 }
 
 func lengthOf(rv reflect.Value) (int, bool) {
+	rv, ok := indirectValue(rv)
+	if !ok {
+		return 0, false
+	}
 	switch rv.Kind() {
 	case reflect.String, reflect.Slice, reflect.Array, reflect.Map, reflect.Chan:
 		return rv.Len(), true
@@ -401,32 +583,16 @@ func lengthOf(rv reflect.Value) (int, bool) {
 	return 0, false
 }
 
-func numeric(rv reflect.Value) (float64, bool) {
-	switch rv.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return float64(rv.Int()), true
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return float64(rv.Uint()), true
-	case reflect.Float32, reflect.Float64:
-		return rv.Float(), true
-	}
-	// Allow string-encoded durations to be compared as seconds.
-	if rv.Kind() == reflect.String {
-		if d, err := time.ParseDuration(rv.String()); err == nil {
-			return d.Seconds(), true
+func indirectValue(rv reflect.Value) (reflect.Value, bool) {
+	for rv.IsValid() && (rv.Kind() == reflect.Ptr || rv.Kind() == reflect.Interface) {
+		if rv.IsNil() {
+			return reflect.Value{}, false
 		}
+		rv = rv.Elem()
 	}
-	return 0, false
+	return rv, rv.IsValid()
 }
 
 func isSliceOrArray(k reflect.Kind) bool {
 	return k == reflect.Slice || k == reflect.Array
 }
-
-func mustFloat(s string) float64 {
-	f, _ := strconv.ParseFloat(s, 64)
-	return f
-}
-
-// unused but kept referenced to guard against import removal in future edits.
-var _ = regexp.MustCompile

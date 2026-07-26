@@ -1,6 +1,6 @@
-go 1.21
+go 1.24
 
-toolchain go1.21
+toolchain go1.24.0
 
 use (
 	./annotation/v3
@@ -9,6 +9,8 @@ use (
 	./app/v2/example
 	./async/v2
 	./async/v2/example
+	./async/v3
+	./async/v3/example
 	./cache/v2
 	./cache/v2/example
 	./cmd/v2
@@ -16,6 +18,7 @@ use (
 	./cmd/v2/example-tool
 	./collection/v2
 	./functional/v2
+	./functional/v3
 	./ginext/v2
 	./ginext/v2/example
 	./ginext/v2/example-bind
@@ -29,7 +32,11 @@ use (
 	./httpext/v2/example
 	./logger/v2
 	./logger/v2/example
+	./logger/v3
+	./logger/v3/example
 	./monitor/v2
+	./monitor/v3
+	./monitor/v3/example
 	./retriever/v2
 	./retriever/v2/example
 	./tracer/v2

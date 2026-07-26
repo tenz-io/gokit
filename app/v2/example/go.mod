@@ -1,6 +1,6 @@
 module app-example
 
-go 1.21
+go 1.24
 
 require (
 	github.com/tenz-io/gokit/logger/v2 v2.0.0

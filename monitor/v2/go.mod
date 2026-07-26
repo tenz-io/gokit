@@ -1,6 +1,6 @@
 module github.com/tenz-io/gokit/monitor/v2
 
-go 1.21
+go 1.24
 
 require github.com/prometheus/client_golang v1.19.0
 

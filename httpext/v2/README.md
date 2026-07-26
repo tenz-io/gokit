@@ -12,6 +12,19 @@ HTTP 客户端扩展，提供可组合的传输层拦截器链：请求头注入
 - `Client` 接口：封装 `JSON`/`DoSimple`/`Do` 三种粒度的调用方式，简化 JSON 请求的编解码样板代码
 - `NewSimpleRequest` + `RequestOption`：以选项模式构造带 Query 参数、Header、Body 的简单请求
 
+## 能力清单
+
+| 能力 | 含义 |
+|---|---|
+| 一键装配拦截器链 | `Interceptor.Apply` 按顺序叠加注入 Header、指标、流量、慢日志四类 `http.RoundTripper`，直接作用于 `*http.Client`，无需手动包装 `Transport` |
+| 统一注入固定请求头 | `WithHeaders` 配置的 Header（如 `Authorization`）在每次出站请求前自动 `Set`，避免调用方重复设置鉴权信息 |
+| 上报请求指标 | `WithEnableMetrics` 开启后，`metricsTransport` 用 `monitor.BeginRecord` 记录每次请求的 URL 与响应状态码，用于监控接口耗时与成功率 |
+| 记录请求/响应流量日志 | `WithEnableTraffic` 开启（或链路处于 debug 态时自动触发）后，`trafficTransport` 采集请求/响应 Header 与 Body，JSON/表单自动解析为结构化字段，其他文本截断展示，便于排查线上问题 |
+| 慢请求告警 | `WithSlowLogFloor` 设置阈值后，`slowLogTransport` 对超过阈值的请求打印带耗时、URL、Query 的 Warn 日志，用于发现异常慢接口 |
+| 简化 JSON 请求调用 | `Client.JSON` 自动将请求体序列化为 JSON、设置 `Content-Type`，并把响应体反序列化到目标结构体，省去手写编解码样板代码 |
+| 选项式构造简单请求 | `NewSimpleRequest` + `WithRequestParams`/`WithRequestHeaders`/`WithRequestBody` 以选项模式拼装 Query 参数、Header、Body，适合非 JSON 场景 |
+| 请求合法性校验 | `SimpleRequest.validate` 在发起请求前检查 URL 是否为空、Method 是否为支持的 HTTP 方法，避免无效请求发出 |
+
 ## 快速开始
 
 ```go

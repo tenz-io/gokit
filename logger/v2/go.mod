@@ -1,6 +1,6 @@
 module github.com/tenz-io/gokit/logger/v2
 
-go 1.21
+go 1.24
 
 require (
 	go.uber.org/zap v1.27.0

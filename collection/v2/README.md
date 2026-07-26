@@ -12,6 +12,21 @@
 - 集合上的函数式操作：`Find`/`FindAll`/`Partition`/`Map`/`Reduce`/`ForEach`/`Any`/`All`/`None`
 - 所有结构均提供 `Len`/`Size`/`IsEmpty`/`Clear`/`Values`/`Clone`，行为一致、可预期
 
+## 能力清单
+
+| 能力 | 含义 |
+|---|---|
+| 后进先出存取 | `Stack[T]` 提供 `Push`/`Pop`/`Peek`，用于回溯、括号匹配、DFS 等需要“最后放入先取出”的场景 |
+| 先进先出存取 | `Queue[T]` 提供 `Enqueue`/`Dequeue`/`Peek`，用于任务缓冲、BFS、消息顺序处理等场景 |
+| 按优先级出队 | `PriorityQueue[T]` 基于二叉堆，通过自定义 `less` 函数决定谁先出队，`Push`/`Pop` 均为 O(log n)，用于任务调度、Top-K、Dijkstra 等场景 |
+| 预分配容量构造 | `NewStackWithCap`/`NewQueueWithCap`/`NewPriorityQueueWithCap`/`NewSetWithCap` 按已知元素数量预分配底层空间，减少扩容开销 |
+| 集合成员维护 | `Set[T]`（基于 map）提供 `Add`/`Remove`/`Contains`/`Clear`，用于去重、快速存在性判断 |
+| 集合代数运算 | `Intersection`/`Union`/`Difference`/`SymmetricDifference` 计算两个集合的交集、并集、差集、对称差集 |
+| 集合关系判断 | `IsSubset`/`IsSuperset`/`IsDisjoint`/`Equal` 判断包含、超集、互斥、相等关系，用于权限校验、去重比较等 |
+| 集合上的查找与分组 | `Find`/`FindAll`/`Partition` 按谓词查找单个/全部元素，或将集合一分为二 |
+| 集合上的函数式变换 | `Map`/`Reduce`/`ForEach` 对集合元素做映射、归约、遍历，`Map` 会自动合并映射后冲突的元素 |
+| 集合上的谓词判断 | `Any`/`All`/`None` 判断集合中是否存在/全部满足/全部不满足某条件 |
+
 ## 快速开始
 
 ```go

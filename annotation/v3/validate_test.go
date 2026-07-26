@@ -77,6 +77,88 @@ func TestValidate_PassesWhenValid(t *testing.T) {
 	assert.NoError(t, Validate(cfg))
 }
 
+func TestQuickValidate_ReturnsSingleError(t *testing.T) {
+	// Same input as TestValidate_CollectsAllErrors, which yields multiple
+	// failures; QuickValidate must return exactly one.
+	cfg := &sampleConfig{Port: -1}
+	err := QuickValidate(cfg)
+	require.Error(t, err)
+
+	// It should be a single FieldError, not a ValidationErrors collection.
+	var fe FieldError
+	require.True(t, errors.As(err, &fe), "should be a single FieldError, got %T", err)
+	assert.NotEmpty(t, fe.Field)
+	assert.NotEmpty(t, fe.Rule)
+
+	// AsErrors must NOT unwrap a single FieldError (it only matches the
+	// collection type); confirm the single-error path is distinct.
+	_, ok := AsErrors(err)
+	assert.False(t, ok, "AsErrors should not treat a single FieldError as a collection")
+}
+
+func TestQuickValidate_PassesWhenValid(t *testing.T) {
+	cfg := &sampleConfig{Nested: inner{InnerField: 5}, NestedPtr: &inner{InnerField: 5}}
+	require.NoError(t, ApplyDefaults(cfg))
+	assert.NoError(t, QuickValidate(cfg))
+}
+
+func TestQuickValidate_ShortCircuits(t *testing.T) {
+	// firstFailing returns the first failing rule for a struct with many
+	// errors; QuickValidate must return the same one (and only that one).
+	cfg := &sampleConfig{Port: -1}
+	fe, ok := firstFailing(cfg)
+	require.True(t, ok)
+	err := QuickValidate(cfg)
+	var got FieldError
+	require.True(t, errors.As(err, &got))
+	assert.Equal(t, fe.Field, got.Field)
+	assert.Equal(t, fe.Rule, got.Rule)
+}
+
+// firstFailing mirrors the deep-first traversal of validateFieldFirst and
+// returns the first failing rule, to assert QuickValidate's ordering.
+func firstFailing(ptr any) (FieldError, bool) {
+	p, err := PlanFor(ptr)
+	if err != nil {
+		return FieldError{}, false
+	}
+	root := reflectValue(ptr)
+	return firstFailingFields(p.fields, root)
+}
+
+func firstFailingFields(fields []*Field, parent reflect.Value) (FieldError, bool) {
+	for _, f := range fields {
+		fv := parent.FieldByIndex(f.Index)
+		for _, r := range f.rules {
+			if ok, msg := r.run(fv); !ok {
+				fe := FieldError{Field: f.Path, Rule: r.name, Param: r.param}
+				if r.msg != "" {
+					fe.Msg = r.msg
+				} else {
+					fe.Msg = msg
+				}
+				return fe, true
+			}
+		}
+		if len(f.children) == 0 {
+			continue
+		}
+		cur := fv
+		if cur.Kind() == reflect.Ptr {
+			if cur.IsNil() {
+				continue
+			}
+			cur = cur.Elem()
+		}
+		if cur.Kind() == reflect.Struct && cur.IsValid() && cur.CanInterface() {
+			if fe, ok := firstFailingFields(f.children, cur); ok {
+				return fe, true
+			}
+		}
+	}
+	return FieldError{}, false
+}
+
 type sliceRules struct {
 	Tags    []string `validate:"min_len=1,dive:non_blank"`
 	Counts  []int    `validate:"gt=0"`

@@ -12,6 +12,20 @@
 - `NewInterceptor`/`NewInterceptorWithOpts` 为 Redis 客户端挂载指标（`monitor`）和流量日志（`logger`/`tracer`）钩子，通过 `WithEnableTraffic`/`WithEnableMetrics` 控制开关
 - `MockManager`（`manager_mock.go`）基于 testify/mock 生成，便于业务层单测替身
 
+## 能力清单
+
+| 能力 | 含义 |
+| --- | --- |
+| 统一多后端缓存接口 | `Manager` 接口抹平内存 map、LRU、Redis 三种实现的差异，业务代码换后端时无需改调用方式 |
+| 结构体直存直取 | `GetBlob`/`SetBlob` 内部用 JSON 编解码，业务无需手写 `Marshal`/`Unmarshal` 即可缓存结构体 |
+| 不存在才写入 | `SetNx` 在 key 不存在时才写入并返回是否已存在，可用于幂等写入、简单分布式锁等场景 |
+| 进程内缓存自动过期清理 | `NewLocal` 创建的 map 缓存启动后台协程每 5 分钟扫描一次，删除已过期的 key，避免内存无限增长 |
+| 容量受限的 LRU 缓存 | `NewLRU` 基于泛型 LRU（`cache/v2/lru`）实现容量上限 + TTL，超出容量按最近最少使用淘汰，并支持 `onEvict` 回调感知被淘汰的数据 |
+| 执行 Redis Lua 脚本 | Redis 后端的 `Eval` 透传 `EVAL` 命令，用于需要原子性的复合操作；内存/LRU 后端不支持，会返回 `ErrNotSupported` |
+| Redis 命令指标采集 | 拦截器的 `metricsHook` 记录每次 Redis 命令耗时和结果，对 `GET` 命令细分 hit/miss/error，便于监控缓存命中率 |
+| Redis 命令流量日志 | 拦截器的 `trafficHook` 记录 Redis 请求/响应内容，可通过 `WithEnableTraffic` 开关，或在链路处于 debug 追踪时自动开启 |
+| 缓存操作单测替身 | `MockManager` 基于 testify/mock 生成，业务层可直接注入替代真实缓存以编写单元测试 |
+
 ## 快速开始
 
 ```go

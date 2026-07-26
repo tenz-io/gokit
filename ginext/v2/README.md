@@ -11,6 +11,20 @@ Gin 扩展：请求绑定+校验（基于 annotation）、JWT 鉴权、RPC 拦�
 - `AllRpcInterceptor` 内置一条责任链：Tracer → Metrics → 流量记录 → 慢日志 → Panic 恢复，也可用 `NewTracerRpcInterceptor` 等单个构造函数自由组合
 - `IsUnauthorizedError` 用于识别鉴权失败类错误，方便统一处理
 
+## 能力清单
+
+| 能力 | 含义 |
+|---|---|
+| 多来源请求绑定 | `BindAndValidate` 依据 `bind` 标签自动从 uri、query、header、form、multipart、JSON 中取值填充结构体，无需手写各来源的解析代码 |
+| 绑定字段默认值填充 | 绑定前先按 `default` 标签为字段填充默认值，用于可选参数（如分页 `offset`）缺省场景 |
+| 校验失败统一转 400 错误 | 绑定/校验失败时自动收集全部 annotation 校验错误并包装成 `errcode.Error`（400），便于前端展示具体字段错误 |
+| 多文件表单上传绑定 | multipart 请求下按 `bind:"file"` 标签读取上传文件内容并写入 `[]byte` 字段，同时支持表单文本字段混合绑定 |
+| 统一成功/错误响应体 | `Response`/`ErrorResponse` 统一输出 `{code,message,data}` 结构，错误自动映射 `errcode.Error` 的 HTTP 状态码 |
+| 文件流直传响应 | 响应数据实现 `FileResponse.GetFile()` 时，`Response` 会自动探测内容类型并直接返回文件二进制流，而非 JSON |
+| JWT 令牌签发与校验 | `GenerateToken`/`VerifyToken` 基于用户 ID、角色、Token 类型（access/refresh）签发和解析 JWT，支持自定义签名密钥 |
+| 基于角色的鉴权中间件 | `Authenticate`/`AuthenticateRest`/`AuthenticateCookie` 按角色位与鉴权方式（Header/Cookie）拦截请求，Cookie 模式下鉴权成功自动续期 Token |
+| RPC 拦截器链（含慢日志与 Panic 恢复） | `AllRpcInterceptor` 串联 Tracer 注入、Metrics 打点、流量记录、慢请求告警日志、Panic 恢复五个环节，用于非 HTTP 的 RPC 处理场景 |
+
 ## 快速开始
 
 ```go

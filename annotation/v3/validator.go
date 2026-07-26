@@ -46,5 +46,5 @@ func lookupValidator(name string) (Validator, bool) {
 	registryMu.RLock()
 	defer registryMu.RUnlock()
 	v, ok := registry[name]
-	return v, ok
+	return v, ok && v != nil
 }

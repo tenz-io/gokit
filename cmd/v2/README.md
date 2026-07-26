@@ -12,6 +12,20 @@
 - `WithUpdateConfigByEnv` / `UpdateConfig` 递归扫描配置结构体，把形如 `${ENV_NAME}` 的字符串字段替换成对应环境变量的值
 - `GetConfig[Ptr]` 在命令处理函数中按类型安全地取回启动时加载的配置指针
 
+## 能力清单
+
+| 能力 | 含义 |
+|---|---|
+| 一行启动 CLI 应用 | `Run` 组装公共标志、执行初始化链、调用业务 Run 函数，并统一处理信号与退出，省去手写 `cli.App` 的样板代码 |
+| 加载并校验 YAML/JSON 配置 | `WithYamlConfig`/`WithJsonConfig` 按 `-c` 标志指定路径读取配置文件，读取前应用 annotation 默认值、反序列化后自动校验，适合启动即需要完整配置的服务 |
+| 加载 .env 环境变量 | `WithDotEnvConfig` 按 `-e` 标志读取 `.env` 文件并注入进程环境变量，用于本地开发或容器化部署时补齐环境变量 |
+| 初始化分级日志 | `WithLogger` 根据 `-v`（是否 debug）、`-l`（输出目录）、`-s`（是否打印到控制台）标志配置 logger，并可选开启 traffic 日志，适合统一不同 CLI 程序的日志行为 |
+| 暴露 admin 运维端口 | `WithAdminHTTPServer` 按 `-a` 标志启动后台 HTTP 服务，挂载 `/ping`（存活探测）、`/metrics`（Prometheus 采集）、`/debug/pprof/*`（性能分析），用于生产环境可观测性 |
+| 用环境变量覆盖配置敏感字段 | `WithUpdateConfigByEnv`/`UpdateConfig` 递归扫描配置结构体，把形如 `${ENV_NAME}` 的字符串字段替换为对应环境变量的值，常用于把密码、密钥等敏感信息从配置文件中解耦 |
+| 跨命令安全取回配置 | `GetConfig[Ptr]` 在子命令 Action 中按类型参数从 App Metadata 中取回启动时加载的配置指针，避免使用 `any` 强转出错 |
+| 打印详细启动信息 | `-v/--verbose` 标志在启动时打印命令行参数与已加载的配置内容（JSON），便于排查配置加载是否符合预期 |
+| 自定义标志与子命令扩展 | `Run` 支持传入 `extraFlags` 和 `extraCommands`，可在公共标志之外扩展业务专属的 CLI 标志与子命令 |
+
 ## 快速开始
 
 ```go

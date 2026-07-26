@@ -1,6 +1,6 @@
 # gokit
 
-Go common kits — a monorepo of Go 1.21+ modules providing application bootstrap, observability, communication, data structures, and code generation for building production services.
+Go common kits — a monorepo of Go 1.24+ modules providing application bootstrap, observability, communication, data structures, and code generation for building production services.
 
 ## Module Overview
 
