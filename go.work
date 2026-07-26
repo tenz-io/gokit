@@ -7,6 +7,8 @@ use (
 	./annotation/v3/example
 	./app/v2
 	./app/v2/example
+	./app/v3
+	./app/v3/example
 	./async/v2
 	./async/v2/example
 	./async/v3
@@ -35,6 +37,8 @@ use (
 	./grpcext/v2/example-server
 	./httpext/v2
 	./httpext/v2/example
+	./httpext/v3
+	./httpext/v3/example
 	./logger/v2
 	./logger/v2/example
 	./logger/v3

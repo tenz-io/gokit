@@ -1,0 +1,6 @@
+name: sample
+page_size: 20
+# Sensitive value comes from the environment, not the committed file.
+# ${DB_PASSWORD:-dev-secret} falls back to "dev-secret" when the env var is
+# absent; .env sets it to a real value for local runs.
+db_password: ${DB_PASSWORD:-dev-secret}
