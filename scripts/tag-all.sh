@@ -1,15 +1,22 @@
 #!/usr/bin/env bash
-# tag-all.sh — Batch tag all (or specified) submodules.
+# tag-all.sh — One-shot batch tag + GitHub Release for all (or specified) v3
+# submodules. All modules in this repo are on the v3 major track.
 #
-# All modules in this repo are on the v3 major track. This script tags every
-# non-example module listed in go.work with a single version number.
+# Unlike a plain `git tag`/`git push` flow, this script talks to GitHub through
+# the gh CLI: `gh release create <tag>` creates the git tag AND the GitHub
+# Release in a single call (the tag is auto-created on the repo's default branch
+# if it does not already exist). This avoids depending on a git remote pointing
+# at github.com — `origin` can stay pointed at a self-hosted server.
 #
 # Usage:
-#   ./scripts/tag-all.sh v3.0.1                        # tag all modules
-#   ./scripts/tag-all.sh v3.0.1 --dry-run              # preview what would happen
-#   ./scripts/tag-all.sh v3.0.1 --push                 # tag AND push to origin
-#   ./scripts/tag-all.sh v3.0.1 --release              # push AND create GitHub Releases
-#   ./scripts/tag-all.sh v3.0.1 tracer,logger,async    # tag specific modules only
+#   ./scripts/tag-all.sh v3.0.1                          # preview (dry-run)
+#   ./scripts/tag-all.sh v3.0.1 --release                # one-shot: tag + release for all modules
+#   ./scripts/tag-all.sh v3.0.1 --push                   # tag only, no releases
+#   ./scripts/tag-all.sh v3.0.1 --release --dry-run      # preview the release commands
+#   ./scripts/tag-all.sh v3.0.1 --release tracer,logger  # specific modules only
+#   ./scripts/tag-all.sh v3.0.1 --release --repo tenz-io/gokit
+#   ./scripts/tag-all.sh v3.0.1 --release --notes-from-file NOTES.md
+#   ./scripts/tag-all.sh v3.0.1 --release --no-overwrite # skip modules whose tag exists
 #
 # Tag format: <prefix>/<version>
 #   e.g. tag annotation/v3.0.1 for module github.com/tenz-io/gokit/annotation/v3
@@ -18,84 +25,138 @@
 # module github.com/tenz-io/gokit/annotation/v3 is tagged annotation/v3.0.1,
 # NOT annotation/v3/v3.0.1).
 #
+# Conflict policy: by default an existing tag+release is DELETED then recreated
+# (overwrite). Use --no-overwrite to instead skip modules whose tag exists.
+#
 # Prerequisites:
-#   - git push access to the repository
-#   - gh CLI (https://cli.github.com) installed and authenticated (for --release)
+#   - gh CLI (https://cli.github.com) installed and authenticated.
+#       brew install gh && gh auth login
+#   - push access to the target GitHub repo.
+#   - `gh auth setup-git` is run by this script so git operations against
+#     github.com authenticate via the gh token (no manual remote needed).
 
 set -euo pipefail
 
 VERSION=""
+REPO="tenz-io/gokit"
 DRY_RUN=false
 PUSH=false
 RELEASE=false
+OVERWRITE=true
+NOTES_FILE=""
 MODULES=""
 
-# Parse the single version arg, then flags / module list.
+# --- arg parsing ----------------------------------------------------------
 while [ $# -gt 0 ]; do
   case "$1" in
-    --dry-run) DRY_RUN=true; shift ;;
-    --push)    PUSH=true; shift ;;
-    --release) PUSH=true; RELEASE=true; shift ;;
+    --dry-run)        DRY_RUN=true; shift ;;
+    --push)           PUSH=true; shift ;;
+    --release)        PUSH=true; RELEASE=true; shift ;;
+    --no-overwrite)   OVERWRITE=false; shift ;;
+    --repo)           REPO="${2:?--repo requires a value}"; shift 2 ;;
+    --repo=*)         REPO="${1#--repo=}"; shift ;;
+    --notes-from-file) NOTES_FILE="${2:?--notes-from-file requires a value}"; shift 2 ;;
+    --notes-from-file=*) NOTES_FILE="${1#--notes-from-file=}"; shift ;;
     --help|-h)
       sed -n '2,/^$/p' "$0" | sed 's/^# \{0,1\}//'
       exit 0 ;;
+    --*)
+      echo "ERROR: unknown option: $1" >&2
+      exit 2 ;;
     *)
-      # A version number is recognized by its v. prefix. Any other non-flag
-      # arg is the optional comma-separated module list.
+      # A version number is recognized by its vN.M.P prefix. Any other
+      # non-flag arg is the optional comma-separated module list.
       case "$1" in
-        v*.*) VERSION="$1" ;;
-        *)    MODULES="$1" ;;
+        v[0-9]*) VERSION="$1" ;;
+        *)       MODULES="$1" ;;
       esac
       shift ;;
   esac
 done
 
 if [ -z "$VERSION" ]; then
-  echo "Usage: $0 <version> [--dry-run] [--push] [--release] [mod1,mod2,...]"
+  echo "Usage: $0 <version> [--release|--push] [--dry-run] [--repo OWNER/REPO]"
+  echo "                    [--notes-from-file FILE] [--no-overwrite] [mod1,mod2,...]"
+  echo ""
+  echo "Arguments:"
+  echo "  <version>                  e.g. v3.0.1 (required)"
+  echo "  mod1,mod2,...              optional subset of modules (default: all in go.work)"
   echo ""
   echo "Options:"
-  echo "  --dry-run   Preview tags without creating them"
-  echo "  --push      Create tags and push to origin"
-  echo "  --release   Create tags, push, and create GitHub Releases (requires gh CLI)"
+  echo "  --release                  Create git tags AND GitHub Releases (one-shot)"
+  echo "  --push                     Create git tags only (no releases)"
+  echo "  --dry-run                   Preview without creating anything"
+  echo "  --repo OWNER/REPO           Target GitHub repo (default: $REPO)"
+  echo "  --notes-from-file FILE      Use FILE contents as release notes for every module"
+  echo "  --no-overwrite              Skip modules whose tag already exists (default: delete+recreate)"
+  echo ""
+  echo "Prerequisites:"
+  echo "  gh auth login               # authenticate gh CLI to github.com"
   echo ""
   echo "Examples:"
-  echo "  $0 v3.0.1 --dry-run"
-  echo "  $0 v3.0.1 --push"
-  echo "  $0 v3.0.1 tracer,logger,async --push"
+  echo "  $0 v3.0.1 --release                  # one-shot all modules"
+  echo "  $0 v3.0.1 --release --dry-run        # preview"
+  echo "  $0 v3.0.1 --release tracer,logger    # specific modules"
   exit 1
 fi
 
-# Check gh CLI if --release is requested
-if [ "$RELEASE" = true ] && [ "$DRY_RUN" != true ]; then
-  if ! command -v gh &> /dev/null; then
-    echo "ERROR: gh CLI not found. Install from https://cli.github.com"
-    echo "  brew install gh && gh auth login"
-    exit 1
-  fi
+# --- preflight -----------------------------------------------------------
+if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z-]+)?$ ]]; then
+  echo "ERROR: version must look like v3.0.1 (got: $VERSION)" >&2
+  exit 2
+fi
+
+if [ "$RELEASE" = false ] && [ "$PUSH" = false ]; then
+  echo "ERROR: pass --release (tag+release) or --push (tag only). Without either,"
+  echo "       nothing is created. Use --dry-run to preview without flags."
+  exit 2
+fi
+
+if ! command -v gh &> /dev/null; then
+  echo "ERROR: gh CLI not found. Install from https://cli.github.com"
+  echo "  brew install gh && gh auth login"
+  exit 1
+fi
+
+if [ "$DRY_RUN" != true ]; then
   if ! gh auth status &> /dev/null; then
-    echo "ERROR: gh CLI not authenticated. Run: gh auth login"
+    echo "ERROR: gh CLI not authenticated. Run: gh auth login" >&2
     exit 1
   fi
+  # Let git operations against github.com use the gh token (idempotent).
+  gh auth setup-git >/dev/null 2>&1 || true
+  # Confirm we can reach the target repo.
+  if ! gh repo view --repo "$REPO" >/dev/null 2>&1; then
+    echo "ERROR: cannot access repo '$REPO'. Check --repo and gh auth scope." >&2
+    exit 1
+  fi
+fi
+
+# Optional custom release notes (read once, reused for every module).
+CUSTOM_NOTES=""
+if [ -n "$NOTES_FILE" ]; then
+  if [ ! -f "$NOTES_FILE" ]; then
+    echo "ERROR: notes file not found: $NOTES_FILE" >&2
+    exit 1
+  fi
+  CUSTOM_NOTES="$(cat "$NOTES_FILE")"
 fi
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
-# Build the module list from go.work (excluding example modules) when no explicit
-# list is given. Each entry is the full module path suffix, e.g. "annotation/v3".
-# The /vN suffix is stripped below to form each tag prefix.
+# --- build module list ----------------------------------------------------
+# Each entry is the full module path suffix, e.g. "annotation/v3".
 if [ -n "$MODULES" ]; then
   IFS=',' read -ra MODS <<< "$MODULES"
-  printf '%s\n' "${MODS[@]}" > /tmp/tag_mods.txt
+  printf '%s\n' "${MODS[@]}"
 else
   grep '\./' go.work | grep -v 'use (' | grep -v '^)' \
     | tr -d $' \t\r' | grep -v '/example' | grep -v '/example-' \
-    | sed 's|^\./||' > /tmp/tag_mods.txt
-fi
+    | sed 's|^\./||'
+fi > /tmp/tag_mods.txt
 
-# For each module, strip the trailing /vN to form the tag prefix (Go's rule:
-# module github.com/tenz-io/gokit/annotation/v3 is tagged annotation/v3.0.1,
-# NOT annotation/v3/v3.0.1). Writes "<module_path> <tag_prefix> <version>".
+# Plan lines: "<module> <tag_prefix> <version>".
 : > /tmp/tag_plan.txt
 while IFS= read -r mod; do
   [ -z "$mod" ] && continue
@@ -104,9 +165,14 @@ while IFS= read -r mod; do
 done < /tmp/tag_mods.txt
 
 TOTAL=$(wc -l < /tmp/tag_plan.txt | tr -d ' ')
+echo "Repo:    $REPO"
+ACTION=""
+if [ "$RELEASE" = true ]; then ACTION="tag + release"; else ACTION="tag only"; fi
+OVERWRITE_STR=$( [ "$OVERWRITE" = true ] && echo yes || echo no )
+echo "Action:  $ACTION  (overwrite=$OVERWRITE_STR)"
 echo "Version: $VERSION"
-echo "Submodules to tag ($TOTAL):"
-awk '{printf "  %s  ->  %s/%s\n", $1, $2, $3}' /tmp/tag_plan.txt
+echo "Modules to tag ($TOTAL):"
+awk '{printf "  %-20s ->  %s/%s\n", $1, $2, $3}' /tmp/tag_plan.txt
 echo "---"
 
 if [ "$TOTAL" -eq 0 ]; then
@@ -115,46 +181,45 @@ if [ "$TOTAL" -eq 0 ]; then
   exit 0
 fi
 
-TAG_FILE=$(mktemp /tmp/created_tags.XXXXXX)
-
 if [ "$DRY_RUN" = true ]; then
   while IFS=' ' read -r mod prefix ver; do
     [ -z "$mod" ] && continue
-    echo "[DRY RUN] git tag -a $prefix/$ver -m 'Release $mod $ver'"
-    if [ "$RELEASE" = true ]; then
-      echo "[DRY RUN] gh release create $prefix/$ver --title '$mod $ver' --notes ''"
-    fi
-  done < /tmp/tag_plan.txt
-else
-  while IFS=' ' read -r mod prefix ver; do
-    [ -z "$mod" ] && continue
     TAG="$prefix/$ver"
-    git tag -d "$TAG" 2>/dev/null || true
-    git tag -a "$TAG" -m "Release $mod $ver" -f
-    echo "Created: $TAG"
-    echo "$TAG" >> "$TAG_FILE"
-  done < /tmp/tag_plan.txt
-
-  # Push tags
-  if [ "$PUSH" = true ]; then
-    echo ""
-    echo "Pushing tags to origin..."
-    if git push origin --force $(tr '\n' ' ' < "$TAG_FILE"); then
-      echo "Tags pushed ($(wc -l < "$TAG_FILE" | tr -d ' ') tags)"
-    else
-      echo "ERROR: Failed to push tags. Check your git remote and authentication."
-      rm -f "$TAG_FILE" /tmp/tag_mods.txt /tmp/tag_plan.txt
-      exit 1
-    fi
-
-    # Create GitHub Releases
+    echo "[DRY RUN] check tag: gh api repos/$REPO/git/refs/tags/$TAG"
     if [ "$RELEASE" = true ]; then
-      echo ""
-      echo "Creating GitHub Releases..."
-      while IFS=' ' read -r mod prefix ver; do
-        [ -z "$mod" ] && continue
-        TAG="$prefix/$ver"
-        RELEASE_NOTES=$(cat <<EOF
+      echo "[DRY RUN] gh release create $TAG --repo $REPO --title '$mod $ver' --latest=false"
+    else
+      echo "[DRY RUN] gh release create $TAG --repo $REPO --title '$mod $ver (tag)' --notes '' --latest=false"
+    fi
+  done < /tmp/tag_plan.txt
+  rm -f /tmp/tag_mods.txt /tmp/tag_plan.txt
+  echo ""
+  echo "Dry run only. To execute: ./scripts/tag-all.sh $VERSION --release"
+  exit 0
+fi
+
+# --- execute --------------------------------------------------------------
+# tag_exists <tag> -> 0 if the tag exists on GitHub, 1 otherwise.
+tag_exists() {
+  gh api "repos/$REPO/git/refs/tags/$1" >/dev/null 2>&1
+}
+
+# release_exists <tag> -> 0 if a release is associated with the tag.
+release_exists() {
+  gh api "repos/$REPO/releases/tags/$1" >/dev/null 2>&1
+}
+
+CREATED=0; OVERWRITTEN=0; SKIPPED=0; FAILED=0
+
+while IFS=' ' read -r mod prefix ver; do
+  [ -z "$mod" ] && continue
+  TAG="$prefix/$ver"
+
+  # Default release notes: per-module install template.
+  if [ -n "$CUSTOM_NOTES" ]; then
+    NOTES="$CUSTOM_NOTES"
+  else
+    NOTES=$(cat <<EOF
 ## ${mod} ${ver}
 
 Go module: \`github.com/tenz-io/gokit/${mod}\`
@@ -164,26 +229,73 @@ go get github.com/tenz-io/gokit/${mod}@${ver}
 \`\`\`
 EOF
 )
-        if gh release create "$TAG" \
-          --title "${mod} ${ver}" \
-          --notes "$RELEASE_NOTES" \
-          --latest=false 2>/dev/null; then
-          echo "  Release: $TAG"
-        else
-          echo "  Skipped (may already exist): $TAG"
-        fi
-      done < /tmp/tag_plan.txt
-      echo ""
-      echo "Releases created. View at: https://github.com/tenz-io/gokit/releases"
-    fi
   fi
-fi
 
-rm -f "$TAG_FILE" /tmp/tag_mods.txt /tmp/tag_plan.txt
+  # Overwrite path: delete existing tag + release first.
+  did_overwrite=false
+  if [ "$OVERWRITE" = true ] && tag_exists "$TAG"; then
+    if release_exists "$TAG"; then
+      gh release delete "$TAG" --cleanup-tag -y --repo "$REPO" >/dev/null 2>&1 \
+        || gh release delete "$TAG" -y --repo "$REPO" >/dev/null 2>&1 || true
+    fi
+    # --cleanup-tag should have removed the tag ref; if not, delete it directly.
+    if tag_exists "$TAG"; then
+      gh api --method DELETE "repos/$REPO/git/refs/tags/$TAG" >/dev/null 2>&1 || true
+    fi
+    # Drop any local copy so we don't carry a stale ref.
+    git tag -d "$TAG" 2>/dev/null || true
+    did_overwrite=true
+  fi
 
+  # Skip path: tag already exists and user asked not to overwrite.
+  if [ "$OVERWRITE" = false ] && tag_exists "$TAG"; then
+    echo "  Skip     $TAG (already exists, --no-overwrite)"
+    SKIPPED=$((SKIPPED + 1))
+    continue
+  fi
+
+  # Create tag + release in one gh call. gh auto-creates the git tag on the
+  # repo's default branch when it does not yet exist. For --push (tag only),
+  # we still go through gh release create (gh has no tag-without-release
+  # subcommand); the resulting release carries an empty body. Pass --notes
+  # even for --push so --push later upgraded to --release needs no extra work.
+  if [ "$RELEASE" = true ]; then
+    TITLE="$mod $ver"
+  else
+    TITLE="$mod $ver (tag)"
+  fi
+
+  if gh release create "$TAG" \
+      --repo "$REPO" \
+      --title "$TITLE" \
+      --notes "$NOTES" \
+      --latest=false >/dev/null 2>&1; then
+    if [ "$did_overwrite" = true ]; then
+      echo "  Overwrite $TAG"
+      OVERWRITTEN=$((OVERWRITTEN + 1))
+    else
+      echo "  Create   $TAG"
+      CREATED=$((CREATED + 1))
+    fi
+  else
+    echo "  ERROR    $TAG — gh release create failed" >&2
+    FAILED=$((FAILED + 1))
+  fi
+done < /tmp/tag_plan.txt
+
+rm -f /tmp/tag_mods.txt /tmp/tag_plan.txt
+
+# --- summary --------------------------------------------------------------
 echo ""
-echo "Done."
-if [ "$DRY_RUN" != true ] && [ "$PUSH" = false ]; then
-  echo "Tags created locally. To push: ./scripts/tag-all.sh $VERSION --push"
-  [ "$RELEASE" = true ] && echo "To create GitHub Releases too: add --release"
+echo "=== Summary ==="
+echo "  created:     $CREATED"
+echo "  overwritten: $OVERWRITTEN"
+echo "  skipped:     $SKIPPED"
+echo "  failed:      $FAILED"
+echo "  repo:        $REPO"
+if [ "$RELEASE" = true ]; then
+  echo "  releases:    https://github.com/$REPO/releases"
 fi
+echo "Done."
+
+[ "$FAILED" -eq 0 ]

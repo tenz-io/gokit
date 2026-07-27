@@ -33,25 +33,30 @@ version-check:
 	@./scripts/version-check.sh
 
 
+# One-shot: tag + GitHub Release for all modules via gh API.
 # Usage: make release VERSION=v3.0.1
 .PHONY: release
 release:
 	@if [ -z "$(VERSION)" ]; then \
-		echo "Usage: make release VERSION=v3.0.1 [MODULES=mod1,mod2]"; \
-		echo "  make release VERSION=v3.0.1 DRY_RUN=1   # preview tags"; \
-		echo "  make release VERSION=v3.0.1 RELEASE=1  # also create GitHub Releases"; \
+		echo "Usage: make release VERSION=v3.0.1 [MODULES=m1,m2] [REPO=owner/repo] [NOTES_FILE=path] [DRY_RUN=1] [PUSH=1]"; \
+		echo "  make release VERSION=v3.0.1            # one-shot: tag + release all modules"; \
+		echo "  make release VERSION=v3.0.1 DRY_RUN=1 # preview"; \
+		echo "  make release VERSION=v3.0.1 PUSH=1    # tag only, no releases"; \
+		echo "  make release VERSION=v3.0.1 REPO=tenz-io/gokit"; \
+		echo "  Prereq: gh auth login"; \
 		exit 1; \
 	fi
 	@echo "=== Running tests ==="
 	@$(MAKE) test
 	@echo "=== Running version-check ==="
 	@./scripts/version-check.sh
-	@echo "=== Creating tags: version=$(VERSION) modules=$(MODULES) ==="
-	@if [ "$(DRY_RUN)" = "1" ]; then \
-		./scripts/tag-all.sh $(VERSION) $(MODULES) --dry-run; \
-	elif [ "$(RELEASE)" = "1" ]; then \
-		./scripts/tag-all.sh $(VERSION) $(MODULES) --release; \
+	@echo "=== Creating tags + releases: version=$(VERSION) repo=$(REPO) modules=$(MODULES) ==="
+	@if [ -n "$(NOTES_FILE)" ]; then NOTES_FLAG="--notes-from-file $(NOTES_FILE)"; else NOTES_FLAG=""; fi; \
+	if [ "$(DRY_RUN)" = "1" ]; then \
+		./scripts/tag-all.sh $(VERSION) $(MODULES) $$NOTES_FLAG $${REPO:+--repo $(REPO)} --release --dry-run; \
+	elif [ "$(PUSH)" = "1" ]; then \
+		./scripts/tag-all.sh $(VERSION) $(MODULES) $$NOTES_FLAG $${REPO:+--repo $(REPO)} --push; \
 	else \
-		./scripts/tag-all.sh $(VERSION) $(MODULES) --push; \
+		./scripts/tag-all.sh $(VERSION) $(MODULES) $$NOTES_FLAG $${REPO:+--repo $(REPO)} --release; \
 	fi
 	@echo "=== Done ==="

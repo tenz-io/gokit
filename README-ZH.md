@@ -120,4 +120,4 @@ Go 1.24+ 的 monorepo，提供应用启动引导、可观测性、通信、数�
 
 ### 发版
 
-发版流程详见 [release.md](release.md)。所有模块统一为 `v3` 主版本轨道，由 `scripts/tag-all.sh`（批量打 tag / 创建 GitHub Release）和 `scripts/version-check.sh`（版本一致性检查）两个脚本管理，发版前请先运行版本检查脚本确认无误。
+发版流程详见 [release.md](release.md)。所有模块统一为 `v3` 主版本轨道，由 `scripts/tag-all.sh`（一键批量打 tag + GitHub Release，全程经 `gh` API）和 `scripts/version-check.sh`（版本一致性检查）两个脚本管理。一键发布：`gh auth login` 后执行 `./scripts/tag-all.sh v3.0.1 --release`（或 `make release VERSION=v3.0.1`），发版前请先运行版本检查脚本确认无误。
