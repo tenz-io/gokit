@@ -50,11 +50,21 @@ Go common kits — a monorepo of Go 1.24+ modules providing application bootstra
 ## Dependency Graph
 
 ```
-        annotation (v3)         functional
-              |                      |
-            app        ginext ──────────────── logger ── monitor ── tracer
-                      |  \
-                   httpext / gormext / cache  ── (observability backends)
+        annotation         functional   collection
+              |               (no internal deps)
+            app
+
+        ginext ──┬── annotation
+                  ├── logger
+                  ├── monitor
+                  └── tracer
+
+  httpext / gormext / cache
+        ├── logger
+        ├── monitor
+        └── tracer
+
+  async / retriever / logger / monitor / tracer  (no internal deps)
 ```
 
 **Internal dependency summary** (direct edges):
@@ -73,7 +83,7 @@ Go common kits — a monorepo of Go 1.24+ modules providing application bootstra
 | `async`              | _(none)_                                         |
 | `retriever`          | _(none)_                                         |
 
-> `annotation` has been upgraded to `v3`; all other modules remain on `v2`.
+> All modules are on the `v3` major track.
 
 **Layers:**
 

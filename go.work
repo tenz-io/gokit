@@ -5,51 +5,29 @@ toolchain go1.24.0
 use (
 	./annotation/v3
 	./annotation/v3/example
-	./app/v2
-	./app/v2/example
 	./app/v3
 	./app/v3/example
-	./async/v2
-	./async/v2/example
 	./async/v3
 	./async/v3/example
-	./cache/v2
-	./cache/v2/example
 	./cache/v3
 	./cache/v3/example
-	./collection/v2
 	./collection/v3
 	./collection/v3/example
-	./functional/v2
 	./functional/v3
 	./functional/v3/example
-	./ginext/v2
-	./ginext/v2/example
-	./ginext/v2/example-bind
 	./ginext/v3
 	./ginext/v3/example
 	./ginext/v3/example-auth
-	./gormext/v2
-	./gormext/v2/example-mysql
-	./gormext/v2/example-sqlite
 	./gormext/v3
 	./gormext/v3/example
-	./httpext/v2
-	./httpext/v2/example
 	./httpext/v3
 	./httpext/v3/example
-	./logger/v2
-	./logger/v2/example
 	./logger/v3
 	./logger/v3/example
-	./monitor/v2
 	./monitor/v3
 	./monitor/v3/example
-	./retriever/v2
-	./retriever/v2/example
 	./retriever/v3
 	./retriever/v3/example
-	./tracer/v2
 	./tracer/v3
 	./tracer/v3/example
 )

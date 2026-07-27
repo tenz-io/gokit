@@ -4,14 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'v2 version to tag (e.g., v2.0.1). Required.'
+        description: 'Version to tag (e.g., v3.0.1). Required.'
         required: true
         type: string
-      v3_version:
-        description: 'v3 version to tag (e.g., v3.0.1). Blank = skip v3 track.'
-        required: false
-        type: string
-        default: ''
       update_go_mod:
         description: 'Also update go.mod version references in consumer modules'
         required: false
@@ -67,30 +62,23 @@ jobs:
 
       - name: Tag submodules
         run: |
-          V2_VERSION="${{ inputs.version }}"
-          V3_VERSION="${{ inputs.v3_version }}"
+          VERSION="${{ inputs.version }}"
           DRY_RUN="${{ inputs.dry_run }}"
 
-          # Each module picks the version for its own major track, so v2 and v3
-          # modules in the same module tree (e.g. annotation/v2 + annotation/v3)
-          # each get their own tag. Tag prefix = module path minus trailing /vN.
+          # Tag prefix = module path minus trailing /vN (Go's rule:
+          # github.com/tenz-io/gokit/annotation/v3 -> tag annotation/v3.0.1).
           while IFS= read -r mod; do
             [ -z "$mod" ] && continue
-            major=$(echo "$mod" | sed -E 's|.*/v([0-9]+)$|\1|')
-            case "$major" in
-              3) ver="$V3_VERSION" ;;
-              *) ver="$V2_VERSION" ;;
-            esac
-            [ -z "$ver" ] && { echo "Skip $mod (no version for track v$major)"; continue; }
+            [ -z "$VERSION" ] && { echo "Skip $mod (no version)"; continue; }
 
             prefix=$(echo "$mod" | sed -E 's|/v[0-9]+$||')
-            TAG="${prefix}/${ver}"
+            TAG="${prefix}/${VERSION}"
 
             if [ "$DRY_RUN" = "true" ]; then
-              echo "[DRY RUN] git tag -a $TAG -m 'Release $mod $ver'"
+              echo "[DRY RUN] git tag -a $TAG -m 'Release $mod $VERSION'"
             else
               git tag -d "$TAG" 2>/dev/null || true
-              git tag -a "$TAG" -m "Release $mod $ver" -f
+              git tag -a "$TAG" -m "Release $mod $VERSION" -f
               echo "Created tag: $TAG"
             fi
           done < /tmp/modules.txt
@@ -104,24 +92,17 @@ jobs:
         if: ${{ inputs.update_go_mod == true && inputs.dry_run == false }}
         run: |
           VERSION="${{ inputs.version }}"
-          # Strip 'v' prefix for major version check
-          VER_NUM="${VERSION#v}"
-          MAJOR="${VER_NUM%%.*}"
 
           echo "Updating go.mod version references to ${VERSION}"
 
           while IFS= read -r mod; do
             [ -z "$mod" ] && continue
 
-            # Determine the module path (handle logger/v2 specially)
+            # Determine the module path
             MOD_PATH="$mod"
             if [ -f "${mod}/go.mod" ]; then
               MOD_PATH=$(head -1 "${mod}/go.mod" | awk '{print $2}')
             fi
-
-            # Fix: for logger, the module in go.mod is logger/v2, tag is logger/v2.0.1
-            # The require line should use the module path + version
-            OLD_VER=$(grep "${MOD_PATH}" "${mod}/go.mod" 2>/dev/null | head -1 || true)
 
             echo "  Module: $MOD_PATH -> ${VERSION}"
           done < /tmp/modules.txt

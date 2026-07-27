@@ -4,7 +4,7 @@ Go 1.24+ 的 monorepo，提供应用启动引导、可观测性、通信、数�
 
 ## 模块概览
 
-当前仓库共 13 个模块目录（`annotation` 已升级到 `v3`，其余模块为 `v2`）。
+当前仓库共 13 个模块目录，全部为 `v3` 主版本。
 
 ### 基础设施
 
@@ -13,7 +13,7 @@ Go 1.24+ 的 monorepo，提供应用启动引导、可观测性、通信、数�
 | [functional](functional/)  | 泛型函数式编程工具：`Map`、`Filter`、`Reduce`、`GroupBy`、`TopK` 等  |
 | [collection](collection/)  | 泛型数据结构：`Stack`、`Queue`、`PriorityQueue`、`Set`               |
 | [tracer](tracer/)          | 基于 context 的请求 ID 传递及 debug/stress/shadow 标志位管理         |
-| [annotation](annotation/)  | struct-tag 驱动：声明式默认值、可插拔校验器、缓存字段 plan（`v3`）   |
+| [annotation](annotation/)  | struct-tag 驱动：声明式默认值、可插拔校验器、缓存字段 plan             |
 
 ### 可观测性
 
@@ -52,11 +52,11 @@ Go 1.24+ 的 monorepo，提供应用启动引导、可观测性、通信、数�
 ## 依赖关系
 
 ```
-        annotation (v3)          functional   collection
+        annotation          functional   collection
               |                       (无内部依赖)
             app
 
-        ginext ──┬── annotation (v3)
+        ginext ──┬── annotation
                   ├── logger
                   ├── monitor
                   └── tracer
@@ -73,7 +73,7 @@ Go 1.24+ 的 monorepo，提供应用启动引导、可观测性、通信、数�
 
 | 模块          | 内部依赖                                    |
 |---------------|----------------------------------------------|
-| `ginext`      | `annotation`（v3）、`logger`、`monitor`、`tracer` |
+| `ginext`      | `annotation`、`logger`、`monitor`、`tracer` |
 | `app`         | `annotation`、`logger`                        |
 | `cache`       | `logger`、`monitor`、`tracer`                  |
 | `gormext`     | `logger`、`monitor`、`tracer`                  |
@@ -87,11 +87,11 @@ Go 1.24+ 的 monorepo，提供应用启动引导、可观测性、通信、数�
 | `async`       | _(无)_                                        |
 | `retriever`   | _(无)_                                        |
 
-> `annotation` 已升级到 `v3`，`ginext` 引用的是 `annotation` 的 `v3` 主版本；其余模块均为 `v2`。
+> 所有模块均为 `v3` 主版本。
 
 ## 分层架构
 
-1. **基础设施层** — `functional`、`collection`、`tracer`、`annotation`（已升级至 `v3`），无任何内部依赖，供其他模块自由组合。
+1. **基础设施层** — `functional`、`collection`、`tracer`、`annotation`，无任何内部依赖，供其他模块自由组合。
 2. **可观测性层** — `logger`、`monitor`、`tracer` 构成可观测性三元组，被绝大多数中间层模块依赖，用于统一日志、指标和链路追踪。
 3. **中间层** — `app`、`ginext`、`httpext`、`gormext`、`cache`，组合基础设施与可观测性能力，直接面向业务服务的启动、通信与数据访问场景。
 
@@ -116,8 +116,8 @@ Go 1.24+ 的 monorepo，提供应用启动引导、可观测性、通信、数�
 
 ### 工作区
 
-本仓库使用 Go workspace（`go.work`）管理，包含 14 个工作区成员（各模块主目录及其 example 子模块）。所有子模块在工作区中统一声明，可同时进行开发；每个模块维护独立的 `go.mod`，独立进行版本管理。
+本仓库使用 Go workspace（`go.work`）管理，包含 27 个工作区成员（13 个模块主目录及其 example 子模块）。所有子模块在工作区中统一声明，可同时进行开发；每个模块维护独立的 `go.mod`，独立进行版本管理。
 
 ### 发版
 
-发版流程详见 [release.md](release.md)。仓库存在 `v2`/`v3`（如 `annotation`）等多个版本轨道并行维护，统一由 `scripts/tag-all.sh`（批量打 tag / 创建 GitHub Release）和 `scripts/version-check.sh`（版本一致性检查）两个脚本管理，发版前请先运行版本检查脚本确认无误。
+发版流程详见 [release.md](release.md)。所有模块统一为 `v3` 主版本轨道，由 `scripts/tag-all.sh`（批量打 tag / 创建 GitHub Release）和 `scripts/version-check.sh`（版本一致性检查）两个脚本管理，发版前请先运行版本检查脚本确认无误。

@@ -1,24 +1,22 @@
 #!/usr/bin/env bash
-# tag-all.sh — Batch tag all (or specified) submodules, with v2/v3 version
-# tracks supported.
+# tag-all.sh — Batch tag all (or specified) submodules.
+#
+# All modules in this repo are on the v3 major track. This script tags every
+# non-example module listed in go.work with a single version number.
 #
 # Usage:
-#   ./scripts/tag-all.sh v2.0.5                       # tag all v2 modules
-#   ./scripts/tag-all.sh v2.0.5 v3.0.1                # tag v2 modules with v2.0.5, v3 modules with v3.0.1
-#   ./scripts/tag-all.sh v2.0.5 --dry-run             # preview what would happen
-#   ./scripts/tag-all.sh v2.0.5 v3.0.1 --push         # tag AND push to origin
-#   ./scripts/tag-all.sh v2.0.5 v3.0.1 --release      # push AND create GitHub Releases
-#   ./scripts/tag-all.sh v2.0.5 tracer,logger,async   # tag specific v2 modules only
+#   ./scripts/tag-all.sh v3.0.1                        # tag all modules
+#   ./scripts/tag-all.sh v3.0.1 --dry-run              # preview what would happen
+#   ./scripts/tag-all.sh v3.0.1 --push                 # tag AND push to origin
+#   ./scripts/tag-all.sh v3.0.1 --release              # push AND create GitHub Releases
+#   ./scripts/tag-all.sh v3.0.1 tracer,logger,async    # tag specific modules only
 #
-# Tag format: <module>/<version>
+# Tag format: <prefix>/<version>
 #   e.g. tag annotation/v3.0.1 for module github.com/tenz-io/gokit/annotation/v3
-#        tag annotation/v3.0.1 for module github.com/tenz-io/gokit/annotation/v3
-#
-# Version selection per module:
-#   The module's major version is read from its directory (./X/vN). The matching
-#   positional version is used: v2 modules use the 1st version arg, v3 modules
-#   use the 2nd. If a module's major has no version arg, it is skipped (with a
-#   notice), so you can release only one track.
+#        tag logger/v3.0.1    for module github.com/tenz-io/gokit/logger/v3
+# The tag prefix is the module path with the trailing /vN removed (Go's rule:
+# module github.com/tenz-io/gokit/annotation/v3 is tagged annotation/v3.0.1,
+# NOT annotation/v3/v3.0.1).
 #
 # Prerequisites:
 #   - git push access to the repository
@@ -26,14 +24,13 @@
 
 set -euo pipefail
 
-V2_VERSION=""
-V3_VERSION=""
+VERSION=""
 DRY_RUN=false
 PUSH=false
 RELEASE=false
 MODULES=""
 
-# Parse positional versions first, then flags / module list.
+# Parse the single version arg, then flags / module list.
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY_RUN=true; shift ;;
@@ -43,20 +40,18 @@ while [ $# -gt 0 ]; do
       sed -n '2,/^$/p' "$0" | sed 's/^# \{0,1\}//'
       exit 0 ;;
     *)
-      # Version numbers are recognized by their v2./v3. prefix so that order
-      # does not matter and releasing only one track is unambiguous. Any
-      # other non-flag arg is the optional comma-separated module list.
+      # A version number is recognized by its v. prefix. Any other non-flag
+      # arg is the optional comma-separated module list.
       case "$1" in
-        v2.*) V2_VERSION="$1" ;;
-        v3.*) V3_VERSION="$1" ;;
-        *)   MODULES="$1" ;;
+        v*.*) VERSION="$1" ;;
+        *)    MODULES="$1" ;;
       esac
       shift ;;
   esac
 done
 
-if [ -z "$V2_VERSION" ] && [ -z "$V3_VERSION" ]; then
-  echo "Usage: $0 <v2-version> [<v3-version>] [--dry-run] [--push] [--release] [mod1,mod2,...]"
+if [ -z "$VERSION" ]; then
+  echo "Usage: $0 <version> [--dry-run] [--push] [--release] [mod1,mod2,...]"
   echo ""
   echo "Options:"
   echo "  --dry-run   Preview tags without creating them"
@@ -64,9 +59,9 @@ if [ -z "$V2_VERSION" ] && [ -z "$V3_VERSION" ]; then
   echo "  --release   Create tags, push, and create GitHub Releases (requires gh CLI)"
   echo ""
   echo "Examples:"
-  echo "  $0 v2.0.5 --dry-run"
-  echo "  $0 v2.0.5 v3.0.1 --push          # release both tracks at once"
-  echo "  $0 v2.0.5 tracer,logger,async --push"
+  echo "  $0 v3.0.1 --dry-run"
+  echo "  $0 v3.0.1 --push"
+  echo "  $0 v3.0.1 tracer,logger,async --push"
   exit 1
 fi
 
@@ -88,8 +83,7 @@ cd "$REPO_ROOT"
 
 # Build the module list from go.work (excluding example modules) when no explicit
 # list is given. Each entry is the full module path suffix, e.g. "annotation/v3".
-# IMPORTANT: do NOT strip the /vN suffix — annotation/v3 is the only remaining
-# annotation major, but the suffix-stripping logic still applies to all modules.
+# The /vN suffix is stripped below to form each tag prefix.
 if [ -n "$MODULES" ]; then
   IFS=',' read -ra MODS <<< "$MODULES"
   printf '%s\n' "${MODS[@]}" > /tmp/tag_mods.txt
@@ -99,38 +93,24 @@ else
     | sed 's|^\./||' > /tmp/tag_mods.txt
 fi
 
-# For each module, pick the version for its major track.
-# Writes "<module_path> <tag_prefix> <version>" lines to /tmp/tag_plan.txt.
-# The tag prefix is the module path with the trailing /vN removed (Go's rule:
+# For each module, strip the trailing /vN to form the tag prefix (Go's rule:
 # module github.com/tenz-io/gokit/annotation/v3 is tagged annotation/v3.0.1,
-# NOT annotation/v3/v3.0.1). v1 modules keep their path as-is.
+# NOT annotation/v3/v3.0.1). Writes "<module_path> <tag_prefix> <version>".
 : > /tmp/tag_plan.txt
-SKIPPED=0
 while IFS= read -r mod; do
   [ -z "$mod" ] && continue
-  major=$(echo "$mod" | sed -E 's|.*/v([0-9]+)$|\1|')
-  case "$major" in
-    2) ver="$V2_VERSION" ;;
-    3) ver="$V3_VERSION" ;;
-    *) ver="$V2_VERSION" ;;  # legacy v1 best-effort
-  esac
-  if [ -z "$ver" ]; then
-    SKIPPED=$((SKIPPED + 1))
-    continue
-  fi
-  # Strip trailing /vN to form the tag prefix (only for v2+).
   prefix=$(echo "$mod" | sed -E 's|/v[0-9]+$||')
-  echo "$mod $prefix $ver" >> /tmp/tag_plan.txt
+  echo "$mod $prefix $VERSION" >> /tmp/tag_plan.txt
 done < /tmp/tag_mods.txt
 
 TOTAL=$(wc -l < /tmp/tag_plan.txt | tr -d ' ')
-echo "Tracks: v2=${V2_VERSION:-<skipped>} v3=${V3_VERSION:-<skipped>}"
-echo "Submodules to tag ($TOTAL, $SKIPPED skipped for missing track):"
+echo "Version: $VERSION"
+echo "Submodules to tag ($TOTAL):"
 awk '{printf "  %s  ->  %s/%s\n", $1, $2, $3}' /tmp/tag_plan.txt
 echo "---"
 
 if [ "$TOTAL" -eq 0 ]; then
-  echo "Nothing to tag (no module matched a provided track)."
+  echo "Nothing to tag."
   rm -f /tmp/tag_mods.txt /tmp/tag_plan.txt
   exit 0
 fi
@@ -204,6 +184,6 @@ rm -f "$TAG_FILE" /tmp/tag_mods.txt /tmp/tag_plan.txt
 echo ""
 echo "Done."
 if [ "$DRY_RUN" != true ] && [ "$PUSH" = false ]; then
-  echo "Tags created locally. To push: ./scripts/tag-all.sh $V2_VERSION ${V3_VERSION:-} --push"
+  echo "Tags created locally. To push: ./scripts/tag-all.sh $VERSION --push"
   [ "$RELEASE" = true ] && echo "To create GitHub Releases too: add --release"
 fi
