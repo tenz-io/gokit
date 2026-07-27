@@ -8,6 +8,6 @@ require (
 )
 
 require (
-	github.com/stretchr/testify v1.9.0 // indirect
+	github.com/stretchr/testify v1.11.1 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 )

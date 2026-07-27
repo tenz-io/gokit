@@ -5,7 +5,7 @@
 ## 版本轨道规则
 
 - **v2 轨道**：所有 `/v2` 模块共享同一个 `v2.0.x` 版本号。
-- **v3 轨道**：`annotation/v3` 独立走 `v3.0.x`；引用它的模块（`ginext`、`app`、`cmd`）的 `require annotation/v3` 版本必须与 v3 tag 一致。
+- **v3 轨道**：`annotation/v3` 独立走 `v3.0.x`；引用它的模块（`ginext`、`app`）的 `require annotation/v3` 版本必须与 v3 tag 一致。
 - tag 前缀 = module path 去掉末尾 `/vN`：`annotation/v3` → tag `annotation/v3.0.x`，`logger/v2` → tag `logger/v2.0.x`（两条轨道前缀不同，不冲突）。
 
 ## 一键批量发布
@@ -92,17 +92,15 @@ tag 前缀 = module path 去掉末尾 `/vN`：
 | 2 | `app` | `github.com/tenz-io/gokit/app/v2` |
 | 3 | `async` | `github.com/tenz-io/gokit/async/v2` |
 | 4 | `cache` | `github.com/tenz-io/gokit/cache/v2` |
-| 5 | `cmd` | `github.com/tenz-io/gokit/cmd/v2` |
-| 6 | `collection` | `github.com/tenz-io/gokit/collection/v2` |
-| 7 | `functional` | `github.com/tenz-io/gokit/functional/v2` |
-| 8 | `ginext` | `github.com/tenz-io/gokit/ginext/v2` |
-| 9 | `gormext` | `github.com/tenz-io/gokit/gormext/v2` |
-| 10 | `grpcext` | `github.com/tenz-io/gokit/grpcext/v2` |
-| 11 | `httpext` | `github.com/tenz-io/gokit/httpext/v2` |
-| 12 | `logger` | `github.com/tenz-io/gokit/logger/v2` |
-| 13 | `monitor` | `github.com/tenz-io/gokit/monitor/v2` |
-| 14 | `retriever` | `github.com/tenz-io/gokit/retriever/v2` |
-| 15 | `tracer` | `github.com/tenz-io/gokit/tracer/v2` |
+| 5 | `collection` | `github.com/tenz-io/gokit/collection/v2` |
+| 6 | `functional` | `github.com/tenz-io/gokit/functional/v2` |
+| 7 | `ginext` | `github.com/tenz-io/gokit/ginext/v2` |
+| 8 | `gormext` | `github.com/tenz-io/gokit/gormext/v2` |
+| 9 | `httpext` | `github.com/tenz-io/gokit/httpext/v2` |
+| 10 | `logger` | `github.com/tenz-io/gokit/logger/v2` |
+| 11 | `monitor` | `github.com/tenz-io/gokit/monitor/v2` |
+| 12 | `retriever` | `github.com/tenz-io/gokit/retriever/v2` |
+| 13 | `tracer` | `github.com/tenz-io/gokit/tracer/v2` |
 
 ## 发布后
 

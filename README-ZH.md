@@ -4,7 +4,7 @@ Go 1.24+ 的 monorepo，提供应用启动引导、可观测性、通信、数�
 
 ## 模块概览
 
-当前仓库共 15 个模块目录（`annotation` 已升级到 `v3`，其余模块为 `v2`）。
+当前仓库共 13 个模块目录（`annotation` 已升级到 `v3`，其余模块为 `v2`）。
 
 ### 基础设施
 
@@ -27,14 +27,12 @@ Go 1.24+ 的 monorepo，提供应用启动引导、可观测性、通信、数�
 | 模块        | 用途                                                                                                |
 |-------------|-------------------------------------------------------------------------------------------------------|
 | [app](app/) | 应用生命周期框架：配置加载（YAML/JSON/dotenv）、admin HTTP 端点（pprof、Prometheus、健康检查）、优雅退出 |
-| [cmd](cmd/) | 基于 `urfave/cli/v2` 的 CLI 启动框架 — 与 `app` 相同的基础能力，以 CLI 命令和标志位形式暴露              |
 
 ### 通信
 
 | 模块                 | 用途                                                                              |
 |----------------------|-------------------------------------------------------------------------------------|
 | [ginext](ginext/)    | Gin 扩展：请求绑定 + 校验、JWT 鉴权、RPC 拦截器、结构化响应                          |
-| [grpcext](grpcext/)  | gRPC 一元/流式拦截器，提供服务端和客户端的请求追踪、流量日志和指标采集              |
 | [httpext](httpext/)  | HTTP 客户端，提供可组合的传输层拦截器链：请求头注入、流量采集、指标和慢请求日志      |
 
 ### 数据与持久化
@@ -56,15 +54,14 @@ Go 1.24+ 的 monorepo，提供应用启动引导、可观测性、通信、数�
 ```
         annotation (v3)          functional   collection
               |                       (无内部依赖)
-         ┌────┴────┐
-        app        cmd
+            app
 
         ginext ──┬── annotation (v3)
                   ├── logger
                   ├── monitor
                   └── tracer
 
-  grpcext / httpext / gormext / cache
+  httpext / gormext / cache
         ├── logger
         ├── monitor
         └── tracer
@@ -78,10 +75,8 @@ Go 1.24+ 的 monorepo，提供应用启动引导、可观测性、通信、数�
 |---------------|----------------------------------------------|
 | `ginext`      | `annotation`（v3）、`logger`、`monitor`、`tracer` |
 | `app`         | `annotation`、`logger`                        |
-| `cmd`         | `annotation`、`logger`                        |
 | `cache`       | `logger`、`monitor`、`tracer`                  |
 | `gormext`     | `logger`、`monitor`、`tracer`                  |
-| `grpcext`     | `logger`、`monitor`、`tracer`                  |
 | `httpext`     | `logger`、`monitor`、`tracer`                  |
 | `annotation`  | _(无)_                                        |
 | `functional`  | _(无)_                                        |
@@ -98,7 +93,7 @@ Go 1.24+ 的 monorepo，提供应用启动引导、可观测性、通信、数�
 
 1. **基础设施层** — `functional`、`collection`、`tracer`、`annotation`（已升级至 `v3`），无任何内部依赖，供其他模块自由组合。
 2. **可观测性层** — `logger`、`monitor`、`tracer` 构成可观测性三元组，被绝大多数中间层模块依赖，用于统一日志、指标和链路追踪。
-3. **中间层** — `app`、`cmd`、`ginext`、`grpcext`、`httpext`、`gormext`、`cache`，组合基础设施与可观测性能力，直接面向业务服务的启动、通信与数据访问场景。
+3. **中间层** — `app`、`ginext`、`httpext`、`gormext`、`cache`，组合基础设施与可观测性能力，直接面向业务服务的启动、通信与数据访问场景。
 
 `async`、`retriever` 作为通用并发/韧性工具，不依赖以上任何内部模块，可在各层中独立引用。
 
@@ -106,11 +101,9 @@ Go 1.24+ 的 monorepo，提供应用启动引导、可观测性、通信、数�
 
 - `go.uber.org/zap` — 结构化日志（`logger`）
 - `github.com/gin-gonic/gin` — HTTP 框架（`ginext`）
-- `google.golang.org/grpc` — gRPC（`grpcext`）
 - `gorm.io/gorm` — ORM（`gormext`）
 - `github.com/go-redis/redis/v8` — Redis 客户端（`cache`）
-- `github.com/prometheus/client_golang` — 指标采集（`monitor`、`app`、`cmd`）
-- `github.com/urfave/cli/v2` — CLI 框架（`cmd`）
+- `github.com/prometheus/client_golang` — 指标采集（`monitor`、`app`）
 
 ## 开发
 
@@ -123,7 +116,7 @@ Go 1.24+ 的 monorepo，提供应用启动引导、可观测性、通信、数�
 
 ### 工作区
 
-本仓库使用 Go workspace（`go.work`）管理，包含 16 个工作区成员（各模块主目录及其 example 子模块）。所有子模块在工作区中统一声明，可同时进行开发；每个模块维护独立的 `go.mod`，独立进行版本管理。
+本仓库使用 Go workspace（`go.work`）管理，包含 14 个工作区成员（各模块主目录及其 example 子模块）。所有子模块在工作区中统一声明，可同时进行开发；每个模块维护独立的 `go.mod`，独立进行版本管理。
 
 ### 发版
 

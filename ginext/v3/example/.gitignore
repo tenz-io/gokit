@@ -1,0 +1,5 @@
+# local log output from logger/v3 (console + file) during runs
+/log/
+
+# compiled example binary (produced by `go build`/`go run`)
+/ginext-v3-example

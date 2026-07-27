@@ -3,7 +3,9 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
+	"net/http"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -65,7 +67,7 @@ func TestRun_InitOrderAndLIFOCleanup(t *testing.T) {
 	// Send a context-done by having Run complete: we signal via errC-nil.
 	// To exercise the signal path we instead cancel through Run completing.
 	// Run here completes on its own (errC<-nil), which should trigger cleanup.
-	code := Run(cfg, nil, []string{})
+	code := Run(cfg, WithArgs([]string{}))
 
 	if code != ExitOK {
 		t.Fatalf("Run exit = %d, want ExitOK", code)
@@ -106,7 +108,7 @@ func TestRun_InitFailureRunsCollectedCleanups(t *testing.T) {
 		Run:   func(*Context, any, chan<- error) {}, // never reached
 	}
 
-	code := Run(cfg, nil, []string{})
+	code := Run(cfg, WithArgs([]string{}))
 	if code != ExitSetup {
 		t.Fatalf("Run exit = %d, want ExitSetup", code)
 	}
@@ -127,9 +129,77 @@ func TestRun_RunErrorReturnsExitRunError(t *testing.T) {
 			errC <- errors.New("fatal")
 		},
 	}
-	code := Run(cfg, nil, []string{})
+	code := Run(cfg, WithArgs([]string{}))
 	if code != ExitRunError {
 		t.Fatalf("Run exit = %d, want ExitRunError", code)
+	}
+}
+
+func TestRun_EmptyNameReturnsExitSetup(t *testing.T) {
+	quietLogger(t)
+	cfg := Config{
+		Name: "",
+		Conf: &struct{}{},
+		Run:  func(*Context, any, chan<- error) { panic("unreachable") },
+	}
+	if code := Run(cfg, WithArgs([]string{})); code != ExitSetup {
+		t.Fatalf("Run exit = %d, want ExitSetup for empty name", code)
+	}
+}
+
+func TestRun_NilRunReturnsExitSetup(t *testing.T) {
+	quietLogger(t)
+	cfg := Config{
+		Name: "nilrun",
+		Conf: &struct{}{},
+		Run:  nil,
+	}
+	if code := Run(cfg, WithArgs([]string{})); code != ExitSetup {
+		t.Fatalf("Run exit = %d, want ExitSetup for nil Run", code)
+	}
+}
+
+func TestRun_WithExtraFlagsSurfacesInRun(t *testing.T) {
+	quietLogger(t)
+	var got string
+	cfg := Config{
+		Name: "extra",
+		Conf: &struct{}{},
+		Run: AdaptRun(func(c *Context, _ *struct{}) error {
+			got = c.Flags().String("env")
+			return nil
+		}),
+	}
+	code := Run(cfg, WithExtraFlags(StringFlag("env", "test", "Environment")), WithArgs([]string{}))
+	if code != ExitOK {
+		t.Fatalf("Run exit = %d, want ExitOK", code)
+	}
+	if got != "test" {
+		t.Errorf("env flag = %q, want test (default from WithExtraFlags)", got)
+	}
+}
+
+func TestRun_WithArgsOverridesOsArgs(t *testing.T) {
+	quietLogger(t)
+	var got string
+	cfg := Config{
+		Name: "args",
+		Conf: &struct{}{},
+		Run: AdaptRun(func(c *Context, _ *struct{}) error {
+			got = c.Flags().String("env")
+			return nil
+		}),
+	}
+	// Inject argv via WithArgs; must take precedence over os.Args.
+	code := Run(cfg,
+		WithExtraFlags(StringFlag("env", "default", "Environment")),
+		WithArgs([]string{"-env", "from-argv"}),
+	)
+	if code != ExitOK {
+		t.Fatalf("Run exit = %d, want ExitOK", code)
+	}
+	if got != "from-argv" {
+		t.Errorf("env = %q, want from-argv", got)
 	}
 }
 
@@ -145,7 +215,7 @@ func TestRun_SignalReturnsExitSignal(t *testing.T) {
 		},
 	}
 	go func() { <-started; time.Sleep(20 * time.Millisecond); sendInterrupt() }()
-	code := Run(cfg, nil, []string{})
+	code := Run(cfg, WithArgs([]string{}))
 	if code != ExitSignal {
 		t.Fatalf("Run exit = %d, want ExitSignal", code)
 	}
@@ -201,6 +271,60 @@ func TestWithAdminHTTPServer_InvalidPort(t *testing.T) {
 	c := NewContext(context.Background(), flags)
 	if _, err := WithAdminHTTPServer()(c, nil); err == nil {
 		t.Fatal("expected error for out-of-range admin port, got nil")
+	}
+}
+
+func TestWithHTTPServer_GracefulShutdown(t *testing.T) {
+	quietLogger(t)
+	port := freePort(t)
+	specs := []FlagSpec{IntFlag(FlagNamePort, port, "")}
+	flags, err := ParseFlags("http", specs, []string{})
+	if err != nil {
+		t.Fatalf("ParseFlags: %v", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	c := NewContext(ctx, flags)
+
+	// A trivial handler so the server serves real traffic before shutdown.
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("ok")) })
+
+	clean, err := WithHTTPServer(mux)(c, nil)
+	if err != nil {
+		t.Fatalf("WithHTTPServer init: %v", err)
+	}
+	if clean == nil {
+		t.Fatal("expected cleanup func, got nil")
+	}
+	// Probe the server, then exercise graceful shutdown.
+	time.Sleep(50 * time.Millisecond)
+	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/", port))
+	if err != nil {
+		t.Fatalf("probe: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+
+	shutdownCtx, cancel2 := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel2()
+	if err := clean(shutdownCtx); err != nil {
+		t.Errorf("http cleanup: %v", err)
+	}
+	cancel()
+}
+
+func TestWithHTTPServer_InvalidPort(t *testing.T) {
+	quietLogger(t)
+	specs := []FlagSpec{IntFlag(FlagNamePort, 99999, "")}
+	flags, err := ParseFlags("http", specs, []string{})
+	if err != nil {
+		t.Fatalf("ParseFlags: %v", err)
+	}
+	c := NewContext(context.Background(), flags)
+	if _, err := WithHTTPServer(http.NewServeMux())(c, nil); err == nil {
+		t.Fatal("expected error for out-of-range http port, got nil")
 	}
 }
 

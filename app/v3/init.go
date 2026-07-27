@@ -58,35 +58,24 @@ func WithDotEnvConfig(filenames ...string) InitFunc {
 	}
 }
 
-// WithLogger 根据 flag 重新配置全局 logger,可选启用
-// traffic logger。它是 logger/v3 的薄封装,使希望
-// 开启 traffic 日志的调用方一行即可启用;包已在 Run 中
-// 配置了基础 logger,因此仅当需要 Traffic flag 时才用到。
+// WithTraffic 在运行期覆盖 traffic logger 开关。Run 已按
+// -traffic flag 配置过基础 logger,因此多数情况下无需本 init;
+// 仅当调用方希望无条件开启 traffic(忽略 flag)时使用。
+func WithTraffic() InitFunc {
+	return func(_ *Context, _ any) (CleanFunc, error) {
+		logger.ConfigureWithOpts(logger.WithTraffic(true))
+		return nil, nil
+	}
+}
+
+// WithLogger 保留以兼容旧调用方;它现在等价于 -traffic flag
+// 被设为 trafficEnabled 后的 configureLogger。新代码请用
+// WithTraffic 或直接传 -traffic flag。
+//
+// Deprecated: 改用 WithTraffic() 或 -traffic 命令行 flag。
 func WithLogger(trafficEnabled bool) InitFunc {
-	return func(c *Context, _ any) (CleanFunc, error) {
-		logDir := c.Flags().String(FlagNameLog)
-		if logDir == "" {
-			logDir = "log"
-		}
-		verbose := c.Flags().Bool(FlagNameVerbose)
-		loggingFile := c.Flags().Bool(FlagNameLoggingFile)
-		loggingConsole := c.Flags().Bool(FlagNameLoggingConsole)
-
-		lvl := logger.InfoLevel
-		if verbose {
-			lvl = logger.DebugLevel
-		}
-
-		opts := []logger.ConfigOption{
-			logger.WithLevel(lvl),
-			logger.WithConsole(loggingConsole),
-			logger.WithCaller(true),
-			logger.WithTraffic(trafficEnabled),
-		}
-		if loggingFile {
-			opts = append(opts, logger.WithFilePath(logDir))
-		}
-		logger.ConfigureWithOpts(opts...)
+	return func(_ *Context, _ any) (CleanFunc, error) {
+		logger.ConfigureWithOpts(logger.WithTraffic(trafficEnabled))
 		return nil, nil
 	}
 }
@@ -107,42 +96,64 @@ func WithAdminHTTPServer() InitFunc {
 		AddPingHandler(mux)
 		AddPrometheusHandler(mux)
 
-		srv := &http.Server{
-			Addr:    fmt.Sprintf(":%d", port),
-			Handler: mux,
-			// 保守的 timeout,使卡住的 admin 请求不会阻塞 shutdown。
-			ReadHeaderTimeout: 5 * time.Second,
-			ReadTimeout:       10 * time.Second,
-			WriteTimeout:      30 * time.Second,
-			IdleTimeout:       60 * time.Second,
-		}
+		return startHTTPServer("admin http server", port, mux)
+	}
+}
 
-		errC := make(chan error, 1)
-		go func() {
-			logger.Infow("starting admin http server", "addr", srv.Addr)
-			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				errC <- err
-			}
-		}()
-
-		clean := func(ctx context.Context) error {
-			shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
-			logger.Infow("shutting down admin http server", "addr", srv.Addr)
-			if err := srv.Shutdown(shutdownCtx); err != nil {
-				return fmt.Errorf("admin http shutdown: %w", err)
-			}
-			return nil
+// WithHTTPServer 在 `port` flag 上启动业务 HTTP server,handler 由调用方提供。
+// 与 admin server 一样使用专属 *http.Server + 带 timeout 的 graceful
+// Shutdown,使多数 HTTP 服务的 main 无需重复编写 listen/shutdown 样板。
+// 返回的 CleanFunc 在退出时优雅关闭。
+func WithHTTPServer(handler http.Handler) InitFunc {
+	return func(c *Context, _ any) (CleanFunc, error) {
+		port := c.Flags().Int(FlagNamePort)
+		if port <= 0 || port > 65535 {
+			return nil, fmt.Errorf("invalid http port: %d", port)
 		}
+		return startHTTPServer("http server", port, handler)
+	}
+}
 
-		// 呈现一个在 Run 装配 errC 之前到达的 listen 错误。
-		select {
-		case err := <-errC:
-			_ = clean(context.Background())
-			return nil, fmt.Errorf("admin http listen: %w", err)
-		default:
-			return clean, nil
+// startHTTPServer 是 admin 与业务 server 的共享实现:装配带保守 timeout 的
+// *http.Server,在 goroutine 中 ListenAndServe,并返回一个带 5s 超时
+// graceful Shutdown 的 CleanFunc。它在返回前探一次 errC,使 listen
+// 期错误能以 init 失败形式呈现(而非等到 Run 才报)。
+func startHTTPServer(label string, port int, handler http.Handler) (CleanFunc, error) {
+	srv := &http.Server{
+		Addr:    fmt.Sprintf(":%d", port),
+		Handler: handler,
+		// 保守的 timeout,使卡住的请求不会阻塞 shutdown。
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+
+	errC := make(chan error, 1)
+	go func() {
+		logger.Infow("starting "+label, "addr", srv.Addr)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			errC <- err
 		}
+	}()
+
+	clean := func(ctx context.Context) error {
+		shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		logger.Infow("shutting down "+label, "addr", srv.Addr)
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			return fmt.Errorf("%s shutdown: %w", label, err)
+		}
+		return nil
+	}
+
+	// 呈现一个在 Run 装配 errC 之前到达的 listen 错误。
+	select {
+	case err := <-errC:
+		_ = clean(context.Background())
+		return nil, fmt.Errorf("%s listen: %w", label, err)
+	default:
+		return clean, nil
 	}
 }
 

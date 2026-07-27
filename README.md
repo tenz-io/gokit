@@ -25,14 +25,12 @@ Go common kits — a monorepo of Go 1.24+ modules providing application bootstra
 | Module            | Purpose                                                                                                                  |
 |-------------------|--------------------------------------------------------------------------------------------------------------------------|
 | [app](app/)       | Lifecycle framework: config loading (YAML/JSON/dotenv), admin HTTP endpoints (pprof, Prometheus, health), graceful shutdown |
-| [cmd](cmd/)       | CLI-first bootstrap wrapping `urfave/cli/v2` — same primitives as `app`, exposed via CLI commands |
 
 ### Communication
 
 | Module                              | Purpose                                                                                       |
 |-------------------------------------|-----------------------------------------------------------------------------------------------|
 | [ginext](ginext/)                   | Gin extension: request binding + validation, JWT auth, RPC interceptors, structured responses |
-| [grpcext](grpcext/)                 | gRPC unary/stream interceptors for request tracing, traffic logging, and metrics              |
 | [httpext](httpext/)                 | HTTP client with composable transport interceptor chain: headers, metrics, traffic, slow-log  |
 
 ### Data & Persistence
@@ -54,11 +52,9 @@ Go common kits — a monorepo of Go 1.24+ modules providing application bootstra
 ```
         annotation (v3)         functional
               |                      |
-            app,cmd   ginext ──────────────── logger ── monitor ── tracer
+            app        ginext ──────────────── logger ── monitor ── tracer
                       |  \
-                   grpcext  ┐
-                    │       ├─ httpext / gormext / cache
-                    └─ (gRPC metrics)  (observability backends)
+                   httpext / gormext / cache  ── (observability backends)
 ```
 
 **Internal dependency summary** (direct edges):
@@ -66,9 +62,7 @@ Go common kits — a monorepo of Go 1.24+ modules providing application bootstra
 | Module               | Internal Dependencies                           |
 |----------------------|-------------------------------------------------|
 | `app`                | `annotation`, `logger`                          |
-| `cmd`                | `annotation`, `logger`                          |
 | `ginext`             | `annotation`, `logger`, `monitor`, `tracer`     |
-| `grpcext`            | `logger`, `monitor`, `tracer`                   |
 | `httpext`            | `logger`, `monitor`, `tracer`                   |
 | `gormext`            | `logger`, `monitor`, `tracer`                   |
 | `cache`              | `logger`, `monitor`, `tracer`                   |
@@ -85,17 +79,15 @@ Go common kits — a monorepo of Go 1.24+ modules providing application bootstra
 
 1. **Foundation** — `functional`, `collection`, `tracer`, `annotation` have zero internal dependencies.
 2. **Observability** — `logger`, `monitor`, `tracer` form the observability backbone used by most mid-tier modules.
-3. **Mid-tier** — `app`, `cmd`, `ginext`, `grpcext`, `httpext`, `gormext`, `cache` compose foundation + observability.
+3. **Mid-tier** — `app`, `ginext`, `httpext`, `gormext`, `cache` compose foundation + observability.
 
 **Key external dependencies:**
 
 - `go.uber.org/zap` — structured logging (`logger`)
 - `github.com/gin-gonic/gin` — HTTP framework (`ginext`)
-- `google.golang.org/grpc` — gRPC (`grpcext`)
 - `gorm.io/gorm` — ORM (`gormext`)
 - `github.com/go-redis/redis/v8` — Redis client (`cache`)
-- `github.com/prometheus/client_golang` — metrics (`monitor`, `app`, `cmd`)
-- `github.com/urfave/cli/v2` — CLI framework (`cmd`)
+- `github.com/prometheus/client_golang` — metrics (`monitor`, `app`)
 
 ## Development
 

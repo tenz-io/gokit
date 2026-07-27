@@ -17,9 +17,6 @@ use (
 	./cache/v2/example
 	./cache/v3
 	./cache/v3/example
-	./cmd/v2
-	./cmd/v2/example
-	./cmd/v2/example-tool
 	./collection/v2
 	./collection/v3
 	./collection/v3/example
@@ -29,12 +26,14 @@ use (
 	./ginext/v2
 	./ginext/v2/example
 	./ginext/v2/example-bind
+	./ginext/v3
+	./ginext/v3/example
+	./ginext/v3/example-auth
 	./gormext/v2
 	./gormext/v2/example-mysql
 	./gormext/v2/example-sqlite
-	./grpcext/v2
-	./grpcext/v2/example-client
-	./grpcext/v2/example-server
+	./gormext/v3
+	./gormext/v3/example
 	./httpext/v2
 	./httpext/v2/example
 	./httpext/v3
@@ -48,6 +47,8 @@ use (
 	./monitor/v3/example
 	./retriever/v2
 	./retriever/v2/example
+	./retriever/v3
+	./retriever/v3/example
 	./tracer/v2
 	./tracer/v3
 	./tracer/v3/example

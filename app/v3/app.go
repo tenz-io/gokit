@@ -56,19 +56,48 @@ const (
 	ExitSignal   ExitCode = 3 // 被 signal 中断
 )
 
+// String 返回 ExitCode 的可读名,使日志与退出码输出显示
+// "ExitSignal" 而非裸数字 3。
+func (c ExitCode) String() string {
+	switch c {
+	case ExitOK:
+		return "ExitOK"
+	case ExitSetup:
+		return "ExitSetup"
+	case ExitRunError:
+		return "ExitRunError"
+	case ExitSignal:
+		return "ExitSignal"
+	}
+	return fmt.Sprintf("ExitCode(%d)", int(c))
+}
+
 // Run 构建并启动由 cfg 描述的应用,阻塞至
 // shutdown。它返回 ExitCode 而非调用 os.Exit,以便调用方
 // (与测试)决定如何处理;main 包装器通常执行
 // `os.Exit(int(app.Run(cfg)))`。
 //
-// flags 覆盖内置 DefaultFlags;传 nil 取默认值。argv
-// 默认为 os.Args[1:];传切片以注入参数(测试使用)。
-func Run(cfg Config, flags []FlagSpec, argv ...[]string) ExitCode {
-	var args []string
-	if len(argv) > 0 {
-		args = argv[0]
+// opts 配置可选输入:WithExtraFlags 扩展/覆盖内置 flag,
+// WithArgs 注入命令行参数(测试使用;默认 os.Args[1:])。
+// 生产入口通常直接 app.Run(cfg),无需任何 option。
+func Run(cfg Config, opts ...RunOption) ExitCode {
+	// 前置校验:缺失 Run 会让 Run goroutine nil-func panic,
+	// 空 Name 会让 flag-set 与日志难以辨识来源。两者均以
+	// setup 失败返回,而非让进程在启动期崩溃。
+	if cfg.Name == "" {
+		fmt.Fprintln(os.Stderr, "app: Config.Name is empty")
+		return ExitSetup
 	}
-	fs, err := ParseFlags(cfg.Name, flags, args)
+	if cfg.Run == nil {
+		fmt.Fprintf(os.Stderr, "%s: Config.Run is nil\n", cfg.Name)
+		return ExitSetup
+	}
+
+	o := defaultRunOptions()
+	for _, opt := range opts {
+		opt(o)
+	}
+	fs, err := ParseFlags(cfg.Name, o.extraFlags, o.resolveArgs())
 	if err != nil {
 		// Help 与 parse 错误都落到此处。输出到 stderr 以便可见;
 		// 绝不在包内部 os.Exit。
@@ -91,9 +120,10 @@ func Run(cfg Config, flags []FlagSpec, argv ...[]string) ExitCode {
 	return app.run(c, cfg.Conf, cancel)
 }
 
-// configureLogger 从解析后的 flag 装配全局 logger。它镜像
-// WithLogger initializer,但无条件运行,以便包在
-// 第一个 InitFunc 之前就有可用的 logger。
+// configureLogger 从解析后的 flag 装配全局 logger,一次完成
+// level/console/file/traffic。它在第一个 InitFunc 之前无条件
+// 运行,因此后续 init 已有可用 logger。WithTraffic /
+// WithLogger 仅在希望运行期覆盖 traffic 时才需要,且不再重复装配基础 logger。
 func configureLogger(name string, fs *Flags) {
 	logDir := fs.String(FlagNameLog)
 	if logDir == "" {
@@ -102,6 +132,7 @@ func configureLogger(name string, fs *Flags) {
 	verbose := fs.Bool(FlagNameVerbose)
 	loggingFile := fs.Bool(FlagNameLoggingFile)
 	loggingConsole := fs.Bool(FlagNameLoggingConsole)
+	traffic := fs.Bool(FlagNameTraffic)
 
 	lvl := logger.InfoLevel
 	if verbose {
@@ -112,6 +143,7 @@ func configureLogger(name string, fs *Flags) {
 		logger.WithLevel(lvl),
 		logger.WithConsole(loggingConsole),
 		logger.WithCaller(true),
+		logger.WithTraffic(traffic),
 	}
 	if loggingFile {
 		opts = append(opts, logger.WithFilePath(logDir))

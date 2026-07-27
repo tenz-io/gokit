@@ -156,3 +156,45 @@ func TestFlags_Print(t *testing.T) {
 		t.Errorf("Print output missing config value:\n%s", out)
 	}
 }
+
+func TestFlags_PrintIncludesCustomFlagsInOrder(t *testing.T) {
+	specs := []FlagSpec{
+		StringFlag("env", "test", "Environment"),
+		StringFlag("region", "us", "Region"),
+	}
+	fs, _ := ParseFlags("test", specs, []string{"-env", "prod"})
+	var b strings.Builder
+	fs.Print(&b)
+	out := b.String()
+
+	// Custom flags must appear alongside built-ins.
+	if !strings.Contains(out, "env: prod") {
+		t.Errorf("Print missing custom env flag:\n%s", out)
+	}
+	if !strings.Contains(out, "region: us") {
+		t.Errorf("Print missing custom region flag:\n%s", out)
+	}
+	// Registration order is preserved: env before region.
+	envIdx := strings.Index(out, "env:")
+	regionIdx := strings.Index(out, "region:")
+	if envIdx < 0 || regionIdx < 0 || envIdx > regionIdx {
+		t.Errorf("Print order wrong: env=%d region=%d\n%s", envIdx, regionIdx, out)
+	}
+}
+
+func TestExitCode_String(t *testing.T) {
+	cases := map[ExitCode]string{
+		ExitOK:       "ExitOK",
+		ExitSetup:    "ExitSetup",
+		ExitRunError: "ExitRunError",
+		ExitSignal:   "ExitSignal",
+	}
+	for code, want := range cases {
+		if got := code.String(); got != want {
+			t.Errorf("%d.String() = %q, want %q", int(code), got, want)
+		}
+	}
+	if got := ExitCode(42).String(); got != "ExitCode(42)" {
+		t.Errorf("unknown ExitCode String = %q, want ExitCode(42)", got)
+	}
+}

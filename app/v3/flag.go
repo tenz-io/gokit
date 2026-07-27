@@ -35,6 +35,7 @@ const (
 	FlagNameLoggingFile    = "logging-file"    // 启用文件日志
 	FlagNameLoggingConsole = "logging-console" // 启用控制台日志
 	FlagNameVerbose        = "verbose"         // verbose(debug 级别)日志
+	FlagNameTraffic        = "traffic"         // 启用流量(traffic)日志
 )
 
 // FlagKind 标识 flag 的值类型,使 Parse 能将解析出的 token 路由到正确的
@@ -90,6 +91,7 @@ var DefaultFlags = []FlagSpec{
 	BoolFlag(FlagNameLoggingFile, true, "Log to file(true/false)"),
 	BoolFlag(FlagNameLoggingConsole, false, "Log to console(true/false)"),
 	BoolFlag(FlagNameVerbose, false, "Verbose mode(true/false)"),
+	BoolFlag(FlagNameTraffic, false, "Enable traffic logging(true/false)"),
 }
 
 // Flags 是 ParseFlags 返回的不可变解析快照。每次查找
@@ -98,6 +100,9 @@ var DefaultFlags = []FlagSpec{
 // Flags 可安全并发读取。
 type Flags struct {
 	values map[string]flagValue
+	// order 按注册顺序保存 flag 名,使 Print 输出确定且
+	// 覆盖调用方通过 extraFlags 扩展的自定义 flag。
+	order []string
 }
 
 type flagValue struct {
@@ -133,17 +138,17 @@ func (fs *Flags) Duration(name string) time.Duration {
 // IsSet 报告 name 是否为已注册的 flag。
 func (fs *Flags) IsSet(name string) bool { _, ok := fs.values[name]; return ok }
 
-// Print 将解析后的 flag 值以紧凑的 "name: value" 块写入 w。
-// 输出至调用方提供的 io.Writer,便于测试捕获;Run
-// 会将其经由 logger 输出。
+// Print 将解析后的 flag 值以紧凑的 "name: value" 块按注册顺序写入 w,
+// 覆盖内置 flag 与调用方扩展的自定义 flag。输出至调用方提供的
+// io.Writer,便于测试捕获;Run 会将其经由 logger 输出。
 func (fs *Flags) Print(w io.Writer) {
 	fmt.Fprintln(w, "args: ==================")
-	for _, f := range DefaultFlags {
-		v, ok := fs.values[f.Name]
+	for _, name := range fs.order {
+		v, ok := fs.values[name]
 		if !ok {
 			continue
 		}
-		fmt.Fprintf(w, "%s: %s\n", f.Name, v.display())
+		fmt.Fprintf(w, "%s: %s\n", name, v.display())
 	}
 	fmt.Fprintln(w, "==================")
 }
@@ -191,6 +196,7 @@ func ParseFlags(name string, specs []FlagSpec, args []string) (*Flags, error) {
 	fs.SetOutput(io.Discard)
 
 	holders := make(map[string]*flagValue, len(specs))
+	order := make([]string, 0, len(specs))
 	for _, s := range specs {
 		if s.Name == "" {
 			return nil, fmt.Errorf("app: flag with empty name")
@@ -201,6 +207,7 @@ func ParseFlags(name string, specs []FlagSpec, args []string) (*Flags, error) {
 		v := &flagValue{kind: s.Kind}
 		applySpec(fs, s, v)
 		holders[s.Name] = v
+		order = append(order, s.Name)
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -211,7 +218,7 @@ func ParseFlags(name string, specs []FlagSpec, args []string) (*Flags, error) {
 	for n, h := range holders {
 		out[n] = *h
 	}
-	return &Flags{values: out}, nil
+	return &Flags{values: out, order: order}, nil
 }
 
 // mergeSpecs 返回 DefaultFlags 经 specs 增强后的结果;specs 中

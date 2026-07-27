@@ -49,17 +49,19 @@ func main() {
 		Conf: &AppConfig{},
 		Inits: []app.InitFunc{
 			app.WithYamlConfig(),
-			app.WithLogger(true), // 开启流量日志
+			app.WithTraffic(), // 强制开启流量日志(等价于 -traffic flag)
 			app.WithAdminHTTPServer(),
 		},
-		Run: func(c *app.Context, conf any, errC chan<- error) {
+		// AdaptRun 消除 conf.(*AppConfig) 断言与 errC 样板:返回 nil 即干净退出。
+		Run: app.AdaptRun(func(c *app.Context, conf *AppConfig) error {
 			ctx, reqID := tracer.EnsureRequestID(c.Context)
 			log := logger.WithRequestID(reqID)
 			logger.FromContext(logger.WithLogger(ctx, log)).Infow("service started")
 			<-c.Done() // 阻塞直到收到信号
-		},
+			return nil
+		}),
 	}
-	os.Exit(int(app.Run(cfg, nil)))
+	os.Exit(int(app.Run(cfg)))
 }
 ```
 
@@ -116,20 +118,25 @@ Inits: []app.InitFunc{
 
 | 符号 | 说明 |
 | --- | --- |
-| `Run(cfg Config, flags []FlagSpec, argv ...[]string) ExitCode` | 应用入口：解析 flag、执行初始化、运行主逻辑、等待退出，返回退出码（不 `os.Exit`） |
+| `Run(cfg Config, opts ...RunOption) ExitCode` | 应用入口：解析 flag、执行初始化、运行主逻辑、等待退出，返回退出码（不 `os.Exit`）；opts 含 `WithExtraFlags`/`WithArgs` |
+| `RunOption` / `WithExtraFlags(...FlagSpec)` / `WithArgs([]string)` | `Run` 的可选输入：扩展 flag、注入 argv（测试用） |
 | `Config` | 应用配置：`Name`/`Usage`/`Conf`/`Inits`/`Run` |
 | `InitFunc` | 初始化函数 `func(c *Context, conf any) (CleanFunc, error)` |
 | `RunFunc` | 主运行函数 `func(c *Context, conf any, errC chan<- error)` |
+| `TypedInitFunc[T]` / `AdaptInit[T](TypedInitFunc[T]) InitFunc` | 类型安全 init 适配器：消除 `conf.(*T)` 断言样板 |
+| `TypedRunFunc[T]` / `AdaptRun[T](TypedRunFunc[T]) RunFunc` | 类型安全 run 适配器：返回 nil 即干净退出、返回 error 即致命 |
 | `CleanFunc` | 清理函数 `func(context.Context) error`，按 LIFO 调用 |
-| `ExitCode` / `ExitOK`/`ExitSetup`/`ExitRunError`/`ExitSignal` | 退出码类型及常量 |
+| `ExitCode` / `ExitOK`/`ExitSetup`/`ExitRunError`/`ExitSignal` | 退出码类型及常量；`ExitCode.String()` 返回可读名 |
 | `Context` | 内嵌 `context.Context`（应用上下文，退出时取消）+ 解析后的 `Flags` |
 | `NewContext(ctx, flags) *Context` | 构造 `Context`（主要用于测试） |
 | `(*Context).Flags() *Flags` | 获取命令行 flag 集合 |
 | `WithYamlConfig() InitFunc` | 读取 YAML 配置文件并反序列化到 `Conf` |
 | `WithJsonConfig() InitFunc` | 读取 JSON 配置文件并反序列化到 `Conf` |
-| `WithDotEnvConfig(filenames ...string) InitFunc` | 加载 `.env` 文件到环境变量 |
-| `WithLogger(trafficEnabled bool) InitFunc` | 按 flag 配置全局日志，可开启流量日志 |
+| `WithDotEnvConfig(filenames ...string) InitFunc` | 加载 `.env` 文件到环境变量（文件缺失即报错，设计如此：确保环境已就绪） |
+| `WithTraffic() InitFunc` | 运行期强制开启流量日志（等价于 `-traffic` flag） |
+| `WithLogger(trafficEnabled bool) InitFunc` | **Deprecated**：改用 `WithTraffic()` 或 `-traffic` flag |
 | `WithAdminHTTPServer() InitFunc` | 启动 admin HTTP 服务（pprof/metrics/ping）并返回优雅关闭清理 |
+| `WithHTTPServer(handler http.Handler) InitFunc` | 在 `port` flag 上启动业务 HTTP 服务，复用优雅关闭样板 |
 | `ReadConfig(path string, conf any, unmarshal UnmarshalFunc) error` | 通用配置文件读取+默认值+**占位符展开**+校验 |
 | `Expand(bs []byte, lookup func(string)(string,bool)) ([]byte, error)` | 在字节层展开 `${VAR}`/`${VAR:-x}`/`${VAR:?m}` 占位符；`ReadConfig` 内部已调用，亦可单独使用 |
 | `AddPrometheusHandler(mux *http.ServeMux)` | 挂载 `/metrics` 处理器 |
@@ -139,12 +146,12 @@ Inits: []app.InitFunc{
 | `FlagSpec` | 不可变的命令行 flag 规格（`Name`/`Kind`/`Default`/`Usage`/`Env`） |
 | `FlagKind` / `FlagKindString`/`FlagKindInt`/`FlagKindBool`/`FlagKindDuration` | flag 值类型 |
 | `StringFlag`/`IntFlag`/`BoolFlag`/`DurationFlag` | flag 规格便捷构造器 |
-| `DefaultFlags` | 内置 flag 集（`config`/`port`/`admin-port`/`log`/`logging-file`/`logging-console`/`verbose`） |
+| `DefaultFlags` | 内置 flag 集（`config`/`port`/`admin-port`/`log`/`logging-file`/`logging-console`/`verbose`/`traffic`） |
 | `ParseFlags(name string, specs []FlagSpec, args []string) (*Flags, error)` | 解析 flag 成不可变快照，返回 error 不 `os.Exit` |
 | `(*Flags).String/Int/Bool/Duration(name)` | 按名称、类型读取 flag 值（未注册返回零值） |
 | `(*Flags).IsSet(name) bool` | 判断 flag 是否注册 |
 | `(*Flags).Print(w io.Writer)` | 打印当前 flag 值 |
-| `FlagNameConfig` / `FlagNamePort` / `FlagNameAdminPort` / `FlagNameLog` / `FlagNameLoggingFile` / `FlagNameLoggingConsole` / `FlagNameVerbose` | 内置 flag 名称常量 |
+| `FlagNameConfig` / `FlagNamePort` / `FlagNameAdminPort` / `FlagNameLog` / `FlagNameLoggingFile` / `FlagNameLoggingConsole` / `FlagNameVerbose` / `FlagNameTraffic` | 内置 flag 名称常量 |
 | `PrettyString(v any) string` | 将任意值格式化为 JSON 字符串 |
 
 引入路径：`import "github.com/tenz-io/gokit/app/v3"`

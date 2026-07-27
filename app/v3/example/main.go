@@ -4,7 +4,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"time"
 
@@ -26,41 +25,37 @@ func main() {
 		Inits: []app.InitFunc{
 			app.WithDotEnvConfig(),
 			app.WithYamlConfig(),
-			app.WithLogger(true), // turn on traffic logging
+			app.WithTraffic(), // force-enable traffic logging (equivalent to -traffic flag)
 			app.WithAdminHTTPServer(),
 		},
-		Run: run(),
+		Run: app.AdaptRun(run),
 	}
-	os.Exit(int(app.Run(cfg, extraFlags)))
+	os.Exit(int(app.Run(cfg, app.WithExtraFlags(extraFlags...))))
 }
 
-func run() app.RunFunc {
-	return func(c *app.Context, conf any, errC chan<- error) {
-		mycnf, ok := conf.(*MyConfig)
-		if !ok {
-			errC <- fmt.Errorf("invalid config type: %T", conf)
-			return
-		}
+// run is the main service loop. AdaptRun handles the *MyConfig assertion and
+// the errC plumbing: returning nil triggers clean shutdown, returning an error
+// is treated as fatal. No boilerplate here.
+func run(c *app.Context, conf *MyConfig) error {
+	env := c.Flags().String("env")
 
-		env := c.Flags().String("env")
+	// Pin a request id on the context for the whole request; the logger
+	// attached below carries it onto every log line.
+	ctx, reqID := tracer.EnsureRequestID(c.Context)
+	reqLog := logger.WithRequestID(reqID)
+	ctx = logger.WithLogger(ctx, reqLog)
 
-		// Pin a request id on the context for the whole request; the logger
-		// attached below carries it onto every log line.
-		ctx, reqID := tracer.EnsureRequestID(c.Context)
-		reqLog := logger.WithRequestID(reqID)
-		ctx = logger.WithLogger(ctx, reqLog)
+	logger.FromContext(ctx).Infow("service started",
+		"name", conf.Name, "env", env,
+		"db_password_set", conf.DBPassword != "", // value itself isn't logged
+	)
 
-		logger.FromContext(ctx).Infow("service started",
-			"name", mycnf.Name, "env", env,
-			"db_password_set", mycnf.DBPassword != "", // value itself isn't logged
-		)
+	logTraffic(ctx)
 
-		logTraffic(ctx)
-
-		// Block until shutdown (signal or context cancel).
-		<-c.Done()
-		logger.FromContext(ctx).Info("service stopped")
-	}
+	// Block until shutdown (signal or context cancel).
+	<-c.Done()
+	logger.FromContext(ctx).Info("service stopped")
+	return nil
 }
 
 func logTraffic(ctx context.Context) {
