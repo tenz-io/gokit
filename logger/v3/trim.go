@@ -15,9 +15,8 @@ const (
 	defaultDeepLimit = 10
 )
 
-// OutputTrimmer controls how deeply structured values are reflected into
-// log output: long strings are truncated, big slices are capped, deep
-// structs/maps are flattened, and named fields are dropped.
+// OutputTrimmer 控制结构化值被反射进日志输出的深度:长字符串被截断、
+// 大 slice 被封顶、深层 struct/map 被扁平化、具名 field 被丢弃。
 type OutputTrimmer struct {
 	arrLimit  int
 	strLimit  int
@@ -56,8 +55,7 @@ func keySet(ks []string) map[string]bool {
 	return m
 }
 
-// TrimFields applies output trimming to a key-value field list, dropping
-// ignored keys entirely.
+// TrimFields 对键值 field 列表应用输出裁剪,完全丢弃被忽略的 key。
 func (ot *OutputTrimmer) TrimFields(args []any) []any {
 	if len(args) < 2 {
 		return args
@@ -75,14 +73,14 @@ func (ot *OutputTrimmer) TrimFields(args []any) []any {
 		out = append(out, key, ot.trimAny(args[i+1], ot.deepLimit))
 	}
 	if len(args)%2 != 0 {
-		// Preserve malformed input so zap can report the dangling key instead
-		// of silently losing caller data.
+		// 保留畸形输入,以便 zap 能报告这个悬空的 key,而不是
+		// 静默丢失调用方数据。
 		out = append(out, args[len(args)-1])
 	}
 	return out
 }
 
-// TrimArgs is the variadic-argument twin of TrimFields.
+// TrimArgs 是 TrimFields 的可变参数孪生版本。
 func (ot *OutputTrimmer) TrimArgs(args []any) []any { return ot.TrimFields(args) }
 
 func (ot *OutputTrimmer) trimAny(v any, depth int) any {
@@ -103,7 +101,7 @@ func (ot *OutputTrimmer) trimAny(v any, depth int) any {
 	}
 	rv := reflect.ValueOf(v)
 
-	// Dereference pointers/interfaces.
+	// 解引用 pointer/interface。
 	for rv.Kind() == reflect.Ptr || rv.Kind() == reflect.Interface {
 		if rv.IsNil() {
 			return nil
@@ -174,8 +172,7 @@ func (ot *OutputTrimmer) trimStruct(v reflect.Value, depth int) map[string]any {
 	return m
 }
 
-// fieldName resolves the external name from the json tag, falling back to
-// the Go field name.
+// fieldName 从 json tag 解析对外名称,回退到 Go field 名。
 func fieldName(f reflect.StructField) (string, bool) {
 	if tag, ok := f.Tag.Lookup("json"); ok {
 		if tag == "-" {
@@ -258,8 +255,8 @@ var (
 	durationType = reflect.TypeOf(time.Duration(0))
 )
 
-// fmtValue renders a reflect.Value's primitive form as a string, used for
-// map keys and other bare scalars.
+// fmtValue 将 reflect.Value 的基本形态渲染为字符串,用于 map key 及其他
+// 裸标量。
 func fmtValue(v reflect.Value) string {
 	if !v.IsValid() {
 		return ""

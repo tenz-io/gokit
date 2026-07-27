@@ -1,14 +1,14 @@
-// Package async provides generic concurrent task execution with panic recovery.
+// Package async 提供带 panic 恢复的通用并发任务执行能力。
 //
-// The package offers two complementary styles:
+// 本包提供两种互补的使用风格：
 //
-//   - Stateless helpers [Run], [RunAll], [Wait], [AllOf], [AnyOf] for one-shot
-//     fan-out where the full task set is known up front.
-//   - A [Group] builder (see [New]) for open-ended use where tasks are added
-//     incrementally, with optional concurrency limit and cancel-on-first-error.
+//   - 无状态辅助函数 [Run]、[RunAll]、[Wait]、[AllOf]、[AnyOf],适用于任务集
+//     已知的一次性 fan-out。
+//   - [Group] 构建器(见 [New]),适用于任务被增量添加的开放式场景,可选并发
+//     上限与"首个出错即取消"。
 //
-// Every task runs inside a panic-safe wrapper that converts a panic into a
-// typed [*PanicError], so a panicking task can never crash the process.
+// 每个任务都在 panic 安全的包装器中执行,panic 会被转换为有类型的
+// [*PanicError],因此 panic 的任务永远不会让进程崩溃。
 package async
 
 import (
@@ -19,30 +19,29 @@ import (
 	"sync"
 )
 
-// Task is the shared async task signature. All helpers and [Group] operate on it.
+// Task 是共享的异步任务签名。所有辅助函数与 [Group] 都基于它操作。
 type Task[T any] func(context.Context) (T, error)
 
-// Result holds the outcome of a single task. Slice position encodes input order,
-// so there is no separate index field.
+// Result 保存单个任务的结果。切片位置即对应输入顺序,因此没有单独的 index 字段。
 type Result[T any] struct {
 	Value T
 	Err   error
 }
 
-// PanicError is returned when a task panics. It carries the recovered value and a
-// captured stack trace so callers can inspect or log it via [errors.As].
+// PanicError 在任务 panic 时返回。它携带被 recover 的值以及捕获的调用栈,
+// 调用方可通过 [errors.As] 进行检视或记录日志。
 type PanicError struct {
 	value any
 	stack []byte
 }
 
-// Value returns the value passed to panic.
+// Value 返回传给 panic 的值。
 func (p *PanicError) Value() any { return p.value }
 
-// Stack returns the goroutine stack captured at the panic site.
+// Stack 返回在 panic 发生处捕获的 goroutine 调用栈。
 func (p *PanicError) Stack() []byte { return p.stack }
 
-// Error implements the error interface.
+// Error 实现 error 接口。
 func (p *PanicError) Error() string {
 	switch v := p.value.(type) {
 	case error:
@@ -54,7 +53,7 @@ func (p *PanicError) Error() string {
 	}
 }
 
-// Unwrap allows errors.Is/As to reach into panics that wrapped an error.
+// Unwrap 使 errors.Is/As 能够穿透到包装了 error 的 panic 内部。
 func (p *PanicError) Unwrap() error {
 	if err, ok := p.value.(error); ok {
 		return err
@@ -62,9 +61,9 @@ func (p *PanicError) Unwrap() error {
 	return nil
 }
 
-// Run executes the tasks concurrently and returns the first error encountered,
-// nil-filtered. It does not cancel sibling tasks on error (no context is derived).
-// Panics are reported as [*PanicError]. Returns nil for an empty task set.
+// Run 并发执行任务,并返回遇到的第一个错误(已过滤 nil)。出错时不会取消
+// 兄弟任务(不会派生 context)。panic 会以 [*PanicError] 形式上报。任务集为
+// 空时返回 nil。
 func Run[T any](ctx context.Context, tasks ...Task[T]) error {
 	tasks = filterNil(tasks)
 	if len(tasks) == 0 {
@@ -94,9 +93,8 @@ func Run[T any](ctx context.Context, tasks ...Task[T]) error {
 	return first
 }
 
-// RunAll executes the tasks concurrently and joins every non-nil error with
-// [errors.Join]. Panics are reported as [*PanicError]. Returns nil when every
-// task succeeds or the task set is empty.
+// RunAll 并发执行任务,并用 [errors.Join] 合并每个非 nil 的错误。panic 会以
+// [*PanicError] 形式上报。当所有任务都成功,或任务集为空时返回 nil。
 func RunAll[T any](ctx context.Context, tasks ...Task[T]) error {
 	tasks = filterNil(tasks)
 	if len(tasks) == 0 {
@@ -124,9 +122,9 @@ func RunAll[T any](ctx context.Context, tasks ...Task[T]) error {
 	return errors.Join(errs...)
 }
 
-// Wait executes the tasks concurrently and blocks until all finish, discarding
-// both values and errors. It is the fire-and-forget variant. Panics are swallowed
-// (recovered but not returned); use [Run] or [RunAll] if they must be observed.
+// Wait 并发执行任务并阻塞至全部完成,同时丢弃返回值与错误。它是
+// fire-and-forget 变体。panic 会被吞掉(recover 但不返回);若必须观测到
+// panic,请改用 [Run] 或 [RunAll]。
 func Wait[T any](ctx context.Context, tasks ...Task[T]) {
 	tasks = filterNil(tasks)
 	if len(tasks) == 0 {
@@ -143,9 +141,9 @@ func Wait[T any](ctx context.Context, tasks ...Task[T]) {
 	wg.Wait()
 }
 
-// AllOf executes the tasks concurrently and returns one [Result] per task, in
-// input order. A task failing or panicking does not affect the others; its
-// result carries the error (panic → [*PanicError]). Returns nil for an empty set.
+// AllOf 并发执行任务,并按输入顺序为每个任务返回一个 [Result]。某个任务
+// 失败或 panic 不影响其他任务;其结果会承载该错误(panic → [*PanicError])。
+// 任务集为空时返回 nil。
 func AllOf[T any](ctx context.Context, tasks ...Task[T]) []Result[T] {
 	tasks = filterNil(tasks)
 	if len(tasks) == 0 {
@@ -166,10 +164,9 @@ func AllOf[T any](ctx context.Context, tasks ...Task[T]) []Result[T] {
 	return results
 }
 
-// AnyOf executes the tasks concurrently and returns the first successful result,
-// cancelling the remaining tasks through a derived context on first success.
-// If every task fails, the failures are joined with [errors.Join]. Panics are
-// treated as failures ([*PanicError]). An empty task set is an error.
+// AnyOf 并发执行任务,并返回第一个成功的结果,在首次成功时通过派生的
+// context 取消其余任务。若所有任务都失败,这些失败会用 [errors.Join] 合并。
+// panic 视作失败([*PanicError])。任务集为空则视为错误。
 func AnyOf[T any](ctx context.Context, tasks ...Task[T]) (T, error) {
 	var zero T
 	if len(tasks) == 0 {
@@ -220,9 +217,8 @@ func AnyOf[T any](ctx context.Context, tasks ...Task[T]) (T, error) {
 	return zero, fmt.Errorf("async.AnyOf: all %d task(s) failed: %w", len(tasks), errors.Join(errs...))
 }
 
-// recoverTask wraps a task so that a panic is recovered and surfaced as a
-// [*PanicError] instead of crashing the process. The stack is captured once,
-// at the panic site.
+// recoverTask 包装一个任务,使 panic 被 recover 并以 [*PanicError] 形式上抛,
+// 而非让进程崩溃。调用栈在 panic 发生处捕获一次。
 func recoverTask[T any](task Task[T]) Task[T] {
 	return func(ctx context.Context) (result T, err error) {
 		defer func() {
@@ -234,14 +230,14 @@ func recoverTask[T any](task Task[T]) Task[T] {
 	}
 }
 
-// stack returns the current goroutine stack, reused by [PanicError].
+// stack 返回当前 goroutine 的调用栈,供 [PanicError] 复用。
 func stack() []byte {
 	buf := make([]byte, 4096)
 	n := runtime.Stack(buf, false)
 	return buf[:n]
 }
 
-// filterNil returns tasks with nil entries dropped, preserving order.
+// filterNil 返回剔除 nil 任务后的切片,保持原顺序。
 func filterNil[T any](tasks []Task[T]) []Task[T] {
 	out := tasks[:0:0]
 	for _, t := range tasks {

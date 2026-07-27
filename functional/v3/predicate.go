@@ -1,10 +1,10 @@
 package fn
 
-// --- Quantifiers ---
+// --- 量词 ---
 
-// All returns true if every element of s satisfies pred.
-// An empty slice returns true (vacuous truth), matching standard quantifier
-// semantics and matching [slices.IndexFunc] loop invariants.
+// All 当 s 中每个元素都满足 pred 时返回 true。
+// 空 slice 返回 true(空真),符合标准量词语义,并与 [slices.IndexFunc] 的
+// 循环不变式一致。
 func All[T any](s []T, pred func(T) bool) bool {
 	for _, v := range s {
 		if !pred(v) {
@@ -14,8 +14,8 @@ func All[T any](s []T, pred func(T) bool) bool {
 	return true
 }
 
-// Any returns true if at least one element of s satisfies pred.
-// An empty slice returns false.
+// Any 当 s 中至少一个元素满足 pred 时返回 true。
+// 空 slice 返回 false。
 func Any[T any](s []T, pred func(T) bool) bool {
 	for _, v := range s {
 		if pred(v) {
@@ -25,8 +25,8 @@ func Any[T any](s []T, pred func(T) bool) bool {
 	return false
 }
 
-// None returns true if no element of s satisfies pred.
-// An empty slice returns true. None is the negation of Any.
+// None 当 s 中没有元素满足 pred 时返回 true。
+// 空 slice 返回 true。None 是 Any 的否定。
 func None[T any](s []T, pred func(T) bool) bool {
 	for _, v := range s {
 		if pred(v) {
@@ -36,10 +36,10 @@ func None[T any](s []T, pred func(T) bool) bool {
 	return true
 }
 
-// --- Membership ---
+// --- 成员判定 ---
 
-// Contains reports whether v is present in s. It is O(n); for repeated
-// membership checks over the same set, build an OrderedSet for O(1) lookups.
+// Contains 报告 v 是否存在于 s 中。它是 O(n);对同一集合反复做 membership
+// 检查时,构建一个 OrderedSet 以获得 O(1) 查找。
 func Contains[T comparable](s []T, v T) bool {
 	for _, x := range s {
 		if x == v {
@@ -49,7 +49,7 @@ func Contains[T comparable](s []T, v T) bool {
 	return false
 }
 
-// ContainsBy reports whether any element of s maps to key under keyFn.
+// ContainsBy 报告 s 中是否有元素在 keyFn 下映射到 key。
 func ContainsBy[T any, K comparable](s []T, key K, keyFn func(T) K) bool {
 	for _, x := range s {
 		if keyFn(x) == key {
@@ -59,7 +59,7 @@ func ContainsBy[T any, K comparable](s []T, key K, keyFn func(T) K) bool {
 	return false
 }
 
-// Count returns the number of elements of s that satisfy pred.
+// Count 返回 s 中满足 pred 的元素个数。
 func Count[T any](s []T, pred func(T) bool) int {
 	n := 0
 	for _, v := range s {
@@ -70,7 +70,7 @@ func Count[T any](s []T, pred func(T) bool) int {
 	return n
 }
 
-// CountBy returns the number of elements whose key (under keyFn) equals key.
+// CountBy 返回 key(由 keyFn 给出)等于 key 的元素个数。
 func CountBy[T any, K comparable](s []T, key K, keyFn func(T) K) int {
 	n := 0
 	for _, x := range s {
@@ -81,10 +81,9 @@ func CountBy[T any, K comparable](s []T, key K, keyFn func(T) K) int {
 	return n
 }
 
-// --- Find / Index ---
+// --- 查找 / 索引 ---
 
-// Find returns the first element of s satisfying pred, or (zero, false) if
-// none match.
+// Find 返回 s 中首个满足 pred 的元素,若无匹配则返回 (zero, false)。
 func Find[T any](s []T, pred func(T) bool) (T, bool) {
 	for _, v := range s {
 		if pred(v) {
@@ -95,8 +94,7 @@ func Find[T any](s []T, pred func(T) bool) (T, bool) {
 	return zero, false
 }
 
-// FindIndex returns the index of the first element of s satisfying pred, or
-// (-1, false) if none match.
+// FindIndex 返回 s 中首个满足 pred 元素的 index,若无匹配则返回 (-1, false)。
 func FindIndex[T any](s []T, pred func(T) bool) (int, bool) {
 	for i, v := range s {
 		if pred(v) {
@@ -106,7 +104,7 @@ func FindIndex[T any](s []T, pred func(T) bool) (int, bool) {
 	return -1, false
 }
 
-// FindLast returns the last element of s satisfying pred, or (zero, false).
+// FindLast 返回 s 中最后一个满足 pred 的元素,否则返回 (zero, false)。
 func FindLast[T any](s []T, pred func(T) bool) (T, bool) {
 	for i := len(s) - 1; i >= 0; i-- {
 		if pred(s[i]) {
@@ -117,8 +115,8 @@ func FindLast[T any](s []T, pred func(T) bool) (T, bool) {
 	return zero, false
 }
 
-// FindLastIndex returns the index of the last element of s satisfying pred,
-// or (-1, false) if none match.
+// FindLastIndex 返回 s 中最后一个满足 pred 元素的 index,
+// 若无匹配则返回 (-1, false)。
 func FindLastIndex[T any](s []T, pred func(T) bool) (int, bool) {
 	for i := len(s) - 1; i >= 0; i-- {
 		if pred(s[i]) {
@@ -128,7 +126,7 @@ func FindLastIndex[T any](s []T, pred func(T) bool) (int, bool) {
 	return -1, false
 }
 
-// IndexOf returns the index of the first occurrence of v in s, or (-1, false).
+// IndexOf 返回 v 在 s 中首次出现位置的 index,否则返回 (-1, false)。
 func IndexOf[T comparable](s []T, v T) (int, bool) {
 	for i, x := range s {
 		if x == v {
@@ -138,7 +136,7 @@ func IndexOf[T comparable](s []T, v T) (int, bool) {
 	return -1, false
 }
 
-// LastIndexOf returns the index of the last occurrence of v in s, or (-1, false).
+// LastIndexOf 返回 v 在 s 中最后出现位置的 index,否则返回 (-1, false)。
 func LastIndexOf[T comparable](s []T, v T) (int, bool) {
 	for i := len(s) - 1; i >= 0; i-- {
 		if s[i] == v {

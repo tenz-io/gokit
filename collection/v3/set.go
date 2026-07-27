@@ -1,32 +1,29 @@
 package collection
 
-// Set is an unordered set of comparable values backed by a map.
+// Set 是一个基于 map 的、存储 comparable 值的无序 set。
 //
-// Unlike v2 (which exposed `type Set map[T]struct{}`), v3 hides the map behind
-// a struct so the internal layout can evolve without breaking callers, and so
-// the set algebra can be expressed as method chains:
+// 与 v2(暴露 `type Set map[T]struct{}`)不同,v3 将 map 隐藏在
+// struct 之后,使内部布局可在不破坏调用方的情况下演进,并使 set 代数可以表示为方法链:
 //
 //	a.Union(b).Intersect(c).Subtract(d)
 //
-// All algebra methods return a fresh [Set]; they never mutate the receiver.
-// Free-function aliases ([Union], [Intersect], [Difference], ...) are provided
-// for callers that prefer a functional style or operate on values held in a
-// slice.
+// 所有代数方法都返回一个新的 [Set];它们从不修改接收者。
+// 为偏好函数式风格或对 slice 中存储的值进行操作的调用方提供了
+// 自由函数别名([Union]、[Intersect]、[Difference]、...)。
 //
-// For an order-preserving set (dedup + iteration in insertion order) use
-// functional/v3's OrderedSet instead.
+// 如需保序 set(去重 + 按插入顺序迭代),请改用 functional/v3 的 OrderedSet。
 type Set[T comparable] struct {
 	m map[T]struct{}
 }
 
-// NewSet creates a set, optionally pre-populated with values.
+// NewSet 创建一个 set,可选地预先填入 values。
 func NewSet[T comparable](values ...T) Set[T] {
 	s := Set[T]{m: make(map[T]struct{}, len(values))}
 	s.Add(values...)
 	return s
 }
 
-// NewSetWithCap creates an empty set pre-sized for cap elements.
+// NewSetWithCap 创建一个为 cap 个元素预分配大小的空 set。
 func NewSetWithCap[T comparable](cap int) Set[T] {
 	if cap <= 0 {
 		cap = defaultCap
@@ -34,8 +31,7 @@ func NewSetWithCap[T comparable](cap int) Set[T] {
 	return Set[T]{m: make(map[T]struct{}, cap)}
 }
 
-// Add inserts the values into the set. Duplicates are no-ops. It returns the
-// receiver so Add can be chained with algebra methods: `s.Add(1, 2).Union(b)`.
+// Add 将 values 插入 set。重复值是 no-op。它返回接收者,以便 Add 可与代数方法链式调用:`s.Add(1, 2).Union(b)`。
 func (s Set[T]) Add(values ...T) Set[T] {
 	for _, v := range values {
 		s.m[v] = struct{}{}
@@ -43,30 +39,29 @@ func (s Set[T]) Add(values ...T) Set[T] {
 	return s
 }
 
-// Remove deletes v from the set. It is a no-op if v is absent.
+// Remove 从 set 中删除 v。若 v 不存在则是 no-op。
 func (s Set[T]) Remove(v T) {
 	delete(s.m, v)
 }
 
-// Contains reports whether v is present in the set.
+// Contains 报告 v 是否存在于 set 中。
 func (s Set[T]) Contains(v T) bool {
 	_, ok := s.m[v]
 	return ok
 }
 
-// Len returns the number of elements.
+// Len 返回元素数量。
 func (s Set[T]) Len() int { return len(s.m) }
 
-// IsEmpty reports whether the set has no elements.
+// IsEmpty 报告 set 是否没有元素。
 func (s Set[T]) IsEmpty() bool { return len(s.m) == 0 }
 
-// Clear removes all elements. The internal map is retained for reuse.
+// Clear 移除所有元素。内部 map 保留以便复用。
 func (s Set[T]) Clear() {
 	clear(s.m)
 }
 
-// Values returns all elements as a slice. The order is non-deterministic
-// (map iteration order); the returned slice is independent.
+// Values 以 slice 形式返回所有元素。顺序不确定(map 迭代顺序);返回的 slice 是独立的。
 func (s Set[T]) Values() []T {
 	out := make([]T, 0, len(s.m))
 	for k := range s.m {
@@ -75,7 +70,7 @@ func (s Set[T]) Values() []T {
 	return out
 }
 
-// Clone returns an independent copy of the set.
+// Clone 返回 set 的独立副本。
 func (s Set[T]) Clone() Set[T] {
 	out := make(map[T]struct{}, len(s.m))
 	for k := range s.m {
@@ -84,9 +79,9 @@ func (s Set[T]) Clone() Set[T] {
 	return Set[T]{m: out}
 }
 
-// --- Chained set algebra (return new Set, receiver untouched) ---
+// --- 链式 set 代数(返回新 Set,接收者不变)---
 
-// Union returns a new set with all elements from s and other (s ∪ other).
+// Union 返回包含 s 和 other 所有元素的新 set(s ∪ other)。
 func (s Set[T]) Union(other Set[T]) Set[T] {
 	out := make(map[T]struct{}, len(s.m)+len(other.m))
 	for k := range s.m {
@@ -98,8 +93,7 @@ func (s Set[T]) Union(other Set[T]) Set[T] {
 	return Set[T]{m: out}
 }
 
-// Intersect returns a new set with elements present in both s and other
-// (s ∩ other). It iterates the smaller set for efficiency.
+// Intersect 返回同时存在于 s 和 other 中的元素的新 set(s ∩ other)。为提高效率,它会遍历较小的 set。
 func (s Set[T]) Intersect(other Set[T]) Set[T] {
 	a, b := s.m, other.m
 	if len(a) > len(b) {
@@ -114,7 +108,7 @@ func (s Set[T]) Intersect(other Set[T]) Set[T] {
 	return Set[T]{m: out}
 }
 
-// Subtract returns a new set with elements in s but not in other (s \ other).
+// Subtract 返回在 s 中但不在 other 中的元素的新 set(s \ other)。
 func (s Set[T]) Subtract(other Set[T]) Set[T] {
 	out := make(map[T]struct{}, len(s.m))
 	for k := range s.m {
@@ -125,8 +119,7 @@ func (s Set[T]) Subtract(other Set[T]) Set[T] {
 	return Set[T]{m: out}
 }
 
-// SymmetricDifference returns a new set with elements in exactly one of s or
-// other (s △ other).
+// SymmetricDifference 返回恰好在 s 或 other 其中之一中的元素的新 set(s △ other)。
 func (s Set[T]) SymmetricDifference(other Set[T]) Set[T] {
 	out := make(map[T]struct{}, len(s.m)+len(other.m))
 	for k := range s.m {
@@ -142,9 +135,9 @@ func (s Set[T]) SymmetricDifference(other Set[T]) Set[T] {
 	return Set[T]{m: out}
 }
 
-// --- Set relations (predicates) ---
+// --- set 关系(谓词)---
 
-// IsSubset reports whether every element of s is in other (s ⊆ other).
+// IsSubset 报告 s 的每个元素是否都在 other 中(s ⊆ other)。
 func (s Set[T]) IsSubset(other Set[T]) bool {
 	if len(s.m) > len(other.m) {
 		return false
@@ -157,12 +150,12 @@ func (s Set[T]) IsSubset(other Set[T]) bool {
 	return true
 }
 
-// IsSuperset reports whether every element of other is in s (s ⊇ other).
+// IsSuperset 报告 other 的每个元素是否都在 s 中(s ⊇ other)。
 func (s Set[T]) IsSuperset(other Set[T]) bool {
 	return other.IsSubset(s)
 }
 
-// IsDisjoint reports whether s and other share no elements (s ∩ other = ∅).
+// IsDisjoint 报告 s 和 other 是否没有共同元素(s ∩ other = ∅)。
 func (s Set[T]) IsDisjoint(other Set[T]) bool {
 	a, b := s.m, other.m
 	if len(a) > len(b) {
@@ -176,7 +169,7 @@ func (s Set[T]) IsDisjoint(other Set[T]) bool {
 	return true
 }
 
-// Equal reports whether s and other contain the same elements.
+// Equal 报告 s 和 other 是否包含相同元素。
 func (s Set[T]) Equal(other Set[T]) bool {
 	return len(s.m) == len(other.m) && s.IsSubset(other)
 }

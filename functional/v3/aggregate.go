@@ -5,19 +5,17 @@ import (
 	"slices"
 )
 
-// number is the set of built-in numeric types whose values can be widened to
-// float64. It mirrors the subset of cmp.Ordered that is arithmetic (i.e. it
-// excludes strings). The standard library does not expose a numeric
-// constraint, so we declare one here.
+// number 是可被 widen 到 float64 的内置数值类型集合。它对应 cmp.Ordered
+// 中算术子集(即排除 strings)。标准库未暴露数值 constraint,因此在此声明。
 type number interface {
 	~int | ~int8 | ~int16 | ~int32 | ~int64 |
 		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr |
 		~float32 | ~float64
 }
 
-// --- Min / Max (ordered) ---
+// --- 最小 / 最大(有序) ---
 
-// Min returns the minimum element of s, or (zero, false) if s is empty.
+// Min 返回 s 的最小元素,s 为空时返回 (zero, false)。
 func Min[T cmp.Ordered](s []T) (T, bool) {
 	if len(s) == 0 {
 		var zero T
@@ -32,7 +30,7 @@ func Min[T cmp.Ordered](s []T) (T, bool) {
 	return cur, true
 }
 
-// Max returns the maximum element of s, or (zero, false) if s is empty.
+// Max 返回 s 的最大元素,s 为空时返回 (zero, false)。
 func Max[T cmp.Ordered](s []T) (T, bool) {
 	if len(s) == 0 {
 		var zero T
@@ -47,10 +45,9 @@ func Max[T cmp.Ordered](s []T) (T, bool) {
 	return cur, true
 }
 
-// --- Sum / Avg ---
+// --- 求和 / 均值 ---
 
-// Sum returns the sum of the elements of s. Returns the zero value for an
-// empty slice.
+// Sum 返回 s 各元素之和。空 slice 返回零值。
 func Sum[T cmp.Ordered](s []T) T {
 	var sum T
 	for _, v := range s {
@@ -59,9 +56,8 @@ func Sum[T cmp.Ordered](s []T) T {
 	return sum
 }
 
-// Avg returns the arithmetic mean of s as a float64, and ok=false if s is
-// empty. T must be a built-in numeric type (integer or float); values are
-// widened to float64 for the computation.
+// Avg 以 float64 返回 s 的算术平均,s 为空时 ok=false。T 必须是内置数值
+// 类型(整数或浮点);计算时值会被 widen 到 float64。
 func Avg[T number](s []T) (float64, bool) {
 	if len(s) == 0 {
 		return 0, false
@@ -73,10 +69,10 @@ func Avg[T number](s []T) (float64, bool) {
 	return sum / float64(len(s)), true
 }
 
-// --- Min / Max by key extractor ---
+// --- 按 key 提取器取最小 / 最大 ---
 
-// MinByKey returns the element of s with the smallest key (under key), or
-// (zero, false) if s is empty. Ties are broken by first occurrence.
+// MinByKey 返回 s 中 key(由 key 给出)最小的元素,s 为空时返回
+// (zero, false)。并列时按首次出现者取胜。
 func MinByKey[T any, K cmp.Ordered](s []T, key Key[T, K]) (T, bool) {
 	if len(s) == 0 {
 		var zero T
@@ -94,8 +90,8 @@ func MinByKey[T any, K cmp.Ordered](s []T, key Key[T, K]) (T, bool) {
 	return cur, true
 }
 
-// MaxByKey returns the element of s with the largest key (under key), or
-// (zero, false) if s is empty. Ties are broken by first occurrence.
+// MaxByKey 返回 s 中 key(由 key 给出)最大的元素,s 为空时返回
+// (zero, false)。并列时按首次出现者取胜。
 func MaxByKey[T any, K cmp.Ordered](s []T, key Key[T, K]) (T, bool) {
 	if len(s) == 0 {
 		var zero T
@@ -113,11 +109,10 @@ func MaxByKey[T any, K cmp.Ordered](s []T, key Key[T, K]) (T, bool) {
 	return cur, true
 }
 
-// --- Min / Max by comparator ---
+// --- 按 comparator 取最小 / 最大 ---
 
-// MinBy returns the element of s for which cmp returns the smallest value, or
-// (zero, false) if s is empty. c is a cmp-style comparator
-// (negative when a < b).
+// MinBy 返回 s 中由 cmp 判定为最小的元素,s 为空时返回 (zero, false)。
+// c 是 cmp 风格的 comparator(a < b 时为负)。
 func MinBy[T any](s []T, c By[T]) (T, bool) {
 	if len(s) == 0 {
 		var zero T
@@ -132,8 +127,8 @@ func MinBy[T any](s []T, c By[T]) (T, bool) {
 	return cur, true
 }
 
-// MaxBy returns the element of s for which c reports it as largest, or
-// (zero, false) if s is empty. c is a cmp-style comparator.
+// MaxBy 返回 s 中由 c 判定为最大的元素,s 为空时返回 (zero, false)。
+// c 是 cmp 风格的 comparator。
 func MaxBy[T any](s []T, c By[T]) (T, bool) {
 	if len(s) == 0 {
 		var zero T
@@ -148,13 +143,13 @@ func MaxBy[T any](s []T, c By[T]) (T, bool) {
 	return cur, true
 }
 
-// --- TopK / BottomK by key extractor ---
+// --- 按 key 提取器的 TopK / BottomK ---
 
-// TopK returns the k elements of s with the largest keys, in descending key
-// order. If k >= len(s), all elements are returned, descending.
+// TopK 返回 s 中 key 最大的 k 个元素,按 key 降序排列。
+// 若 k >= len(s),返回全部元素,降序。
 //
-// The key extractor lets you order by a single cmp.Ordered field — e.g.
-// TopK(users, 10, fn.Key(func(u User) int { return u.Score })).
+// key extractor 让你按单个 cmp.Ordered 字段排序——例如
+// TopK(users, 10, fn.Key(func(u User) int { return u.Score }))。
 func TopK[T any, K cmp.Ordered](s []T, k int, key Key[T, K]) []T {
 	if k <= 0 || len(s) == 0 {
 		return nil
@@ -163,24 +158,24 @@ func TopK[T any, K cmp.Ordered](s []T, k int, key Key[T, K]) []T {
 	if k >= n {
 		out := append(make([]T, 0, n), s...)
 		slices.SortFunc(out, func(a, b T) int {
-			// Descending by key.
+			// 按 key 降序。
 			return cmp.Compare(key(b), key(a))
 		})
 		return out
 	}
-	// Selection: keep a min-heap of the k largest seen so far. Evict the root
-	// (smallest of the survivors) when a candidate has a larger key.
+	// 选择:维护一个含目前为止最大 k 个元素的 min-heap。当候选元素 key
+	// 更大时驱逐 root(幸存者中最小的)。
 	root := topKHeap(s, k,
-		func(a, b T) bool { return key(a) < key(b) }, // min-heap by key
+		func(a, b T) bool { return key(a) < key(b) }, // 按 key 的 min-heap
 		func(root, cand T) bool { return key(cand) > key(root) },
 	)
-	// root holds the k survivors in min-heap order; sort to descending.
+	// root 以 min-heap 顺序持有 k 个幸存者;排序为降序。
 	slices.SortFunc(root, func(a, b T) int { return cmp.Compare(key(b), key(a)) })
 	return root
 }
 
-// BottomK returns the k elements of s with the smallest keys, in ascending key
-// order. If k >= len(s), all elements are returned, ascending.
+// BottomK 返回 s 中 key 最小的 k 个元素,按 key 升序排列。
+// 若 k >= len(s),返回全部元素,升序。
 func BottomK[T any, K cmp.Ordered](s []T, k int, key Key[T, K]) []T {
 	if k <= 0 || len(s) == 0 {
 		return nil
@@ -189,25 +184,24 @@ func BottomK[T any, K cmp.Ordered](s []T, k int, key Key[T, K]) []T {
 	if k >= n {
 		out := append(make([]T, 0, n), s...)
 		slices.SortFunc(out, func(a, b T) int {
-			return cmp.Compare(key(a), key(b)) // Ascending by key.
+			return cmp.Compare(key(a), key(b)) // 按 key 升序。
 		})
 		return out
 	}
-	// Selection: keep a max-heap of the k smallest seen so far. Model a
-	// max-heap by inverting the min-heap's comparator.
+	// 选择:维护一个含目前为止最小 k 个元素的 max-heap。通过反转
+	// min-heap 的 comparator 来模拟 max-heap。
 	root := topKHeap(s, k,
-		func(a, b T) bool { return key(a) > key(b) }, // max-heap via reversed key
+		func(a, b T) bool { return key(a) > key(b) }, // 反转 key 得到 max-heap
 		func(root, cand T) bool { return key(cand) < key(root) },
 	)
-	slices.SortFunc(root, func(a, b T) int { return cmp.Compare(key(a), key(b)) }) // ascending
+	slices.SortFunc(root, func(a, b T) int { return cmp.Compare(key(a), key(b)) }) // 升序
 	return root
 }
 
-// --- TopK / BottomK by comparator ---
+// --- 按 comparator 的 TopK / BottomK ---
 
-// TopKBy returns the k largest elements per the cmp-style comparator c, in
-// descending order per c. Use this when ordering cannot be expressed by a
-// single ordered key.
+// TopKBy 按 cmp 风格 comparator c 返回 k 个最大元素,按 c 降序排列。
+// 当排序无法用单个有序 key 表达时使用。
 func TopKBy[T any](s []T, k int, c By[T]) []T {
 	if k <= 0 || len(s) == 0 {
 		return nil
@@ -215,19 +209,18 @@ func TopKBy[T any](s []T, k int, c By[T]) []T {
 	n := len(s)
 	if k >= n {
 		out := append(make([]T, 0, n), s...)
-		slices.SortFunc(out, func(a, b T) int { return c(b, a) }) // descending
+		slices.SortFunc(out, func(a, b T) int { return c(b, a) }) // 降序
 		return out
 	}
 	root := topKHeap(s, k,
-		func(a, b T) bool { return c(a, b) < 0 }, // min-heap: a "less" than b
+		func(a, b T) bool { return c(a, b) < 0 }, // min-heap:a 比 b "更小"
 		func(root, cand T) bool { return c(cand, root) > 0 },
 	)
-	slices.SortFunc(root, func(a, b T) int { return c(b, a) }) // descending
+	slices.SortFunc(root, func(a, b T) int { return c(b, a) }) // 降序
 	return root
 }
 
-// BottomKBy returns the k smallest elements per the cmp-style comparator c,
-// in ascending order per c.
+// BottomKBy 按 cmp 风格 comparator c 返回 k 个最小元素,按 c 升序排列。
 func BottomKBy[T any](s []T, k int, c By[T]) []T {
 	if k <= 0 || len(s) == 0 {
 		return nil
@@ -235,13 +228,13 @@ func BottomKBy[T any](s []T, k int, c By[T]) []T {
 	n := len(s)
 	if k >= n {
 		out := append(make([]T, 0, n), s...)
-		slices.SortFunc(out, c) // ascending
+		slices.SortFunc(out, c) // 升序
 		return out
 	}
 	root := topKHeap(s, k,
-		func(a, b T) bool { return c(a, b) > 0 }, // max-heap via reversed comparator
+		func(a, b T) bool { return c(a, b) > 0 }, // 反转 comparator 得到 max-heap
 		func(root, cand T) bool { return c(cand, root) < 0 },
 	)
-	slices.SortFunc(root, c) // ascending
+	slices.SortFunc(root, c) // 升序
 	return root
 }

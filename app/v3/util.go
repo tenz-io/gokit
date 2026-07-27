@@ -11,17 +11,17 @@ import (
 	"github.com/tenz-io/gokit/logger/v3"
 )
 
-// wait blocks until one of: a signal is received, the app context is done, or
-// the Run goroutine reports on errC. hook runs the graceful cleanup once and
-// is invoked before returning in every branch. The returned ExitCode reflects
-// the cause: ExitRunError on a non-nil errC, ExitOK on a nil errC (clean
-// completion), ExitSignal on an interrupt.
+// wait 阻塞,直到以下之一发生:收到 signal、app context done、或
+// Run goroutine 在 errC 上报告。hook 会执行一次 graceful cleanup,
+// 在每个分支返回之前都会被调用。返回的 ExitCode 反映
+// 原因:非 nil errC 为 ExitRunError、nil errC(干净
+// 完成)为 ExitOK、被中断为 ExitSignal。
 //
-// Unlike v2's WaitSignal, this never calls os.Exit — Run returns the code and
-// the caller decides.
+// 与 v2 的 WaitSignal 不同,它从不调用 os.Exit —— Run 返回 code,由
+// 调用方决定。
 func wait(ctx context.Context, errC <-chan error, hook func()) ExitCode {
-	// SIGINT (Ctrl-C) and SIGTERM (container/k8s shutdown). os.Kill is not
-	// catchable, so it is deliberately omitted.
+	// SIGINT(Ctrl-C)与 SIGTERM(container/k8s shutdown)。os.Kill 不可
+	// 捕获,因此刻意省略。
 	signC := make(chan os.Signal, 1)
 	signal.Notify(signC, syscall.SIGINT, syscall.SIGTERM)
 	defer signal.Stop(signC)
@@ -49,8 +49,8 @@ func wait(ctx context.Context, errC <-chan error, hook func()) ExitCode {
 	}
 }
 
-// PrettyString renders v as a compact JSON string, falling back to %+v. Useful
-// for printing decoded config in verbose mode.
+// PrettyString 将 v 渲染为紧凑的 JSON 字符串,失败时回退到 %+v。适合
+// 在 verbose 模式下打印解码后的 config。
 func PrettyString(v any) string {
 	if v == nil {
 		return "nil"

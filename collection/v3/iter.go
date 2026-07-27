@@ -2,8 +2,7 @@ package collection
 
 import "iter"
 
-// All returns an [iter.Seq] over the stack's elements from bottom (first
-// pushed) to top (last pushed). It is safe to break out of the range early.
+// All 返回一个遍历 stack 元素的 [iter.Seq],顺序从底部(最先压入)到顶部(最后压入)。提前 break 出 range 是安全的。
 //
 //	for v := range s.All() { ... }
 func (s *Stack[T]) All() iter.Seq[T] {
@@ -16,8 +15,7 @@ func (s *Stack[T]) All() iter.Seq[T] {
 	}
 }
 
-// All returns an [iter.Seq] over the queue's elements from front (oldest) to
-// back (newest). It is safe to break out of the range early.
+// All 返回一个遍历 queue 元素的 [iter.Seq],顺序从前端(最旧)到后端(最新)。提前 break 出 range 是安全的。
 func (q *Queue[T]) All() iter.Seq[T] {
 	return func(yield func(T) bool) {
 		n := len(q.buf)
@@ -29,9 +27,7 @@ func (q *Queue[T]) All() iter.Seq[T] {
 	}
 }
 
-// All returns an [iter.Seq] over the heap's elements. The order is the
-// internal heap layout, NOT priority order — to drain in priority order call
-// [Heap.Pop] until empty. It is safe to break out of the range early.
+// All 返回一个遍历 heap 元素的 [iter.Seq]。顺序是内部 heap 布局,而非优先级顺序 —— 若要按优先级顺序排空,请调用 [Heap.Pop] 直到为空。提前 break 出 range 是安全的。
 func (h *Heap[T]) All() iter.Seq[T] {
 	return func(yield func(T) bool) {
 		for _, v := range h.data {
@@ -42,9 +38,7 @@ func (h *Heap[T]) All() iter.Seq[T] {
 	}
 }
 
-// All returns an [iter.Seq] over the set's elements. The order is
-// non-deterministic (map iteration order). It is safe to break out of the
-// range early.
+// All 返回一个遍历 set 元素的 [iter.Seq]。顺序不确定(map 迭代顺序)。提前 break 出 range 是安全的。
 func (s Set[T]) All() iter.Seq[T] {
 	return func(yield func(T) bool) {
 		for k := range s.m {

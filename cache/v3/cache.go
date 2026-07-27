@@ -1,26 +1,20 @@
-// Package cache provides purely in-process caching primitives: an unbounded
-// map cache and a capacity-bounded LRU cache, both with optional per-entry
-// TTL expiration. There is no network backend, no Redis, no Lua — everything
-// lives in the local process.
+// Package cache 提供纯进程内的 cache 原语:无界 map cache 和基于 capacity
+// 限定的 LRU cache,二者均支持可选的每条目 TTL 过期。没有网络 backend,
+// 没有 Redis,没有 Lua —— 一切都存活于本地进程内。
 //
-// V3 is a clean rewrite of cache/v2 with the network surface removed and the
-// concurrency contract fixed:
-//   - the [Manager] interface keeps Get/Set/SetNx/GetBlob/SetBlob/Del/Expire
-//     plus a Close for lifecycle management, but drops Eval (Lua scripts need
-//     a remote store) and drops the context.Context argument (a pure-memory
-//     cache cannot honor cancellation, so carrying it was misleading);
-//   - [NewLocal] returns a map-backed cache with a background sweep goroutine
-//     that reaps expired keys; Close stops it and waits for it to exit (v2
-//     leaked the goroutine);
-//   - [NewLRU] returns an LRU-bounded cache backed by an in-package
-//     concurrency-safe generic LRU; eviction callbacks run outside the lock,
-//     so a callback may safely re-enter the cache;
-//   - there is no default TTL: every Set/SetNx/Expire takes an explicit
-//     duration, where a non-positive value means "never expires" and a
-//     positive value sets an absolute deadline. Both backends honor the
-//     same contract, so swapping them never changes data lifetime;
-//   - an injectable clock ([WithNow]) lets tests drive expiration without
-//     real sleeps.
+// V3 是对 cache/v2 的全新重写,移除了网络层并修正了并发契约:
+//   - [Manager] interface 保留了 Get/Set/SetNx/GetBlob/SetBlob/Del/Expire,
+//     并新增 Close 用于生命周期管理;但移除了 Eval(Lua 脚本需要远端存储),
+//     并去掉了 context.Context 参数(纯内存 cache 无法响应取消,继续携带它是误导性的);
+//   - [NewLocal] 返回一个基于 map 的 cache,带有一个后台清扫 goroutine
+//     定期回收过期 key;Close 会停止它并等待其退出(v2 存在 goroutine 泄漏);
+//   - [NewLRU] 返回一个基于 LRU 容量限定的 cache,底层为包内自带的
+//     并发安全泛型 LRU;eviction 回调在锁外执行,
+//     因此回调可以安全地重入 cache;
+//   - 不设默认 TTL:每个 Set/SetNx/Expire 都接受显式 duration,
+//     非正值表示"永不过期",正值则设置一个绝对 deadline。两个 backend 遵循
+//     相同的契约,因此互换它们永远不会改变数据生命周期;
+//   - 可注入的 clock([WithNow])让测试无需真实 sleep 即可驱动过期。
 package cache
 
 import (
@@ -28,62 +22,57 @@ import (
 	"time"
 )
 
-// Cache operation errors.
+// Cache 操作错误。
 var (
-	// ErrNotFound is returned when a key is absent or has expired.
+	// ErrNotFound 在 key 缺失或已过期时返回。
 	ErrNotFound = errors.New("cache: key not found")
-	// ErrInactive is returned when the cache was never initialized (nil
-	// receiver) or has been closed.
+	// ErrInactive 在 cache 从未初始化(nil receiver)或已被关闭时返回。
 	ErrInactive = errors.New("cache: inactive")
 )
 
-// Manager is the unified cache interface across both backends. Business code
-// can swap between [NewLocal] and [NewLRU] without changing call sites; the
-// two implementations honor the same expiration contract.
+// Manager 是跨两种 backend 的统一 cache interface。业务代码
+// 可在 [NewLocal] 与 [NewLRU] 之间互换而无需改动调用点;
+// 两个实现遵循相同的过期契约。
 //
-// Expiration: every Set/SetNx/Expire takes an explicit expire duration.
-// A non-positive expire means the key never expires; a positive expire sets
-// an absolute deadline relative to now. This holds for both backends — there
-// is no default TTL to surprise a caller who swaps backends.
+// Expiration:每个 Set/SetNx/Expire 都接受显式的 expire duration。
+// 非正 expire 表示 key 永不过期;正 expire 则设置一个相对于 now 的绝对
+// deadline。这对两个 backend 都成立 —— 不存在会让切换 backend 的调用方
+// 感到意外的默认 TTL。
 //
-// Expiry of a read key is lazy: Get/GetBlob return ErrNotFound for an expired
-// key and remove it. An Expire call on an expired key is a no-op that returns
-// ErrNotFound — Expire cannot resurrect a key that has logically expired.
+// 读到的 key 的过期是 lazy 的:Get/GetBlob 对过期 key 返回 ErrNotFound 并
+// 将其删除。对已过期 key 调用 Expire 是一个 no-op,并返回 ErrNotFound ——
+// Expire 无法复活一个在逻辑上已过期的 key。
 type Manager interface {
-	// Get returns the raw string value for key, or ErrNotFound when the key is
-	// absent or expired. An expired key is removed lazily on read.
+	// Get 返回 key 对应的原始字符串值;当 key 缺失或已过期时返回 ErrNotFound。
+	// 已过期的 key 在读取时被 lazy 删除。
 	Get(key string) (raw string, err error)
-	// Set stores raw under key with the given expiration. A non-positive
-	// expire means the key never expires.
+	// Set 将 raw 存入 key,并附带指定的过期时间。非正
+	// expire 表示该 key 永不过期。
 	Set(key string, raw string, expire time.Duration) (err error)
-	// SetNx stores raw under key only when the key does not exist (or has
-	// expired); it returns existing=true when the key was already present and
-	// unexpired. The existence check and the write are atomic with respect to
-	// other SetNx/Set calls. A non-positive expire means the key never expires.
+	// SetNx 仅当 key 不存在(或已过期)时将 raw 存入 key;
+	// 当 key 已存在且未过期时返回 existing=true。存在性检查与写入
+	// 相对于其他 SetNx/Set 调用是原子的。非正 expire 表示该 key 永不过期。
 	SetNx(key string, raw string, expire time.Duration) (existing bool, err error)
-	// GetBlob fetches the JSON-encoded value for key and decodes it into
-	// output (which must be a pointer). Returns ErrNotFound on miss or expiry.
-	// JSON decoding happens outside the cache's lock.
+	// GetBlob 取回 key 对应的 JSON 编码值并解码到 output(必须为指针)。
+	// 缺失或过期时返回 ErrNotFound。JSON 解码发生在 cache 锁之外。
 	GetBlob(key string, output any) (err error)
-	// SetBlob JSON-encodes val and stores it under key with the given
-	// expiration. A non-positive expire means the key never expires.
+	// SetBlob 对 val 进行 JSON 编码并存入 key,附带指定的
+	// 过期时间。非正 expire 表示该 key 永不过期。
 	SetBlob(key string, val any, expire time.Duration) (err error)
-	// Del removes key. It is a no-op when the key is absent.
+	// Del 删除 key。当 key 缺失时为 no-op。
 	Del(key string) (err error)
-	// Expire resets key's expiration. A non-positive expire makes the key
-	// never expire. Returns ErrNotFound when the key is absent or has already
-	// expired (it will not resurrect an expired key).
+	// Expire 重置 key 的过期时间。非正 expire 使该 key 永不过期。
+	// 当 key 缺失或已过期时返回 ErrNotFound(它不会复活已过期的 key)。
 	Expire(key string, expire time.Duration) (err error)
-	// Close releases any background resources (e.g. the sweep goroutine in
-	// [NewLocal]). It is idempotent and safe to call multiple times; backends
-	// without resources (the LRU) treat it as a no-op. After Close the cache
-	// remains usable for reads/writes; only background reaping stops, and the
-	// sweep goroutine is guaranteed to have exited when Close returns.
+	// Close 释放任何后台资源(例如 [NewLocal] 中的清扫 goroutine)。
+	// 它是幂等的,可安全多次调用;没有资源的 backend(LRU)将其视为 no-op。
+	// Close 之后 cache 仍可用于读/写;仅后台回收停止,
+	// 且 Close 返回时清扫 goroutine 保证已退出。
 	Close() error
 }
 
-// Option configures a cache at construction time. It is shared by [NewLocal]
-// and [NewLRU]; irrelevant options are ignored by a given backend.
+// Option 在构造期配置一个 cache。它由 [NewLocal] 与 [NewLRU] 共享;
+// 与某 backend 无关的 option 会被该 backend 忽略。
 type Option func(*options)
 
 type options struct {
@@ -98,9 +87,8 @@ func defaultOptions() options {
 	}
 }
 
-// WithNow injects the clock used for all expiration decisions. Tests pass a
-// controllable time source so expiration can be advanced without real sleeps;
-// production leaves it as time.Now.
+// WithNow 注入用于所有过期判断的 clock。测试传入可控时间源,
+// 从而无需真实 sleep 即可推进过期;生产环境保持为 time.Now。
 func WithNow(now func() time.Time) Option {
 	return func(o *options) {
 		if now != nil {
@@ -109,10 +97,9 @@ func WithNow(now func() time.Time) Option {
 	}
 }
 
-// WithEvictInterval sets how often the local cache's background sweep runs.
-// It only affects [NewLocal]; [NewLRU] expires lazily on access. A
-// non-positive value disables the background sweep entirely (expiration is
-// still enforced lazily on read).
+// WithEvictInterval 设置 local cache 后台清扫的运行间隔。
+// 它仅作用于 [NewLocal];[NewLRU] 在访问时 lazy 过期。非正值
+// 完全禁用后台清扫(过期仍在读取时 lazy 生效)。
 func WithEvictInterval(d time.Duration) Option {
 	return func(o *options) {
 		o.evictInterval = d

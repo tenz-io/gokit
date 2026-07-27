@@ -1,9 +1,9 @@
 package fn
 
-// --- Deduplicate ---
+// --- 去重 ---
 
-// Deduplicate returns a new slice with duplicates removed, preserving the
-// order of first occurrence. The input slice is not modified.
+// Deduplicate 返回一个去除重复元素后的新 slice,保留首次出现顺序。
+// 输入 slice 不会被修改。
 func Deduplicate[T comparable](s []T) []T {
 	if len(s) == 0 {
 		return nil
@@ -20,9 +20,8 @@ func Deduplicate[T comparable](s []T) []T {
 	return out
 }
 
-// DeduplicateBy returns a new slice with elements whose key (under keyFn) is
-// duplicated removed, preserving the order of first occurrence. The input
-// slice is not modified.
+// DeduplicateBy 返回一个新 slice,其 key(由 keyFn 给出)重复的元素被去除,
+// 保留首次出现顺序。输入 slice 不会被修改。
 func DeduplicateBy[T any, K comparable](s []T, keyFn func(T) K) []T {
 	if len(s) == 0 {
 		return nil
@@ -40,9 +39,9 @@ func DeduplicateBy[T any, K comparable](s []T, keyFn func(T) K) []T {
 	return out
 }
 
-// DeduplicateInPlace removes duplicates from s in place, preserving first
-// occurrence, and returns the (shortened) prefix s[:k]. It reuses s's backing
-// array. The dropped tail is zeroed to avoid retaining live references.
+// DeduplicateInPlace 原地从 s 中去除重复元素,保留首次出现顺序,
+// 并返回(缩短后的)前缀 s[:k]。它复用 s 的 backing array。被丢弃的尾部
+// 会被清零以避免保留活跃引用。
 func DeduplicateInPlace[T comparable](s []T) []T {
 	if len(s) == 0 {
 		return s[:0]
@@ -61,7 +60,7 @@ func DeduplicateInPlace[T comparable](s []T) []T {
 	return s[:k]
 }
 
-// DeduplicateByInPlace is the in-place variant of DeduplicateBy.
+// DeduplicateByInPlace 是 DeduplicateBy 的 in-place 变体。
 func DeduplicateByInPlace[T any, K comparable](s []T, keyFn func(T) K) []T {
 	if len(s) == 0 {
 		return s[:0]
@@ -81,23 +80,22 @@ func DeduplicateByInPlace[T any, K comparable](s []T, keyFn func(T) K) []T {
 	return s[:k]
 }
 
-// Unique and UniqueBy are aliases for Deduplicate and DeduplicateBy for
-// callers that prefer the more common name.
+// Unique 和 UniqueBy 是 Deduplicate 与 DeduplicateBy 的别名,供偏好更常见
+// 命名的调用方使用。
 //
-// Deprecated alias: prefer Deduplicate for clarity; Unique is kept as a
-// convenience for readers coming from other languages' stdlibs.
+// Deprecated alias:为清晰起见优先使用 Deduplicate;保留 Unique 是为了
+// 方便来自其他语言标准库的读者。
 func Unique[T comparable](s []T) []T { return Deduplicate(s) }
 
-// UniqueBy is the alias for DeduplicateBy.
+// UniqueBy 是 DeduplicateBy 的别名。
 func UniqueBy[T any, K comparable](s []T, keyFn func(T) K) []T {
 	return DeduplicateBy(s, keyFn)
 }
 
-// --- GroupBy / Partition ---
+// --- 分组 / 划分 ---
 
-// GroupBy partitions s into a map keyed by keyFn(element). Within each group,
-// elements keep their original relative order. Returns an empty (non-nil) map
-// for an empty input.
+// GroupBy 将 s 按 keyFn(element) 作为 key 分区到一个 map 中。在每个 group 内,
+// 元素保留原有的相对顺序。输入为空时返回空(非 nil)map。
 func GroupBy[T any, K comparable](s []T, keyFn func(T) K) map[K][]T {
 	groups := make(map[K][]T, len(s))
 	for _, v := range s {
@@ -107,9 +105,8 @@ func GroupBy[T any, K comparable](s []T, keyFn func(T) K) map[K][]T {
 	return groups
 }
 
-// GroupByCount returns a map from key to the number of elements with that key.
-// It is a specialization of GroupBy for counting workloads, avoiding slice
-// allocation per group.
+// GroupByCount 返回一个从 key 到该 key 元素数量的 map。它是 GroupBy 针对
+// 计数负载的特化版本,避免每个 group 分配 slice。
 func GroupByCount[T any, K comparable](s []T, keyFn func(T) K) map[K]int {
 	groups := make(map[K]int, len(s))
 	for _, v := range s {
@@ -118,8 +115,8 @@ func GroupByCount[T any, K comparable](s []T, keyFn func(T) K) map[K]int {
 	return groups
 }
 
-// Partition splits s into two slices: elements for which pred returns true
-// (matched) and the rest (unmatched), both preserving input order.
+// Partition 将 s 拆分为两个 slice:pred 返回 true 的元素(matched)和
+// 其余元素(unmatched),两者都保留输入顺序。
 func Partition[T any](s []T, pred func(T) bool) (matched, unmatched []T) {
 	matched = make([]T, 0, (len(s)+1)/2)
 	unmatched = make([]T, 0, (len(s)+1)/2)
@@ -133,15 +130,13 @@ func Partition[T any](s []T, pred func(T) bool) (matched, unmatched []T) {
 	return matched, unmatched
 }
 
-// PartitionInPlace partitions s in place so that all elements for which pred
-// returns true come first, followed by the rest, and returns the count of
-// matched elements (the index where the unmatched tail begins). It is a
-// stable partition: relative order is preserved within each side.
+// PartitionInPlace 原地对 s 分区,使所有 pred 返回 true 的元素排在前面,
+// 其余元素紧随其后,并返回匹配元素的个数(unmatched 尾部开始的 index)。
+// 这是一个 stable partition:两侧各自保留相对顺序。
 //
-// The matched prefix s[:k] is compacted in place; the unmatched tail s[k:]
-// holds the remaining elements in original order. A small auxiliary buffer is
-// used only for the unmatched half so the matched-prefix compaction can run in
-// a single forward pass; both halves end up in s's backing array.
+// matched 前缀 s[:k] 原地压缩;unmatched 尾部 s[k:] 按原始顺序持有其余元素。
+// 仅对 unmatched 半段使用一个小的辅助 buffer,使 matched 前缀压缩能在一次
+// 正向扫描中完成;两半最终都落在 s 的 backing array 中。
 func PartitionInPlace[T any](s []T, pred func(T) bool) int {
 	n := len(s)
 	unmatched := make([]T, 0, n)

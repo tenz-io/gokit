@@ -1,9 +1,9 @@
-// Package annotation is a struct-tag-driven toolkit for Go structs:
-// declarative defaults, a pluggable validator, and a cached field plan that
-// HTTP layers (or any transport) can reuse for binding.
+// Package annotation 是一个由 struct tag 驱动的 Go struct 工具包:
+// 声明式 default、可插拔的 validator,以及一个缓存 field plan,供 HTTP 层
+// (或任意 transport)复用以进行绑定。
 //
-// One walk of a struct produces a cached Plan; Validate, ApplyDefaults and
-// external binders all consume that same plan instead of re-reflecting.
+// 对 struct 的一次遍历产生一个缓存的 Plan;Validate、ApplyDefaults 和外部
+// binder 都消费同一 plan,而非重复 reflect。
 package annotation
 
 import (
@@ -11,20 +11,20 @@ import (
 	"strings"
 )
 
-// FieldError is a single validation failure on a struct field.
+// FieldError 是 struct field 上的单个校验失败。
 type FieldError struct {
-	// Field is the dotted path to the field, e.g. "Config.Addr.Street".
+	// Field 是指向该 field 的点分路径,例如 "Config.Addr.Street"。
 	Field string
-	// Rule is the name of the rule that failed, e.g. "required", "gt".
-	// Empty for ad-hoc errors such as bind failures.
+	// Rule 是失败规则的 name,例如 "required"、"gt"。
+	// 对于 bind 失败等临时错误,为空。
 	Rule string
-	// Param is the raw parameter of the rule, e.g. "0", "^a-z+$".
+	// Param 是规则的原始 param,例如 "0"、"^a-z+$"。
 	Param string
-	// Msg is a human-readable explanation.
+	// Msg 是人类可读的说明。
 	Msg string
 }
 
-// Error implements error.
+// Error 实现 error。
 func (e FieldError) Error() string {
 	switch {
 	case e.Msg == "":
@@ -36,15 +36,14 @@ func (e FieldError) Error() string {
 	}
 }
 
-// ValidationErrors is the ordered collection of every failure found while
-// validating a struct. Unlike returning on the first error, it accumulates
-// all problems so callers can report them at once.
+// ValidationErrors 是校验 struct 时发现的每个失败的有序集合。与在首个错误
+// 处返回不同,它累积所有问题,使调用方可一次性上报。
 type ValidationErrors []FieldError
 
-// Has reports whether any errors were collected.
+// Has 报告是否收集到了任何错误。
 func (v ValidationErrors) Has() bool { return len(v) > 0 }
 
-// Error implements error.
+// Error 实现 error。
 func (v ValidationErrors) Error() string {
 	if len(v) == 0 {
 		return ""
@@ -59,19 +58,18 @@ func (v ValidationErrors) Error() string {
 	return sb.String()
 }
 
-// NewFieldError builds a FieldError.
+// NewFieldError 构建一个 FieldError。
 func NewFieldError(field, rule, param, msg string) FieldError {
 	return FieldError{Field: field, Rule: rule, Param: param, Msg: msg}
 }
 
-// Err is a convenience constructor returning a single-error ValidationErrors,
-// useful for ad-hoc failures (e.g. a malformed request body) outside the rule
-// engine. The rule may be empty.
+// Err 是一个便捷构造函数,返回单错误的 ValidationErrors,适用于规则引擎之外
+// 的临时失败(例如格式错误的请求体)。rule 可为空。
 func Err(field, rule, msg string) ValidationErrors {
 	return ValidationErrors{{Field: field, Rule: rule, Msg: msg}}
 }
 
-// Errf is like Err with a formatted message.
+// Errf 类似于 Err,但使用格式化消息。
 func Errf(field, rule, format string, args ...any) ValidationErrors {
 	return ValidationErrors{{Field: field, Rule: rule, Msg: fmt.Sprintf(format, args...)}}
 }

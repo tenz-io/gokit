@@ -13,8 +13,8 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-// TrafficTyp distinguishes the direction of a traffic record: a request
-// received from a caller (recv) or a request sent to a downstream (send).
+// TrafficTyp 区分 traffic 记录的方向:从调用方接收到的请求(recv)
+// 或发往下游的请求(send)。
 type TrafficTyp string
 
 const (
@@ -22,13 +22,13 @@ const (
 	TrafficTypSend TrafficTyp = "send"
 )
 
-// TrafficRec records a single request/response span.
+// TrafficRec 记录单个请求/响应 span。
 //
-// Start one with Entry.StartTraffic(cmd); complete it with End or
-// EndWithError. All methods are nil-safe: a nil *TrafficRec (returned when
-// traffic logging is disabled) makes End/EndWithError no-ops, so callers can
-// write `rec := logger.StartTraffic(cmd); defer func(){ rec.End(resp, code) }()`
-// without guarding against nil.
+// 通过 Entry.StartTraffic(cmd) 开启一个;用 End 或 EndWithError 完成它。
+// 所有方法都是 nil 安全的:当 traffic 日志被禁用时返回的 nil *TrafficRec
+// 会让 End/EndWithError 成为 no-op,因此调用方可以直接写
+// `rec := logger.StartTraffic(cmd); defer func(){ rec.End(resp, code) }()`
+// 而无需做 nil 守卫。
 type TrafficRec struct {
 	mu        sync.Mutex
 	logger    *zap.SugaredLogger
@@ -49,8 +49,8 @@ func startTrafficRec(logger *zap.SugaredLogger, cmd string, trimmer *OutputTrimm
 	}
 }
 
-// WithTyp sets the direction of the traffic record. Returns the receiver for
-// chaining. Defaults to recv.
+// WithTyp 设置 traffic 记录的方向。返回 receiver 以便链式调用。
+// 默认为 recv。
 func (tr *TrafficRec) WithTyp(t TrafficTyp) *TrafficRec {
 	if tr == nil {
 		return tr
@@ -64,19 +64,18 @@ func (tr *TrafficRec) WithTyp(t TrafficTyp) *TrafficRec {
 	return tr
 }
 
-// End completes the traffic span, recording the response body, a status code,
-// and any extra structured fields. Only the first End/EndWithError call writes
-// a record; later calls are no-ops.
+// End 完成该 traffic span,记录响应体、状态码以及任意额外的结构化
+// field。仅第一次 End/EndWithError 调用会写入记录;后续调用为 no-op。
 //
-//	resp   any     the response payload to log (may be nil)
-//	code   string  a status code (e.g. "200", "0", "error")
-//	fields ...any  extra key-value pairs appended to the record
+//	resp   any     要记录的响应负载(可为 nil)
+//	code   string  状态码(例如 "200"、"0"、"error")
+//	fields ...any  追加到记录中的额外键值对
 func (tr *TrafficRec) End(resp any, code string, fields ...any) {
 	tr.endWith(resp, code, "", fields...)
 }
 
-// EndWithError completes the traffic span with an error: code is set to
-// "error" and msg to the error's message.
+// EndWithError 以一个错误完成该 traffic span:code 被置为
+// "error",msg 被置为该错误的消息。
 func (tr *TrafficRec) EndWithError(err error, fields ...any) {
 	msg := ""
 	if err != nil {
@@ -124,9 +123,8 @@ func (tr *TrafficRec) endWith(resp any, code, msg string, fields ...any) {
 	tr.logger.Infow(logMsg, allFields...)
 }
 
-// newTrafficCore builds the dedicated zap instance that writes traffic.log.
-// It is intentionally separate from the main core so traffic records never
-// mix into the business log files.
+// newTrafficCore 构建写入 traffic.log 的专用 zap 实例。
+// 它刻意与主 core 分离,以免 traffic 记录混入业务日志文件。
 func newTrafficCore(cfg Config) *zap.SugaredLogger {
 	trafficDir := cfg.TrafficPath
 	if trafficDir == "" {
@@ -144,9 +142,9 @@ func newTrafficCore(cfg Config) *zap.SugaredLogger {
 	encCfg := encoderConfig()
 	encCfg.LevelKey = ""
 	encCfg.CallerKey = ""
-	// Traffic records already have a structured "msg" field for the error
-	// detail. Use a different key for the pipe-delimited human summary so JSON
-	// output never contains duplicate keys.
+	// traffic 记录已有一个用于错误详情的结构化 "msg" field。此处用
+	// 不同的 key 来承载以竖线分隔的人类可读摘要,使 JSON 输出永远不会
+	// 出现重复 key。
 	encCfg.MessageKey = "summary"
 	var enc zapcore.Encoder
 	if cfg.Encoding == JSONEncoding {

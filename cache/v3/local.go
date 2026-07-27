@@ -6,47 +6,44 @@ import (
 	"time"
 )
 
-// item is a single local-cache entry. raw is the stored bytes; expireAt is
-// the absolute deadline, with the zero value meaning "never expires". A
-// time.Time (not a unix-second int) keeps sub-second TTLs accurate.
+// item 是单个 local-cache 条目。raw 是存储的 bytes;expireAt
+// 是绝对 deadline,零值表示"永不过期"。使用 time.Time(而非 unix 秒整数)
+// 以保持亚秒级 TTL 的精度。
 type item struct {
 	raw      []byte
 	expireAt time.Time
 }
 
-// localCache is a process-local map cache with optional per-entry TTL and a
-// background sweep goroutine that reaps expired keys so memory does not grow
-// unbounded when reads are sparse.
+// localCache 是一个进程本地的 map cache,支持可选的每条目 TTL,
+// 并带有一个后台清扫 goroutine,定期回收过期 key,避免在读稀疏时内存无限增长。
 //
-// It implements [Manager]. Construct with [NewLocal].
+// 它实现了 [Manager]。通过 [NewLocal] 构造。
 //
-// Concurrency: every mutation and read is guarded by an RWMutex. Lazy expiry
-// on read is *synchronous and conditional*: a Get that finds an expired key
-// drops the read lock, takes the write lock, re-checks that the same item is
-// still present and still expired, and only then deletes it. This avoids the
-// race where an async delete removes a value just written by a concurrent
-// Set to the same key. GetBlob additionally copies the raw bytes under the
-// lock and decodes JSON after unlocking, so a slow or reentrant Unmarshal
-// cannot block writers or deadlock.
+// Concurrency:每次变更与读取都由 RWMutex 保护。读取时的 lazy 过期
+// 是*同步且带条件的*:一个发现已过期 key 的 Get 会释放读锁,
+// 获取写锁,重新确认同一 item 仍然存在且仍过期,然后才删除它。
+// 这避免了如下竞争:异步删除恰好把并发 Set 刚写入同 key 的值删掉。
+// GetBlob 额外在锁内复制原始 bytes,解锁后再解码 JSON,
+// 因此一个缓慢或重入的 Unmarshal 不会阻塞写者或死锁。
 type localCache struct {
 	m       map[string]*item
 	nowFunc func() time.Time
 	lock    sync.RWMutex
 
-	// sweepWg tracks the background sweep goroutine so Close can wait for it
-	// to exit. stopCh, when non-nil, is closed to signal the sweep to stop.
+	// sweepWg 跟踪后台清扫 goroutine,以便 Close 能等待其退出。
+	// stopCh 在非 nil 时被关闭以通知清扫停止。
 	stopCh  chan struct{}
 	sweepWg sync.WaitGroup
 	startMu sync.Mutex
 	started bool
 }
 
-// NewLocal creates a process-local map cache. By default it starts a
-// background goroutine that sweeps expired keys every 5 minutes; pass
-// [WithEvictInterval](0) to disable it (expiration is still enforced lazily
-// on read). The returned cache must be Close'd when done to stop the sweep.
+// NewLocal 创建一个进程本地的 map cache。默认情况下它会启动一个后台
+// goroutine,每 5 分钟清扫一次过期 key;传入
+// [WithEvictInterval](0) 可禁用它(过期仍在读取时 lazy 生效)。
+// 返回的 cache 在使用完毕后必须 Close 以停止清扫。
 //
-// Options: [WithNow] (injectable clock), [WithEvictInterval].
+// Options:[WithNow](可注入 clock),[WithEvictInterval]。
 func NewLocal(opts ...Option) Manager {
 	o := defaultOptions()
 	for _, opt := range opts {
@@ -60,9 +57,9 @@ func NewLocal(opts ...Option) Manager {
 	return lc
 }
 
-// Close stops the background sweep goroutine and blocks until it has exited.
-// It is safe to call multiple times and on a cache whose sweep was disabled.
-// The cache contents remain usable after Close; only the reaping loop stops.
+// Close 停止后台清扫 goroutine 并阻塞,直到它已退出。
+// 可多次调用,也可对一个禁用了清扫的 cache 调用,均安全。
+// Close 之后 cache 内容仍可用;仅回收循环停止。
 func (lc *localCache) Close() error {
 	if lc == nil {
 		return nil
@@ -71,15 +68,15 @@ func (lc *localCache) Close() error {
 	if lc.started && lc.stopCh != nil {
 		select {
 		case <-lc.stopCh:
-			// already closed
+			// 已关闭
 		default:
 			close(lc.stopCh)
 		}
 		lc.started = false
 	}
 	lc.startMu.Unlock()
-	// Wait outside startMu so the sweep goroutine (which does not touch
-	// startMu on exit) can actually terminate.
+	// 在 startMu 外等待,这样清扫 goroutine(它在退出时不触碰
+	// startMu)才能真正终止。
 	lc.sweepWg.Wait()
 	return nil
 }
@@ -88,8 +85,8 @@ func (lc *localCache) active() bool {
 	return lc != nil && lc.m != nil
 }
 
-// startEvict launches the background sweep at the given interval. A
-// non-positive interval disables sweeping.
+// startEvict 按指定间隔启动后台清扫。非正间隔
+// 会禁用清扫。
 func (lc *localCache) startEvict(interval time.Duration) {
 	if !lc.active() || interval <= 0 {
 		return
@@ -119,7 +116,7 @@ func (lc *localCache) evictLoop(interval time.Duration) {
 	}
 }
 
-// evict removes all expired entries under a write lock.
+// evict 在写锁下删除所有过期条目。
 func (lc *localCache) evict() {
 	if !lc.active() {
 		return
@@ -135,8 +132,8 @@ func (lc *localCache) evict() {
 	}
 }
 
-// expireAt returns the absolute deadline for a new entry. A non-positive
-// duration means "never expires" (the zero time.Time).
+// expireAt 返回新条目的绝对 deadline。非正 duration
+// 表示"永不过期"(零值 time.Time)。
 func (lc *localCache) expireAt(expire time.Duration) time.Time {
 	if expire <= 0 {
 		return time.Time{}
@@ -144,8 +141,8 @@ func (lc *localCache) expireAt(expire time.Duration) time.Time {
 	return lc.nowFunc().Add(expire)
 }
 
-// expired reports whether it is past the entry's deadline. A zero expireAt
-// means the entry never expires.
+// expired 判断是否已超过条目的 deadline。零值 expireAt
+// 表示该条目永不过期。
 func (lc *localCache) expired(it *item) bool {
 	if it.expireAt.IsZero() {
 		return false
@@ -153,22 +150,20 @@ func (lc *localCache) expired(it *item) bool {
 	return !lc.nowFunc().Before(it.expireAt)
 }
 
-// deleteIfExpired removes key only when the cache still holds the exact item
-// (by pointer) and that item is still expired. The caller has just observed
-// the item under a read lock; re-confirming under the write lock closes the
-// window in which a concurrent Set could have replaced the value — if it
-// did, we leave the new value alone. Always called with the read lock
-// already released.
+// deleteIfExpired 仅当 cache 仍持有完全相同的 item(按指针比较)
+// 且该 item 仍过期时才删除 key。调用方刚在读锁下观察到该 item;
+// 在写锁下再次确认可关闭如下时间窗口:并发的 Set 可能已替换了该值 ——
+// 若确实如此,我们不动新值。调用时读锁必须已释放。
 func (lc *localCache) deleteIfExpired(key string, stale *item) {
 	lc.lock.Lock()
 	defer lc.lock.Unlock()
 	cur, ok := lc.m[key]
 	if !ok || cur != stale {
-		// Replaced or removed concurrently — do not touch the new value.
+		// 已被并发替换或删除 —— 不动新值。
 		return
 	}
 	if !lc.expired(cur) {
-		// Time rolled back or was re-Expire'd to a live deadline.
+		// 时间被回拨或被重新 Expire 为有效 deadline。
 		return
 	}
 	delete(lc.m, key)
@@ -214,7 +209,7 @@ func (lc *localCache) SetNx(key string, raw string, expire time.Duration) (exist
 	defer lc.lock.Unlock()
 
 	if it, ok := lc.m[key]; ok && it != nil {
-		// Treat an expired key as absent so SetNx writes through.
+		// 将已过期 key 视作缺失,以便 SetNx 写入。
 		if !lc.expired(it) {
 			return true, nil
 		}
@@ -235,8 +230,8 @@ func (lc *localCache) GetBlob(key string, output any) error {
 		return ErrNotFound
 	}
 	expired := lc.expired(it)
-	// Copy the raw bytes under the lock; decode after unlocking so a slow or
-	// reentrant Unmarshal cannot block writers or deadlock.
+	// 在锁内复制原始 bytes;解锁后再解码,这样缓慢或重入的
+	// Unmarshal 不会阻塞写者或死锁。
 	raw := make([]byte, len(it.raw))
 	copy(raw, it.raw)
 	lc.lock.RUnlock()
@@ -285,7 +280,7 @@ func (lc *localCache) Expire(key string, expire time.Duration) error {
 	if !ok || it == nil {
 		return ErrNotFound
 	}
-	// Do not resurrect an expired key.
+	// 不复活已过期的 key。
 	if lc.expired(it) {
 		return ErrNotFound
 	}

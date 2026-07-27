@@ -6,12 +6,12 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 )
 
-// encodeBlob serializes val for storage. It uses MessagePack: compact
-// binary, no repeated field names, and lighter allocations than JSON —
-// noticeably smaller on the wire and in the map for typical structs.
+// encodeBlob 序列化 val 以便存储。它使用 MessagePack:紧凑的
+// 二进制,无重复字段名,内存分配比 JSON 更少 ——
+// 在网络传输与 map 中,对典型 struct 都明显更小。
 //
-// The codec is kept behind these helpers so a future pluggable Codec option
-// can swap it without touching the backends.
+// codec 被封装在这些 helper 之后,以便未来可插拔的 Codec option
+// 能在不改动 backend 的情况下替换它。
 func encodeBlob(val any) ([]byte, error) {
 	bs, err := msgpack.Marshal(val)
 	if err != nil {
@@ -20,8 +20,8 @@ func encodeBlob(val any) ([]byte, error) {
 	return bs, nil
 }
 
-// decodeBlob deserializes data (produced by encodeBlob) into output, which
-// must be a pointer.
+// decodeBlob 将(由 encodeBlob 产生的)data 反序列化到 output,
+// output 必须为指针。
 func decodeBlob(data []byte, output any) error {
 	if err := msgpack.Unmarshal(data, output); err != nil {
 		return fmt.Errorf("cache: decode error: %w", err)

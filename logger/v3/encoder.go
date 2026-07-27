@@ -6,15 +6,14 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// encodeTime stamps each entry with an RFC3339-ish, ms-precision timestamp
-// that carries the local offset, e.g. 2006-01-02T15:04:05.000+08:00.
+// encodeTime 为每条 entry 打上一个 RFC3339 风格、毫秒精度、带本地时区
+// 偏移的时间戳,例如 2006-01-02T15:04:05.000+08:00。
 func encodeTime(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 	enc.AppendString(t.Format("2006-01-02T15:04:05.000Z0700"))
 }
 
-// encoderConfig returns the shared field layout for both console and JSON
-// encoders. Both encoders use the same keys, so a switch from console to
-// JSON only changes the wire format, not the field names.
+// encoderConfig 返回 console 与 JSON encoder 共用的字段布局。两种 encoder
+// 使用相同的 key,因此从 console 切换到 JSON 只改变传输格式,字段名不变。
 func encoderConfig() zapcore.EncoderConfig {
 	return zapcore.EncoderConfig{
 		TimeKey:          "@t",
@@ -29,7 +28,7 @@ func encoderConfig() zapcore.EncoderConfig {
 	}
 }
 
-// newEncoder returns a console or JSON encoder based on enc.
+// newEncoder 根据 enc 返回 console 或 JSON encoder。
 func newEncoder(enc Encoding) zapcore.Encoder {
 	cfg := encoderConfig()
 	if enc == JSONEncoding {

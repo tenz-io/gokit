@@ -15,7 +15,7 @@ import (
 
 var timeType = reflect.TypeOf(time.Time{})
 
-// Register the built-in rules. Order does not matter; each is keyed by name.
+// 注册内建规则。顺序无关紧要;每条按 name 索引。
 func init() {
 	Register("required", requiredValidator)
 	Register("len", lenValidator)
@@ -30,7 +30,7 @@ func init() {
 	Register("eq", eqValidator)
 	Register("ne", neValidator)
 	Register("oneof", oneofValidator)
-	Register("in", oneofValidator) // alias
+	Register("in", oneofValidator) // 别名
 	Register("non_blank", nonBlankValidator)
 	Register("pattern", patternValidator)
 	Register("email", namedPatternValidator("email"))
@@ -48,10 +48,10 @@ func init() {
 	Register("prefix", prefixValidator)
 	Register("suffix", suffixValidator)
 	Register("dive", diveValidator)
-	Register("msg", nil) // modifier, not a rule; handled in compileRules
+	Register("msg", nil) // 修饰符,非规则;在 compileRules 中处理
 }
 
-// --- required ---
+// --- required(必填)---
 
 func requiredValidator(_ string, _ reflect.StructField) (Rule, error) {
 	return func(rv reflect.Value) (bool, string) {
@@ -62,7 +62,7 @@ func requiredValidator(_ string, _ reflect.StructField) (Rule, error) {
 	}, nil
 }
 
-// --- lengths ---
+// --- 长度 ---
 
 func lenValidator(param string, _ reflect.StructField) (Rule, error) {
 	n, err := strconv.Atoi(param)
@@ -103,7 +103,7 @@ func maxLenValidator(param string, _ reflect.StructField) (Rule, error) {
 	}, nil
 }
 
-// --- numeric comparisons ---
+// --- 数值比较 ---
 
 func numericValidator(name, param, sym string) (Rule, error) {
 	limit, err := parseNumericLimit(param)
@@ -116,7 +116,7 @@ func numericValidator(name, param, sym string) (Rule, error) {
 			return true, ""
 		}
 		if isSliceOrArray(rv.Kind()) {
-			// Compare every element.
+			// 比较每个元素。
 			for i := 0; i < rv.Len(); i++ {
 				if cmp, ok := compareNumeric(rv.Index(i), limit); ok && !orderedComparison(name, cmp) {
 					return false, fmt.Sprintf("element %d must be %s %s", i, sym, param)
@@ -126,7 +126,7 @@ func numericValidator(name, param, sym string) (Rule, error) {
 		}
 		cmp, ok := compareNumeric(rv, limit)
 		if !ok {
-			return true, "" // not a numeric field; skip
+			return true, "" // 非数值 field;跳过
 		}
 		if !orderedComparison(name, cmp) {
 			return false, fmt.Sprintf("must be %s %s", sym, param)
@@ -293,7 +293,7 @@ func orderedComparison(name string, cmp int) bool {
 	}
 }
 
-// --- oneof ---
+// --- oneof(枚举值)---
 
 func oneofValidator(param string, _ reflect.StructField) (Rule, error) {
 	options := strings.Split(param, " ")
@@ -312,7 +312,7 @@ func oneofValidator(param string, _ reflect.StructField) (Rule, error) {
 	}, nil
 }
 
-// --- non_blank ---
+// --- non_blank(非空白)---
 
 func nonBlankValidator(_ string, _ reflect.StructField) (Rule, error) {
 	return func(rv reflect.Value) (bool, string) {
@@ -336,7 +336,7 @@ func nonBlankValidator(_ string, _ reflect.StructField) (Rule, error) {
 	}, nil
 }
 
-// --- patterns ---
+// --- pattern(正则匹配)---
 
 func patternValidator(param string, _ reflect.StructField) (Rule, error) {
 	re, err := compilePattern(param)
@@ -349,7 +349,7 @@ func patternValidator(param string, _ reflect.StructField) (Rule, error) {
 			return true, ""
 		}
 		if rv.Kind() != reflect.String {
-			return true, "" // skip non-strings
+			return true, "" // 跳过非字符串
 		}
 		if !re.MatchString(rv.String()) {
 			return false, fmt.Sprintf("does not match %s", param)
@@ -406,7 +406,7 @@ func validNamedValue(name, value string) bool {
 	}
 }
 
-// --- contains / prefix / suffix ---
+// --- contains / prefix / suffix(包含 / 前缀 / 后缀)---
 
 func containsValidator(param string, _ reflect.StructField) (Rule, error) {
 	return func(rv reflect.Value) (bool, string) {
@@ -456,10 +456,10 @@ func suffixValidator(param string, _ reflect.StructField) (Rule, error) {
 	}, nil
 }
 
-// --- dive ---
+// --- dive(深入元素)---
 
-// dive applies an element-level rule to every element of a slice/array/map.
-// e.g. validate:"min_len=1,dive:non_blank".
+// dive 对 slice/array/map 的每个元素应用元素级规则。
+// 例如 validate:"min_len=1,dive:non_blank"。
 func diveValidator(param string, ft reflect.StructField) (Rule, error) {
 	name, nestedParam, _ := splitRule(param)
 	v, ok := lookupValidator(name)
@@ -493,11 +493,11 @@ func diveValidator(param string, ft reflect.StructField) (Rule, error) {
 	}, nil
 }
 
-// --- helpers ---
+// --- 辅助 ---
 
-// splitRule separates a rule token into its name and parameter. It accepts
-// '=' as the canonical separator and ':' as a convenience (so "dive:non_blank"
-// and "dive=non_blank" both work). A token with no separator is a bare rule.
+// splitRule 将规则 token 拆分为其 name 和 param。它以 '=' 为规范分隔符,
+// 以 ':' 为便捷分隔符(因此 "dive:non_blank" 和 "dive=non_blank" 均可用)。
+// 无分隔符的 token 是裸规则。
 func splitRule(raw string) (name, param string, ok bool) {
 	eq, colon := strings.Index(raw, "="), strings.Index(raw, ":")
 	switch {
@@ -522,7 +522,7 @@ func compileRules(f *Field) error {
 		name, param, _ := splitRule(raw)
 
 		if name == "msg" {
-			// Applies to the previously compiled rule.
+			// 应用于先前编译的规则。
 			if len(f.rules) > 0 {
 				f.rules[len(f.rules)-1].msg = param
 			}
@@ -531,8 +531,7 @@ func compileRules(f *Field) error {
 
 		v, ok := lookupValidator(name)
 		if !ok {
-			// Unknown rule becomes a permanent failure so the misconfiguration
-			// is visible instead of silently passing.
+			// 未知规则变为永久失败,使错误配置可见而非静默通过。
 			f.rules = append(f.rules, namedRule{
 				name:  name,
 				param: param,
@@ -561,7 +560,7 @@ func isEmptyValue(rv reflect.Value) bool {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
 		reflect.Uintptr:
-		return false // presence, not zero
+		return false // 关注存在性,而非零值
 	case reflect.Float32, reflect.Float64:
 		return false
 	case reflect.Struct:

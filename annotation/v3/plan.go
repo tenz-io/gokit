@@ -6,23 +6,22 @@ import (
 	"sync"
 )
 
-// BindSource names where a value should be read from when binding an HTTP
-// request. It is parsed from the bind tag (e.g. bind:"uri,name=id" -> URI);
-// the transport layer decides how to fetch each source.
+// BindSource 命名绑定 HTTP 请求时从何处读取值。它从 bind tag 解析
+// (例如 bind:"uri,name=id" -> URI);由 transport 层决定如何取每个 source。
 type BindSource string
 
 const (
-	// BindNone means no bind source declared.
+	// BindNone 表示未声明 bind source。
 	BindNone BindSource = ""
-	// BindURI binds from a route parameter.
+	// BindURI 从路由参数绑定。
 	BindURI BindSource = "uri"
-	// BindQuery binds from a URL query parameter.
+	// BindQuery 从 URL query 参数绑定。
 	BindQuery BindSource = "query"
-	// BindHeader binds from an HTTP header.
+	// BindHeader 从 HTTP header 绑定。
 	BindHeader BindSource = "header"
-	// BindForm binds from a form (urlencoded or multipart).
+	// BindForm 从 form(urlencoded 或 multipart)绑定。
 	BindForm BindSource = "form"
-	// BindFile binds an uploaded file's bytes.
+	// BindFile 绑定上传文件的字节。
 	BindFile BindSource = "file"
 )
 
@@ -34,38 +33,37 @@ const (
 	tagValidate = "validate"
 )
 
-// Field is one cached entry for a leaf or nested field in a struct plan.
+// Field 是 struct plan 中叶子或嵌套 field 的一个缓存条目。
 type Field struct {
-	// Path is the dotted path from the root struct, e.g. "Config.Addr.Street".
+	// Path 是从根 struct 起的点分路径,例如 "Config.Addr.Street"。
 	Path string
-	// Name is the Go field name.
+	// Name 是 Go field 名。
 	Name string
-	// Index is the reflect field index chain usable with FieldByIndex.
+	// Index 是可用于 FieldByIndex 的 reflect field index 链。
 	Index []int
-	// Type is the field's reflect.Type.
+	// Type 是 field 的 reflect.Type。
 	Type reflect.Type
-	// StructField is the reflect.StructField (tags, exported flag, ...).
+	// StructField 是 reflect.StructField(tag、导出标志、...)。
 	StructField reflect.StructField
 
-	// BindName is the resolved external name (bind name -> json -> protobuf ->
-	// Go name).
+	// BindName 是解析后的外部名(bind name -> json -> protobuf -> Go 名)。
 	BindName string
-	// BindSource is where the value should be read from, or BindNone.
+	// BindSource 是值应从何处读取,或 BindNone。
 	BindSource BindSource
 
-	// Default is the default-tag value, or "" when none.
+	// Default 是 default-tag 的值,无则为 ""。
 	Default string
 
-	// rules are the compiled validation rules for this field, in declaration
-	// order. nil for fields with no validate tag.
+	// rules 是该 field 编译后的校验规则,按声明顺序排列。无 validate tag 的
+	// field 为 nil。
 	rules []namedRule
 
-	// children are nested struct fields, in declaration order. nil for leaves
-	// (including slices/maps whose elements are not validated structurally).
+	// children 是嵌套 struct field,按声明顺序排列。叶子(包括元素不被结构性
+	// 校验的 slice/map)为 nil。
 	children []*Field
 }
 
-// IsRequired reports whether the field carries a "required" rule.
+// IsRequired 报告该 field 是否带有 "required" 规则。
 func (f *Field) IsRequired() bool {
 	for _, r := range f.rules {
 		if r.name == "required" {
@@ -75,18 +73,16 @@ func (f *Field) IsRequired() bool {
 	return false
 }
 
-// Plan is the cached structural description of a struct type. It is built once
-// per type and reused across requests.
+// Plan 是某个 struct 类型的缓存结构描述。每个类型构建一次,跨请求复用。
 type Plan struct {
 	rootType reflect.Type
 	fields   []*Field
 }
 
-// Fields returns the cached top-level fields in declaration order.
+// Fields 返回按声明顺序排列的缓存顶层 field。
 func (p *Plan) Fields() []*Field { return p.fields }
 
-// Walk visits every field (including nested structs) in declaration order. The
-// callback may return false to stop the walk early.
+// Walk 按声明顺序访问每个 field(包括嵌套 struct)。回调可返回 false 以提前终止遍历。
 func (p *Plan) Walk(fn func(*Field) bool) {
 	for _, f := range p.fields {
 		if !walkField(f, fn) {
@@ -107,8 +103,8 @@ func walkField(f *Field, fn func(*Field) bool) bool {
 	return true
 }
 
-// FieldsBySource returns top-level fields whose BindSource matches src, in
-// declaration order. Convenience for transport binders.
+// FieldsBySource 返回 BindSource 匹配 src 的顶层 field,按声明顺序排列。
+// 为 transport binder 提供便利。
 func (p *Plan) FieldsBySource(src BindSource) []*Field {
 	var out []*Field
 	for _, f := range p.fields {
@@ -119,8 +115,8 @@ func (p *Plan) FieldsBySource(src BindSource) []*Field {
 	return out
 }
 
-// PlanFor returns the cached Plan for the struct behind ptr, building it on
-// first use. ptr must be a non-nil pointer to a struct.
+// PlanFor 返回 ptr 所指 struct 的缓存 Plan,首次使用时构建。ptr 必须是指向
+// struct 的非空 pointer。
 func PlanFor(ptr any) (*Plan, error) {
 	rv := reflect.ValueOf(ptr)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() {
@@ -136,9 +132,8 @@ func PlanFor(ptr any) (*Plan, error) {
 var planCache sync.Map // reflect.Type -> *Plan
 
 func planForType(t reflect.Type, parent string) (*Plan, error) {
-	// Only root plans are cached. A nested field's Path depends on its parent,
-	// so caching nested plans by type alone would leak the first-seen path into
-	// every later use of that type.
+	// 仅缓存根 plan。嵌套 field 的 Path 依赖其 parent,因此仅按类型缓存嵌套
+	// plan 会把首次见到的路径泄漏到该类型后续的每次使用中。
 	if parent == "" {
 		if cached, ok := planCache.Load(t); ok {
 			return cached.(*Plan), nil
@@ -158,9 +153,8 @@ func planForType(t reflect.Type, parent string) (*Plan, error) {
 
 func buildPlan(t reflect.Type, parent string, ancestors map[reflect.Type]bool) (*Plan, error) {
 	if ancestors[t] {
-		// A recursive pointer (for example, a linked-list Next field) is a
-		// legitimate Go type. Stop expanding the static plan at the cycle rather
-		// than publishing an incomplete plan or recurring forever.
+		// 递归 pointer(例如链表的 Next field)是合法的 Go 类型。在环处停止
+		// 扩展静态 plan,而不是发布不完整的 plan 或无限递归。
 		return &Plan{rootType: t}, nil
 	}
 	ancestors[t] = true
@@ -170,14 +164,14 @@ func buildPlan(t reflect.Type, parent string, ancestors map[reflect.Type]bool) (
 	var fields []*Field
 	for i := 0; i < t.NumField(); i++ {
 		sf := t.Field(i)
-		if sf.PkgPath != "" { // unexported
+		if sf.PkgPath != "" { // unexported(未导出)
 			continue
 		}
 		fpath := joinPath(parent, sf.Name)
 
 		ft := sf.Type
-		// Peel at most one pointer for structural inspection so *Nested still
-		// recurses, but keep the original type on the Field for setters.
+		// 为结构性检查最多剥离一层 pointer,使 *Nested 仍可递归,但在 Field
+		// 上保留原始类型以供 setter 使用。
 		structType := peelPtr(ft)
 		var children []*Field
 		if structType != nil {
@@ -208,10 +202,9 @@ func buildPlan(t reflect.Type, parent string, ancestors map[reflect.Type]bool) (
 	return p, nil
 }
 
-// peelPtr returns the struct type inside ft (peeling one pointer level), or nil
-// if ft is not a (pointer to a) struct. time.Time and similar are treated as
-// leaves because they expose their own validation semantics via rules, not via
-// their internal fields.
+// peelPtr 返回 ft 内部的 struct 类型(剥离一层 pointer),若 ft 不是 struct
+// 或指向 struct 的 pointer 则返回 nil。time.Time 及类似类型被视为叶子,因为
+// 它们通过 rules 而非内部 field 暴露自身的校验语义。
 func peelPtr(ft reflect.Type) reflect.Type {
 	if ft == timeType {
 		return nil
@@ -233,9 +226,8 @@ func joinPath(parent, name string) string {
 	return parent + "." + name
 }
 
-// resolveBindName picks the external name for binding, in priority order:
-// bind tag's name=... -> json tag's first element -> protobuf tag's name=...
-// -> Go field name.
+// resolveBindName 按优先级顺序选取绑定的外部名:
+// bind tag 的 name=... -> json tag 的首元素 -> protobuf tag 的 name=... -> Go field 名。
 func resolveBindName(sf reflect.StructField) string {
 	if name, ok := bindName(sf.Tag); ok && name != "" {
 		return name
@@ -250,8 +242,8 @@ func resolveBindName(sf reflect.StructField) string {
 }
 
 func resolveBindSource(sf reflect.StructField) BindSource {
-	// Preserve declaration order. Iterating the map returned by tagMap made a
-	// malformed multi-source tag choose a different source nondeterministically.
+	// 保留声明顺序。遍历 tagMap 返回的 map 会使格式错误的多 source tag 不确定地
+	// 选择不同 source。
 	for _, elem := range strings.Split(sf.Tag.Get(tagBind), ",") {
 		key, _, _ := strings.Cut(elem, "=")
 		switch BindSource(key) {
@@ -285,8 +277,7 @@ func protoName(tag reflect.StructTag) (string, bool) {
 	return tagMap(tag, tagProto)["name"], true
 }
 
-// tagMap parses "k1=v1,k2=v2,k" style tags into a map. Bare keys (no '=') map
-// to "".
+// tagMap 将 "k1=v1,k2=v2,k" 风格的 tag 解析为 map。无 '=' 的裸键映射为 ""。
 func tagMap(tag reflect.StructTag, name string) map[string]string {
 	m := map[string]string{}
 	v := tag.Get(name)

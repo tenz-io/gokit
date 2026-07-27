@@ -10,60 +10,59 @@ import (
 	"github.com/tenz-io/gokit/logger/v3"
 )
 
-// CleanFunc releases resources acquired by an InitFunc. It is always called in
-// LIFO order, including when a later InitFunc fails, so partial startup never
-// leaks. CleanFunc must be safe to call even when its InitFunc returned a
-// partially-initialized resource.
+// CleanFunc 释放由 InitFunc 获取的资源。它始终按
+// LIFO 顺序调用,即便后续 InitFunc 失败也会触发,因此部分启动不会
+// 泄漏。即使其 InitFunc 返回了部分初始化的资源,CleanFunc 也必须可安全调用。
 type CleanFunc func(context.Context) error
 
-// InitFunc initializes one application concern, reading config and flags from
-// the Context and the decoded config at conf. It returns a (possibly nil)
-// CleanFunc the App invokes at shutdown. A non-nil error aborts startup; the
-// App runs the cleanups collected so far before returning.
+// InitFunc 初始化一个应用关注点,从
+// Context 读取 config 与 flag,以及解码后的 conf。它返回(可能为 nil)
+// CleanFunc,App 在 shutdown 时调用。非 nil error 会中止启动;
+// App 在返回前会运行已收集的 cleanup。
 type InitFunc func(c *Context, conf any) (CleanFunc, error)
 
-// RunFunc is the main service loop. It must block until the application
-// context is cancelled (c.Done()) or report a fatal error by sending to errC.
-// A nil error on errC signals clean completion.
+// RunFunc 是主服务循环。它必须阻塞,直到 application
+// context 被取消(c.Done()),或通过向 errC 发送以报告致命错误。
+// errC 上的 nil error 表示干净完成。
 type RunFunc func(c *Context, conf any, errC chan<- error)
 
-// Config describes an application.
+// Config 描述一个应用。
 type Config struct {
-	// Name is the app name, used as the flag-set name in usage and logs.
+	// Name 为 app 名,在 usage 与日志中作为 flag-set 名使用。
 	Name string
 
-	// Usage is a short description shown in -h/--help output.
+	// Usage 是在 -h/--help 输出中显示的简短说明。
 	Usage string
 
-	// Conf is the application's config value, decoded from the config file by
-	// the With* initializers. It is passed (by pointer if the caller used a
-	// pointer) to every Init and Run.
+	// Conf 是应用的 config 值,由
+	// With* initializer 从 config 文件解码。它(若调用方使用
+	// 指针则按指针)会传给每个 Init 与 Run。
 	Conf any
 
-	// Inits runs sequentially before Run. Each may return a CleanFunc.
+	// Inits 在 Run 之前顺序执行。每个可返回一个 CleanFunc。
 	Inits []InitFunc
 
-	// Run is the main service loop, started after all Inits succeed.
+	// Run 是主服务循环,在所有 Inits 成功后启动。
 	Run RunFunc
 }
 
-// ExitCode is the process exit code Run reports. Zero is success.
+// ExitCode 是 Run 报告的进程 exit code。0 表示成功。
 type ExitCode int
 
 const (
 	ExitOK       ExitCode = 0
-	ExitSetup    ExitCode = 1 // flag parse or init failure
-	ExitRunError ExitCode = 2 // Run reported an error
-	ExitSignal   ExitCode = 3 // interrupted by signal
+	ExitSetup    ExitCode = 1 // flag 解析或 init 失败
+	ExitRunError ExitCode = 2 // Run 报告了 error
+	ExitSignal   ExitCode = 3 // 被 signal 中断
 )
 
-// Run builds and starts the application described by cfg, blocking until
-// shutdown. It returns an ExitCode rather than calling os.Exit so callers
-// (and tests) can decide what to do; main wrappers typically do
-// `os.Exit(int(app.Run(cfg)))`.
+// Run 构建并启动由 cfg 描述的应用,阻塞至
+// shutdown。它返回 ExitCode 而非调用 os.Exit,以便调用方
+// (与测试)决定如何处理;main 包装器通常执行
+// `os.Exit(int(app.Run(cfg)))`。
 //
-// flags overrides the built-in DefaultFlags; pass nil for the defaults. argv
-// defaults to os.Args[1:]; pass a slice to inject args (used by tests).
+// flags 覆盖内置 DefaultFlags;传 nil 取默认值。argv
+// 默认为 os.Args[1:];传切片以注入参数(测试使用)。
 func Run(cfg Config, flags []FlagSpec, argv ...[]string) ExitCode {
 	var args []string
 	if len(argv) > 0 {
@@ -71,17 +70,17 @@ func Run(cfg Config, flags []FlagSpec, argv ...[]string) ExitCode {
 	}
 	fs, err := ParseFlags(cfg.Name, flags, args)
 	if err != nil {
-		// Help and parse errors both land here. Print to stderr for visibility;
-		// never os.Exit from inside the package.
+		// Help 与 parse 错误都落到此处。输出到 stderr 以便可见;
+		// 绝不在包内部 os.Exit。
 		fmt.Fprintf(os.Stderr, "%s: %v\n", cfg.Name, err)
 		return ExitSetup
 	}
 	fs.Print(flagOutput)
 
-	// Configure the logger as the first thing the app uses, so subsequent
-	// startup logging is structured. WithLogger is also available as an Init
-	// for callers that want traffic logging on by default; running it here
-	// guarantees a working global logger even before Inits run.
+	// 将 logger 配置为应用最先使用的部件,以便后续
+	// 启动日志为结构化。WithLogger 也可作为 Init 供
+	// 希望默认开启 traffic 日志的调用方使用;在此处运行
+	// 保证即便在 Inits 运行之前也有可用的全局 logger。
 	configureLogger(cfg.Name, fs)
 
 	appCtx, cancel := context.WithCancel(context.Background())
@@ -92,9 +91,9 @@ func Run(cfg Config, flags []FlagSpec, argv ...[]string) ExitCode {
 	return app.run(c, cfg.Conf, cancel)
 }
 
-// configureLogger wires the global logger from resolved flags. It mirrors the
-// WithLogger initializer but runs unconditionally so the package has a working
-// logger before the first InitFunc.
+// configureLogger 从解析后的 flag 装配全局 logger。它镜像
+// WithLogger initializer,但无条件运行,以便包在
+// 第一个 InitFunc 之前就有可用的 logger。
 func configureLogger(name string, fs *Flags) {
 	logDir := fs.String(FlagNameLog)
 	if logDir == "" {
@@ -121,12 +120,12 @@ func configureLogger(name string, fs *Flags) {
 	logger.Infow("application starting", "name", name, "level", fmt.Sprint(int(lvl)))
 }
 
-// flagOutput is where Run prints resolved flag values. Production writes to
-// os.Stdout; tests swap it to io.Discard to keep output clean. Not concurrent
-// with swaps — the App lifecycle is single-threaded at startup.
+// flagOutput 是 Run 输出解析后 flag 值的去处。生产环境写至
+// os.Stdout;测试将其替换为 io.Discard 以保持输出干净。不与
+// 替换并发 —— App 生命周期在启动期为单线程。
 var flagOutput io.Writer = os.Stdout
 
-// application is the runnable built from a Config.
+// application 是由 Config 构建的 runnable。
 type application struct {
 	name     string
 	initFns  []InitFunc
@@ -143,12 +142,12 @@ func newApplication(name string, inits []InitFunc, run RunFunc) *application {
 	}
 }
 
-// run executes the init/cleanup/run/wait lifecycle. It never calls os.Exit;
-// the only signal-driven side effect is cancelling appCtx and running cleanup,
-// after which it returns an ExitCode.
+// run 执行 init/cleanup/run/wait 生命周期。它从不调用 os.Exit;
+// 唯一由 signal 驱动的副作用是取消 appCtx 并运行 cleanup,
+// 之后返回 ExitCode。
 func (a *application) run(c *Context, conf any, cancelApp context.CancelFunc) ExitCode {
-	// Sequential init. On any failure, run collected cleanups in LIFO order
-	// and report the setup exit code.
+	// 顺序 init。任何失败时,按 LIFO 顺序运行已收集的 cleanup
+	// 并返回 setup exit code。
 	for _, init := range a.initFns {
 		clean, err := init(c, conf)
 		if err != nil {
@@ -161,15 +160,15 @@ func (a *application) run(c *Context, conf any, cancelApp context.CancelFunc) Ex
 		}
 	}
 
-	// errC is buffered so a Run that reports-and-exits never blocks on a
-	// nobody-listening receiver (v2's unbuffered channel could hang if Run
-	// panicked before WaitSignal selected).
+	// errC 为 buffered,使"报告即退出"的 Run 不会因
+	// 无人接收而阻塞(v2 的无缓冲 channel 在 Run
+	// 于 WaitSignal select 之前 panic 时可能挂起)。
 	errC := make(chan error, 1)
 
 	go a.runFn(c, conf, errC)
 
-	// Wait for: a fatal error from Run (-> run error), a signal (-> signal
-	// exit after graceful cleanup), or Run completing cleanly (errC<-nil).
+	// 等待:来自 Run 的致命错误(-> run error)、signal(-> graceful
+	// cleanup 后 signal 退出),或 Run 干净完成(errC<-nil)。
 	code := wait(c, errC, func() {
 		logger.Infow("shutting down", "name", a.name)
 		cancelApp()
@@ -178,8 +177,8 @@ func (a *application) run(c *Context, conf any, cancelApp context.CancelFunc) Ex
 	return code
 }
 
-// runCleanup invokes collected cleanups in LIFO order. Errors are logged but do
-// not abort the chain; one cleanup failing must not skip later ones.
+// runCleanup 以 LIFO 顺序调用已收集的 cleanup。错误仅记录但不
+// 中断链;一个 cleanup 失败不得跳过后续的。
 func (a *application) runCleanup(ctx context.Context) error {
 	var errs []error
 	for i := len(a.cleanFns) - 1; i >= 0; i-- {

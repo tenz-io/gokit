@@ -1,20 +1,20 @@
-// Package app provides a small application-lifecycle framework: flag parsing,
-// ordered initialization with LIFO cleanup, an optional admin HTTP server
-// (pprof / metrics / ping), and graceful, signal-driven shutdown.
+// Package app 提供一个轻量的应用生命周期框架:flag 解析、
+// 带 LIFO cleanup 的有序 init、可选的 admin HTTP server
+// (pprof / metrics / ping),以及 graceful、signal 驱动的 shutdown。
 //
-// v3 is a clean rewrite on top of logger/v3 and annotation/v3. It fixes the
-// startup hazards of v2:
-//   - Flags are immutable value specs; parsing snapshots results into a Flags
-//     value instead of mutating caller-defined Flag structs (v2 aliased the
-//     caller's fields via &f.Value).
-//   - Parse returns an error rather than calling os.Exit, so bad args and
-//     -h/--help are testable and never abort the process.
-//   - Cleanup runs in LIFO order and is invoked even when a later init fails,
-//     so already-acquired resources never leak.
-//   - The admin server uses a dedicated *http.ServeMux (never the package-level
-//     DefaultServeMux) and shuts down gracefully via Shutdown on exit.
-//   - Run returns an exit code instead of calling os.Exit internally; the
-//     caller decides whether to os.Exit.
+// v3 是在 logger/v3 与 annotation/v3 之上的全新重写,修复了
+// v2 的启动期风险:
+//   - Flag 为不可变 value spec;解析结果快照到一个 Flags
+//     值中,而非修改调用方定义的 Flag 结构体(v2 通过
+//     &f.Value 给调用方字段起别名)。
+//   - Parse 返回 error 而非调用 os.Exit,因此错误的参数与
+//     -h/--help 可被测试,且永远不会中止进程。
+//   - Cleanup 以 LIFO 顺序执行,即便后续 init 失败也会触发,
+//     因此已获取的资源不会泄漏。
+//   - admin server 使用专属的 *http.ServeMux(绝不使用包级
+//     DefaultServeMux),并在退出时通过 Shutdown 执行 graceful shutdown。
+//   - Run 返回 exit code 而非内部调用 os.Exit;由
+//     调用方决定是否 os.Exit。
 package app
 
 import (
@@ -26,19 +26,19 @@ import (
 	"time"
 )
 
-// Flag name constants used by the built-in flags and by the With* initializers.
+// Flag name constants 为内置 flag 与 With* initializer 使用的 flag 名常量。
 const (
-	FlagNameConfig         = "config"          // path to the config file
-	FlagNamePort           = "port"            // service HTTP port
-	FlagNameAdminPort      = "admin-port"      // admin HTTP port
-	FlagNameLog            = "log"             // log output directory
-	FlagNameLoggingFile    = "logging-file"    // enable file logging
-	FlagNameLoggingConsole = "logging-console" // enable console logging
-	FlagNameVerbose        = "verbose"         // verbose (debug-level) logging
+	FlagNameConfig         = "config"          // config 文件路径
+	FlagNamePort           = "port"            // 服务 HTTP 端口
+	FlagNameAdminPort      = "admin-port"      // admin HTTP 端口
+	FlagNameLog            = "log"             // 日志输出目录
+	FlagNameLoggingFile    = "logging-file"    // 启用文件日志
+	FlagNameLoggingConsole = "logging-console" // 启用控制台日志
+	FlagNameVerbose        = "verbose"         // verbose(debug 级别)日志
 )
 
-// FlagKind identifies a flag's value type so Parse can route the parsed token
-// to the right setter and Flags can return a typed value.
+// FlagKind 标识 flag 的值类型,使 Parse 能将解析出的 token 路由到正确的
+// setter,并让 Flags 返回有类型的值。
 type FlagKind int
 
 const (
@@ -48,23 +48,22 @@ const (
 	FlagKindDuration
 )
 
-// FlagSpec describes one command-line flag as an immutable value: the flag's
-// name, kind, default, usage text, and an optional "env" hook for defaulting
-// from an environment variable. Unlike v2's *Flag structs, a FlagSpec carries
-// no mutable destination — parsing writes into a fresh Flags snapshot, so the
-// same FlagSpec slice is safe to reuse across calls and concurrent parses.
+// FlagSpec 将一个命令行 flag 描述为不可变 value:flag 的
+// 名字、kind、默认值、usage 文本,以及一个可选的 "env" 钩子用于从环境变量取默认值。
+// 与 v2 的 *Flag 结构体不同,FlagSpec 不携带可变目的端 ——
+// 解析结果写入一个全新的 Flags 快照,因此同一份 FlagSpec 切片可安全地跨调用和并发解析复用。
 type FlagSpec struct {
 	Name    string
 	Kind    FlagKind
 	Default any
 	Usage   string
-	// Env, when non-empty, supplies the default from the named environment
-	// variable when the flag is absent from argv. Precedence: argv > env > Default.
+	// Env 非空时,若 flag 未出现在 argv 中,则从该名字的环境变量取默认值。
+	// 优先级: argv > env > Default。
 	Env string
 }
 
-// StringFlag, IntFlag, BoolFlag and DurationFlag are convenience constructors
-// so callers build specs without spelling out FlagKind.
+// StringFlag、IntFlag、BoolFlag 与 DurationFlag 是便捷构造器,
+// 让调用方无需显式写出 FlagKind 即可构造 spec。
 func StringFlag(name, def, usage string) FlagSpec {
 	return FlagSpec{Name: name, Kind: FlagKindString, Default: def, Usage: usage}
 }
@@ -81,8 +80,8 @@ func DurationFlag(name string, def time.Duration, usage string) FlagSpec {
 	return FlagSpec{Name: name, Kind: FlagKindDuration, Default: def, Usage: usage}
 }
 
-// DefaultFlags is the built-in flag set registered by every App unless the
-// caller supplies an overriding slice. The With* initializers read these names.
+// DefaultFlags 是每个 App 默认注册的内置 flag 集合,除非调用方
+// 传入覆盖切片。With* initializer 读取这些名字。
 var DefaultFlags = []FlagSpec{
 	StringFlag(FlagNameConfig, "config/app.yaml", "Conf file"),
 	IntFlag(FlagNamePort, 8080, "HTTP port"),
@@ -93,10 +92,10 @@ var DefaultFlags = []FlagSpec{
 	BoolFlag(FlagNameVerbose, false, "Verbose mode(true/false)"),
 }
 
-// Flags is the immutable, parsed snapshot returned by ParseFlags. Each lookup
-// returns the resolved value and a bool indicating the flag was registered;
-// callers that ignore the bool get the zero value for an unknown name, which is
-// the common "just read it" path. Flags is safe for concurrent reads.
+// Flags 是 ParseFlags 返回的不可变解析快照。每次查找
+// 返回解析后的值以及一个表示该 flag 是否已注册的 bool;
+// 忽略该 bool 的调用方对于未知名字会拿到零值,这是最常见的"直接读"路径。
+// Flags 可安全并发读取。
 type Flags struct {
 	values map[string]flagValue
 }
@@ -109,34 +108,34 @@ type flagValue struct {
 	dur  time.Duration
 }
 
-// Lookup returns the raw flagValue and whether the flag was registered. Most
-// callers use the typed String/Int/Bool/Duration accessors instead.
+// Lookup 返回原始 flagValue 以及该 flag 是否已注册。多数
+// 调用方改用类型化的 String/Int/Bool/Duration 访问器。
 func (fs *Flags) Lookup(name string) (flagValue, bool) {
 	v, ok := fs.values[name]
 	return v, ok
 }
 
-// String returns the string value of name, or "" when the flag is absent.
+// String 返回 name 的 string 值,flag 不存在时返回 ""。
 func (fs *Flags) String(name string) string { v, _ := fs.values[name]; return v.str }
 
-// Int returns the int value of name, or 0 when the flag is absent.
+// Int 返回 name 的 int 值,flag 不存在时返回 0。
 func (fs *Flags) Int(name string) int { v, _ := fs.values[name]; return int(v.num) }
 
-// Bool returns the bool value of name, or false when the flag is absent.
+// Bool 返回 name 的 bool 值,flag 不存在时返回 false。
 func (fs *Flags) Bool(name string) bool { v, _ := fs.values[name]; return v.b }
 
-// Duration returns the duration value of name, or zero when the flag is absent.
+// Duration 返回 name 的 duration 值,flag 不存在时返回零值。
 func (fs *Flags) Duration(name string) time.Duration {
 	v, _ := fs.values[name]
 	return v.dur
 }
 
-// IsSet reports whether name was a registered flag.
+// IsSet 报告 name 是否为已注册的 flag。
 func (fs *Flags) IsSet(name string) bool { _, ok := fs.values[name]; return ok }
 
-// Print writes the resolved flag values to w in a compact "name: value" block.
-// Output goes to a caller-supplied io.Writer so tests can capture it; Run
-// routes it through the logger.
+// Print 将解析后的 flag 值以紧凑的 "name: value" 块写入 w。
+// 输出至调用方提供的 io.Writer,便于测试捕获;Run
+// 会将其经由 logger 输出。
 func (fs *Flags) Print(w io.Writer) {
 	fmt.Fprintln(w, "args: ==================")
 	for _, f := range DefaultFlags {
@@ -163,21 +162,20 @@ func (v flagValue) display() string {
 	return v.str
 }
 
-// ParseFlags resolves specs against argv (defaulting to os.Args[1:]) and
-// returns an immutable Flags snapshot. It never calls os.Exit: a parse error,
-// an unknown flag, or -h/--help surfaces as an error (flag.ErrHelp for help) so
-// the caller can print usage and decide an exit code.
+// ParseFlags 将 specs 与 argv(默认为 os.Args[1:])对照解析,
+// 返回不可变的 Flags 快照。它从不调用 os.Exit:解析错误、
+// 未知 flag 或 -h/--help 都以 error 形式返回(help 时为 flag.ErrHelp),以便
+// 调用方打印 usage 并决定 exit code。
 //
-// specs is combined with DefaultFlags when nil; otherwise the caller's specs
-// extend DefaultFlags (caller specs take precedence on name collision).
+// specs 为 nil 时与 DefaultFlags 合并;否则调用方的 specs
+// 扩展 DefaultFlags(名字冲突时以调用方 specs 为准)。
 func ParseFlags(name string, specs []FlagSpec, args []string) (*Flags, error) {
 	if specs == nil {
 		specs = DefaultFlags
 	} else {
-		// Reject caller-side duplicates before mergeSpecs folds overrides into a
-		// single entry (which would hide the dup). A spec may collide with a
-		// built-in default (override), but two caller specs with the same name
-		// is an error.
+		// 在 mergeSpecs 将 override 折叠为单条目之前(会掩盖重复)拒绝
+		// 调用方侧的重复。一个 spec 可以与内置 default 冲突(override),
+		// 但两条同名的调用方 spec 视为错误。
 		if dup := firstDuplicate(specs); dup != "" {
 			return nil, fmt.Errorf("app: duplicate flag %q", dup)
 		}
@@ -188,8 +186,8 @@ func ParseFlags(name string, specs []FlagSpec, args []string) (*Flags, error) {
 	}
 
 	fs := flag.NewFlagSet(name, flag.ContinueOnError)
-	// Silence the default error output; ParseFlags reports errors as values so
-	// the caller controls formatting and the exit code.
+	// 静默默认错误输出;ParseFlags 以值形式返回错误,
+	// 由调用方控制格式化与 exit code。
 	fs.SetOutput(io.Discard)
 
 	holders := make(map[string]*flagValue, len(specs))
@@ -216,10 +214,10 @@ func ParseFlags(name string, specs []FlagSpec, args []string) (*Flags, error) {
 	return &Flags{values: out}, nil
 }
 
-// mergeSpecs returns DefaultFlags augmented with specs; a specs entry whose name
-// already exists in DefaultFlags replaces it (caller override), otherwise it is
-// appended. The returned slice is a fresh copy so the caller's slice is not
-// mutated. Callers must have already de-duplicated their own specs.
+// mergeSpecs 返回 DefaultFlags 经 specs 增强后的结果;specs 中
+// 名字已存在于 DefaultFlags 的条目将替换它(调用方 override),否则
+// 追加。返回的切片为全新拷贝,因此调用方切片不会被修改。
+// 调用方必须已对自身 specs 去重。
 func mergeSpecs(specs []FlagSpec) []FlagSpec {
 	out := make([]FlagSpec, 0, len(DefaultFlags)+len(specs))
 	out = append(out, DefaultFlags...)
@@ -239,9 +237,9 @@ func mergeSpecs(specs []FlagSpec) []FlagSpec {
 	return out
 }
 
-// firstDuplicate returns the name of the first flag appearing twice in specs,
-// or "" when all names are distinct. Used by ParseFlags to reject caller-side
-// dups before mergeSpecs folds overrides.
+// firstDuplicate 返回 specs 中第一个出现两次的 flag 名,
+// 若所有名字互不相同则返回 ""。供 ParseFlags 在 mergeSpecs
+// 折叠 override 之前拒绝调用方侧重复使用。
 func firstDuplicate(specs []FlagSpec) string {
 	seen := make(map[string]struct{}, len(specs))
 	for _, s := range specs {
@@ -256,9 +254,9 @@ func firstDuplicate(specs []FlagSpec) string {
 	return ""
 }
 
-// applySpec registers one flag on fs, writing the resolved default (env > spec
-// default) into v's fields and binding the flag's pointer to v so Parse fills
-// in the argv value.
+// applySpec 在 fs 上注册一个 flag,将解析出的默认值(env > spec
+// default)写入 v 的字段,并将该 flag 的指针绑定到 v,使 Parse 能
+// 填入 argv 的值。
 func applySpec(fs *flag.FlagSet, s FlagSpec, v *flagValue) {
 	def := s.Default
 	if s.Env != "" {

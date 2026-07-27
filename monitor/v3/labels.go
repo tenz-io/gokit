@@ -2,38 +2,36 @@ package monitor
 
 import "github.com/prometheus/client_golang/prometheus"
 
-// Label names shared by every metric family. V3 unifies the label set across
-// counter/gauge/histogram/summary (v2's histogram dropped `opt`, which made
-// cardinality strategy inconsistent); every family now carries the same four
-// dimensions so dashboards and queries are uniform.
+// 每个 metric family 共享的 label 名。V3 在 counter/gauge/histogram/
+// summary 之间统一了 label 集合(v2 的 histogram 丢弃了 `opt`,导致基数
+// 策略不一致);现在每个 family 都携带相同的四个维度,从而使 dashboard
+// 与查询保持一致。
 const (
 	labelCmd   = "cmd"
 	labelDsCmd = "dsCmd"
 	labelCode  = "code"
 	labelOpt   = "opt"
 
-	// defaultNamespace/Subsystem are the metric prefix; overridable via Init.
+	// defaultNamespace/Subsystem 是 metric 的前缀;可通过 Init 覆盖。
 	defaultNamespace = "gokit"
 	defaultSubsystem = "flight"
 
-	// valNA is the placeholder for empty string labels, so Prometheus never
-	// sees an unset label value (which would silently split series).
+	// valNA 是空字符串 label 的占位符,使 Prometheus 永远不会看到未设置
+	// 的 label 值(否则会静默地分裂序列)。
 	valNA = "NA"
 
-	// codeOK / codeErr are the only two result codes retained after
-	// normalization, keeping cardinality bounded regardless of how callers
-	// spell their error codes.
+	// codeOK / codeErr 是归一化之后仅保留的两个结果码,无论调用方如何
+	// 书写错误码都能保持基数受限。
 	codeOK  = "0"
 	codeErr = "1"
 
-	// optActive is the active-request gauge's opt slot: the gauge that tracks
-	// in-flight calls uses opt="actives" so it does not collide with business
-	// opt dimensions like hit/miss.
+	// optActive 是活跃请求 gauge 的 opt 槽位:跟踪在途调用的 gauge 使用
+	// opt="actives",从而不会与 hit/miss 这类业务 opt 维度冲突。
 	optActive = "actives"
 )
 
-// latencyBuckets is the histogram bucket layout for latency in milliseconds,
-// spanning 0.1ms to 10s. Reused from v2 (battle-tested across the codebase).
+// latencyBuckets 是以毫秒为单位的延迟 histogram bucket 布局,覆盖
+// 0.1ms 到 10s。复用自 v2(在代码库中久经实战)。
 var latencyBuckets = []float64{
 	1e-1,     // 0.1ms  factor 10
 	1e0, 3e0, // 1ms    factor 3
@@ -43,7 +41,7 @@ var latencyBuckets = []float64{
 	1e4, // 10000ms to infinite
 }
 
-// summaryObjectives configures the quantile targets for the data-size summary.
+// summaryObjectives 配置数据大小 summary 的 quantile 目标。
 var summaryObjectives = map[float64]float64{
 	0.5:  0.05,
 	0.9:  0.01,
@@ -51,8 +49,8 @@ var summaryObjectives = map[float64]float64{
 	0.99: 0.001,
 }
 
-// normalizeOpt maps an empty opt to the NA placeholder so that omitted opt
-// values collapse into one series instead of many.
+// normalizeOpt 将空 opt 映射为 NA 占位符,使被省略的 opt 值合并为
+// 同一条序列而非多条。
 func normalizeOpt(opt string) string {
 	if opt == "" {
 		return valNA
@@ -60,10 +58,10 @@ func normalizeOpt(opt string) string {
 	return opt
 }
 
-// normalizeCode collapses any non-zero code to "1" (err) and an empty code to
-// "0" (ok). This bounds the cardinality of code across observe/sample: the
-// business only ever sees ok/err on latency and size metrics, while exact
-// codes are preserved on counter/gauge where they are first-class.
+// normalizeCode 将任意非零 code 折叠为 "1"(err),将空 code 折叠为
+// "0"(ok)。这限制了 observe/sample 中 code 的基数:业务在延迟与
+// 数据大小 metric 上只会看到 ok/err,而精确 code 仍在 counter/gauge
+// 上作为一等值被保留。
 func normalizeCode(code string) string {
 	if code == "" || code == codeOK {
 		return codeOK
@@ -71,13 +69,13 @@ func normalizeCode(code string) string {
 	return codeErr
 }
 
-// labelsOf builds the canonical four-dimensional label set for a metric. The
-// cmd is the Exporter's scope; dsCmd/code/opt are per-call.
+// labelsOf 为某个 metric 构造标准的四维 label 集合。cmd 是 Exporter 的
+// 作用域;dsCmd/code/opt 是按调用的。
 //
-// The production hot path uses Exporter.WithLabelValues (a slice fast path with
-// no map allocation); labelsOf is kept for tests and tooling that want a
-// ready-made prometheus.Labels map for assertions and gathering. It does not
-// normalize — pass already-normalized values.
+// 生产热路径使用 Exporter.WithLabelValues(无 map 分配的 slice 快速
+// 路径);labelsOf 保留下来供测试与工具使用,它们需要一个现成的
+// prometheus.Labels map 用于断言与采集。它不做归一化 —— 调用方需
+// 传入已归一化的值。
 func labelsOf(cmd, dsCmd, code, opt string) prometheus.Labels {
 	return prometheus.Labels{
 		labelCmd:   cmd,

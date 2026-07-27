@@ -5,9 +5,9 @@ import (
 	"strings"
 )
 
-// flagByName maps every accepted string token (canonical names plus
-// aliases, lowercased) to its flag. Built once at init from flagTable so the
-// parse hot path is a single map lookup per token, not a linear scan.
+// flagByName 把每个被接受的字符串 token(规范名加别名,已小写化)映射到
+// 其 flag。在 init 时从 flagTable 一次性构建,使解析热路径对每个 token
+// 只需一次 map 查找,而非线性扫描。
 var flagByName = func() map[string]Flag {
 	m := make(map[string]Flag, len(flagTable)*2)
 	for _, d := range flagTable {
@@ -19,12 +19,10 @@ var flagByName = func() map[string]Flag {
 	return m
 }()
 
-// allFlagBits is the OR of every known flag bit. String uses it to separate
-// the named bits of a Flag from any reserved/unknown bits (bits set on a Flag
-// that no flagTable entry claims — e.g. a bit a newer version introduced that
-// this build does not know about). Unknown bits are rendered as a trailing
-// 0xNN suffix rather than silently dropped, so a Flag carrying them is never
-// mistaken for FlagNone.
+// allFlagBits 是所有已知 flag 位的 OR。String 用它把 Flag 中的命名位与
+// 任何保留/未知位(Flag 上设置了但无 flagTable 条目认领的位 —— 例如更新
+// 版本引入而当前构建未知的位)区分开。未知位被渲染为末尾的 0xNN 后缀,
+// 而非被静默丢弃,使携带未知位的 Flag 不会被误认为 FlagNone。
 var allFlagBits = func() Flag {
 	var all Flag
 	for _, d := range flagTable {
@@ -33,17 +31,15 @@ var allFlagBits = func() Flag {
 	return all
 }()
 
-// ParseFlag parses a "|" separated flag string such as "debug|shadow" into a
-// Flag. Tokens are case-folded and trimmed; unknown tokens are ignored (so
-// "debug|bogus" yields FlagDebug, not FlagNone). An empty string yields
-// FlagNone.
+// ParseFlag 把 "|" 分隔的 flag 字符串(如 "debug|shadow")解析成一个
+// Flag。token 会做大小写折叠与 trim;未知 token 被忽略(因此
+// "debug|bogus" 得到 FlagDebug,而非 FlagNone)。空字符串得到 FlagNone。
 //
-// This is the lenient parser, kept for compatibility with the per-transport
-// switch logic callers (e.g. ginext) previously hand-rolled. For inbound
-// trust boundaries where a typo must not silently downgrade shadow/stress
-// traffic to real traffic, use [ParseFlagStrict].
+// 这是 lenient 解析器,为兼容此前调用方(如 ginext)手写的 per-transport
+// switch 逻辑而保留。在 inbound 信任边界上,若拼错不得静默把 shadow/stress
+// 流量降级为真实流量,请用 [ParseFlagStrict]。
 //
-// This is the inverse of [Flag.String]:
+// 它是 [Flag.String] 的逆运算:
 //
 //	tracer.ParseFlag(tracer.FlagDebug.String()) == tracer.FlagDebug
 func ParseFlag(s string) Flag {
@@ -51,20 +47,19 @@ func ParseFlag(s string) Flag {
 	return f
 }
 
-// ParseFlagStrict parses a "|" separated flag string like [ParseFlag] but
-// returns an error naming the first unknown token instead of silently
-// dropping it. Use this at HTTP/gRPC inbound boundaries where a misspelled
-// mode ("shdow") must surface rather than degrade shadow traffic to real
-// traffic. The no-op tokens ("normal", "none") and empty tokens are accepted,
-// as is the empty string (yields FlagNone, nil error). "none" is the string
-// form of FlagNone (see [Flag.String]).
+// ParseFlagStrict 像 [ParseFlag] 一样解析 "|" 分隔的 flag 字符串,但返回
+// 一个指出首个未知 token 的 error,而非静默丢弃它。用于 HTTP/gRPC 的
+// inbound 边界 —— 在那里拼错的模式("shdow")必须暴露而非把 shadow 流量
+// 降级为真实流量。no-op token("normal"、"none")与空 token 都被接受,
+// 空字符串也被接受(得到 FlagNone、nil error)。"none" 是 FlagNone 的
+// 字符串形式(见 [Flag.String])。
 func ParseFlagStrict(s string) (Flag, error) {
 	return parseFlag(s, true)
 }
 
-// parseFlag is the shared engine for ParseFlag (lenient) and ParseFlagStrict.
-// When strict is true, an unknown token produces a non-nil error and parsing
-// stops at the first such token (its already-OR'd bits are still returned).
+// parseFlag 是 ParseFlag(lenient)与 ParseFlagStrict 的共享引擎。当 strict
+// 为 true 时,未知 token 产生非 nil error,并在首个此类 token 处停止解析
+// (其已 OR 的位仍会被返回)。
 func parseFlag(s string, strict bool) (Flag, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
@@ -74,27 +69,26 @@ func parseFlag(s string, strict bool) (Flag, error) {
 	for _, tok := range strings.Split(s, "|") {
 		key := strings.ToLower(strings.TrimSpace(tok))
 		if key == "" || key == "normal" || key == "none" {
-			continue // "normal" / "none" / empty are explicitly the no-op mode
+			continue // "normal" / "none" / 空串显式表示 no-op 模式
 		}
 		bit, ok := flagByName[key]
 		if !ok {
 			if strict {
 				return f, fmt.Errorf("tracer: unknown flag %q", tok)
 			}
-			continue // lenient: ignore unknown tokens
+			continue // lenient: 忽略未知 token
 		}
 		f |= bit
 	}
 	return f, nil
 }
 
-// String returns the canonical "|" joined form of f's set bits, in flagTable
-// order, e.g. "debug|shadow". FlagNone renders as "none".
+// String 返回 f 已设置位的规范 "|" 连接形式,顺序遵循 flagTable,如
+// "debug|shadow"。FlagNone 渲染为 "none"。
 //
-// Bits set on f that no flagTable entry claims (reserved/unknown bits, e.g.
-// a flag a newer version introduced that this build does not know about) are
-// NOT dropped: they are appended as a trailing 0xNN suffix, so a Flag that
-// carries unknown bits is never mistaken for FlagNone when versions disagree.
+// f 上设置了但无 flagTable 条目认领的位(保留/未知位,例如更新版本引入
+// 而当前构建未知的 flag)不会被丢弃:它们被追加为末尾 0xNN 后缀,使携带
+// 未知位的 Flag 在版本不一致时不会被误认为 FlagNone。
 func (f Flag) String() string {
 	known := f & allFlagBits
 	unknown := f &^ allFlagBits
@@ -104,13 +98,13 @@ func (f Flag) String() string {
 	case len(names) == 0 && unknown == 0:
 		return "none"
 	case unknown == 0:
-		// only known bits — join names
+		// 只有已知位 —— 连接名称
 		return joinNames(names)
 	default:
-		// some unknown bits remain; render names (if any) then 0xNN.
-		// Convert to uint8 BEFORE handing to fmt: Flag implements Stringer,
-		// so fmt.Sprintf("%x", unknown) would re-enter Flag.String and
-		// recurse forever. The raw uint8 prints as hex with no dispatch.
+		// 残留一些未知位;先渲染名称(若有)再接 0xNN。
+		// 在交给 fmt 前先转换为 uint8:Flag 实现了 Stringer,
+		// 因此 fmt.Sprintf("%x", unknown) 会重新进入 Flag.String
+		// 并无限递归。原始 uint8 以 hex 打印,无方法派发。
 		prefix := ""
 		if len(names) > 0 {
 			prefix = joinNames(names) + "|"
@@ -119,8 +113,8 @@ func (f Flag) String() string {
 	}
 }
 
-// joinNames joins flag names with "|" in flagTable order. Names is assumed
-// non-empty and ordered.
+// joinNames 以 "|" 按 flagTable 顺序连接 flag 名称。假定 Names 非空且
+// 已排序。
 func joinNames(names []string) string {
 	if len(names) == 1 {
 		return names[0]
@@ -135,6 +129,6 @@ func joinNames(names []string) string {
 	return b.String()
 }
 
-// GoString returns the debug-printf form, e.g. "Flag(debug|shadow)" or
-// "Flag(none)", so Flag prints readably inside fmt.Printf("%#v", ...).
+// GoString 返回 debug-printf 形式,如 "Flag(debug|shadow)" 或
+// "Flag(none)",使 Flag 在 fmt.Printf("%#v", ...) 中可读打印。
 func (f Flag) GoString() string { return "Flag(" + f.String() + ")" }

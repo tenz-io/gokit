@@ -5,14 +5,13 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// Entry is the primary logging interface.
+// Entry 是主要的日志接口。
 //
-// Every With* method returns a new Entry that inherits the parent's fields
-// without mutating the parent, so an Entry is safe to share across
-// goroutines and to derive per-request children from.
+// 每个 With* 方法都返回一个新的 Entry,它继承父级的 field 而不修改父级,
+// 因此 Entry 可安全跨 goroutine 共享,也适合派生每请求的子 entry。
 type Entry interface {
-	// Plain methods are print-style, f methods are printf-style, and w methods
-	// accept alternating structured key-value fields.
+	// 无后缀方法为 print 风格,f 方法为 printf 风格,w 方法
+	// 接受交替的结构化键值 field。
 	Debug(args ...any)
 	Debugf(format string, args ...any)
 	Debugw(msg string, fields ...any)
@@ -26,50 +25,50 @@ type Entry interface {
 	Errorf(format string, args ...any)
 	Errorw(msg string, fields ...any)
 
-	// With returns a child Entry with the given structured fields appended.
-	// Fields are alternating key-value pairs: With("user", "bob", "age", 42).
+	// With 返回一个追加了给定结构化 field 的子 Entry。
+	// field 为交替的键值对:With("user", "bob", "age", 42)。
 	With(args ...any) Entry
 
-	// WithError adds an "error" field with err.Error(). Returns the same
-	// entry when err is nil.
+	// WithError 追加一个取值为 err.Error() 的 "error" field。当 err 为 nil 时
+	// 返回同一个 entry。
 	WithError(err error) Entry
 
-	// WithRequestID sets the request_id field. WithTracing is an alias.
+	// WithRequestID 设置 request_id field。WithTracing 是其别名。
 	WithRequestID(id string) Entry
 	WithTracing(id string) Entry
 
-	// WithFields adds multiple structured fields from a Fields map.
+	// WithFields 从 Fields map 追加多个结构化 field。
 	WithFields(fields Fields) Entry
-	// WithField adds a single structured field.
+	// WithField 追加单个结构化 field。
 	WithField(k string, v any) Entry
 
-	// StartTraffic begins a traffic span for request/response logging.
-	// Returns nil if traffic logging is not configured.
+	// StartTraffic 为请求/响应日志开启一个 traffic span。
+	// 未配置 traffic 日志时返回 nil。
 	StartTraffic(cmd string) *TrafficRec
 
-	// Enabled reports whether the entry will log at the given level.
+	// Enabled 报告该 entry 是否会在给定级别下产生日志。
 	Enabled(lvl Level) bool
 
-	// SetLevel adjusts the log level of this entry's core at runtime.
+	// SetLevel 在运行时调整该 entry 所属 core 的 log level。
 	SetLevel(lvl Level)
 
-	// GetLevel returns the current log level of this entry's core.
+	// GetLevel 返回该 entry 所属 core 的当前 log level。
 	GetLevel() Level
 
-	// Logger returns the underlying *zap.SugaredLogger.
+	// Logger 返回底层 *zap.SugaredLogger。
 	Logger() *zap.SugaredLogger
 }
 
-// logEntry implements Entry using a single *zap.SugaredLogger backed by a
-// core whose level is governed by a zap.AtomicLevel (so SetLevel works).
+// logEntry 基于 *zap.SugaredLogger 实现 Entry,其底层 core 的 level 由
+// zap.AtomicLevel 管控(从而使 SetLevel 生效)。
 type logEntry struct {
 	base    *zap.SugaredLogger
 	level   zap.AtomicLevel
-	traffic *zap.SugaredLogger // nil when traffic is disabled
+	traffic *zap.SugaredLogger // traffic 禁用时为 nil
 	trimmer *OutputTrimmer
 }
 
-// --- Entry methods ---
+// --- Entry 方法 ---
 
 func (e *logEntry) Logger() *zap.SugaredLogger { return e.base }
 
@@ -151,9 +150,9 @@ func (e *logEntry) GetLevel() Level {
 	return Level(e.level.Level())
 }
 
-// newEntry builds a logEntry from cfg. The AtomicLevel is wired into the
-// core (as the LevelEnabler) so that SetLevel/GetLevel actually take effect,
-// unlike v2 where a detached AtomicLevel made SetLevel a no-op.
+// newEntry 从 cfg 构建一个 logEntry。AtomicLevel 被接入 core(作为
+// LevelEnabler),从而 SetLevel/GetLevel 真正生效,而非 v2 中那样
+// AtomicLevel 脱离连接使 SetLevel 成为 no-op。
 func newEntry(cfg Config) *logEntry {
 	validateConfig(&cfg)
 

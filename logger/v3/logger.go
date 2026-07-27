@@ -1,18 +1,17 @@
-// Package logger provides a structured, leveled logging API built on
-// go.uber.org/zap.
+// Package logger 提供基于 go.uber.org/zap 构建的、结构化且分级别的日志 API。
 //
-// v3 is a clean rewrite with no backwards-compatibility shims. It supports:
-//   - Four log levels: Debug, Info, Warn, Error
-//   - Console output (default) and per-level file output with rotation
-//   - Structured fields via With() / WithError() / WithRequestID() chaining
-//   - Context propagation: attach an Entry to a context.Context and pull it
-//     back out across call chains
-//   - Traffic logging: start/end spans that record cmd, cost, code and resp
-//     into a separate traffic.log
-//   - Output trimming for large strings/slices/maps/structs
-//   - Runtime level changes via SetLevel/GetLevel
+// v3 是一次全新重写,不带任何向后兼容垫片。它支持:
+//   - 四个 log level:Debug、Info、Warn、Error
+//   - console 输出(默认)以及按级别拆分并带 rotation 的文件输出
+//   - 通过 With()/WithError()/WithRequestID() 链式追加结构化 field
+//   - context 传播:将一个 Entry 绑定到 context.Context,并在调用链中
+//     取回
+//   - traffic 日志:记录 start/end span,将 cmd、cost、code 与 resp 写入
+//     独立的 traffic.log
+//   - 对大字符串/slice/map/struct 的输出裁剪
+//   - 通过 SetLevel/GetLevel 在运行时修改级别
 //
-// Quick start:
+// 快速上手:
 //
 //	logger.Configure(logger.Config{
 //	    Level:   logger.InfoLevel,
@@ -27,7 +26,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// Fields is a map of structured key-value pairs attached to log entries.
+// Fields 是附加到 log entry 上的结构化键值对 map。
 type Fields map[string]any
 
 func (f Fields) toArgs() []any {
@@ -41,7 +40,7 @@ func (f Fields) toArgs() []any {
 	return args
 }
 
-// Level represents a log severity level.
+// Level 表示一个日志严重级别。
 type Level zapcore.Level
 
 const (
@@ -51,81 +50,80 @@ const (
 	ErrorLevel Level = Level(zapcore.ErrorLevel)
 )
 
-// Encoding selects the output format of the logger.
+// Encoding 选择 logger 的输出格式。
 type Encoding string
 
 const (
-	// ConsoleEncoding (default) writes human-friendly "LEVEL time msg key=value" lines.
+	// ConsoleEncoding (默认)写入对人类友好的 "LEVEL time msg key=value" 行。
 	ConsoleEncoding Encoding = "console"
-	// JSONEncoding writes one JSON object per line, suitable for log aggregation.
+	// JSONEncoding 每行写入一个 JSON 对象,适合日志聚合。
 	JSONEncoding Encoding = "json"
 )
 
-// WriterSyncer is an alias for zapcore.WriteSyncer.
+// WriterSyncer 是 zapcore.WriteSyncer 的别名。
 type WriterSyncer = zapcore.WriteSyncer
 
-// LevelEnabler is an alias for zapcore.LevelEnabler.
+// LevelEnabler 是 zapcore.LevelEnabler 的别名。
 type LevelEnabler = zapcore.LevelEnabler
 
-// Config configures a logger instance. The initial global logger and the
-// functional-option constructors use the documented defaults. With the
-// struct constructors, boolean fields are explicit: Console:false means no
-// console output.
+// Config 配置一个 logger 实例。初始全局 logger 与 functional-option 构造函数
+// 使用文档中记载的默认值。使用 struct 构造函数时,布尔字段需显式指定:
+// Console:false 表示不输出到 console。
 type Config struct {
-	// Level sets the minimum log level. Default: InfoLevel.
+	// Level 设置最低 log level。默认:InfoLevel。
 	Level Level
 
-	// Encoding selects between console and JSON output. Default: console.
+	// Encoding 在 console 与 JSON 输出之间选择。默认:console。
 	Encoding Encoding
 
-	// Console enables logging to stdout (Info/Debug) and stderr (Warn/Error).
-	// Default: true.
+	// Console 启用向 stdout(Info/Debug)与 stderr(Warn/Error)的日志输出。
+	// 默认:true。
 	Console bool
 
-	// FilePath enables file logging to the given directory. When set, log
-	// files are created under FilePath/<level>.log, split by severity:
-	// debug.log (Debug+), info.log (Info+), warn.log (Warn+), error.log (Error+).
-	// Default: "" (disabled).
+	// FilePath 启用向指定目录的文件日志。设置后,日志文件会创建在
+	// FilePath/<level>.log 下,按严重级别拆分:
+	// debug.log(Debug+)、info.log(Info+)、warn.log(Warn+)、error.log(Error+)。
+	// 默认:""(禁用)。
 	FilePath string
 
-	// MaxSize is the max size in MB before a log file is rotated. Default: 100.
+	// MaxSize 是日志文件被 rotation 前的最大体积(MB)。默认:100。
 	MaxSize int
-	// MaxAge is the max age in days to keep a rotated log file. Default: 7.
+	// MaxAge 是已 rotation 日志文件的最大保留天数。默认:7。
 	MaxAge int
-	// MaxBackups is the max number of rotated files to keep. Default: 10.
+	// MaxBackups 是保留的已 rotation 文件最大数量。默认:10。
 	MaxBackups int
 
-	// Caller adds the caller's file and line number to each log entry.
+	// Caller 在每条 log entry 中加入调用方的文件与行号。
 	Caller bool
-	// CallerSkip increases the number of callers skipped (default 0).
+	// CallerSkip 增加跳过的调用者层数(默认 0)。
 	CallerSkip int
 
-	// Traffic enables the traffic logger component, which writes a separate
-	// traffic.log recording request/response spans.
+	// Traffic 启用 traffic logger 组件,它会写入独立的
+	// traffic.log 来记录请求/响应 span。
 	Traffic bool
-	// TrafficPath overrides the directory for traffic.log. Falls back to
-	// FilePath, then "log" if empty.
+	// TrafficPath 覆盖 traffic.log 的目录。为空时回退到
+	// FilePath,仍为空则回退到 "log"。
 	TrafficPath string
-	// TrafficMaxSize/MaxAge/MaxBackups override rotation settings for the
-	// traffic log. Zero falls back to the main MaxSize/MaxAge/MaxBackups.
+	// TrafficMaxSize/MaxAge/MaxBackups 覆盖 traffic 日志的 rotation 设置。
+	// 为零时回退到主 MaxSize/MaxAge/MaxBackups。
 	TrafficMaxSize    int
 	TrafficMaxAge     int
 	TrafficMaxBackups int
 
-	// Trimmer configures output truncation for large fields. If nil, sensible
-	// defaults are applied (arr=3, str=128, depth=10).
+	// Trimmer 配置对大型 field 的输出裁剪。为 nil 时,应用合理默认值
+	// (arr=3、str=128、depth=10)。
 	Trimmer *TrimConfig
 }
 
-// TrimConfig controls output truncation.
+// TrimConfig 控制输出裁剪。
 type TrimConfig struct {
-	ArrLimit  int      // max elements kept from a slice/array (default 3)
-	StrLimit  int      // max bytes kept from a string (default 128)
-	DeepLimit int      // max nesting depth for structs/maps (default 10)
-	Ignores   []string // field names to drop entirely
+	ArrLimit  int      // 从 slice/array 保留的最大元素数(默认 3)
+	StrLimit  int      // 从 string 保留的最大字节数(默认 128)
+	DeepLimit int      // struct/map 的最大嵌套深度(默认 10)
+	Ignores   []string // 完全丢弃的 field 名
 }
 
-// defaultConfig is the configuration applied when none is provided.
+// defaultConfig 是未提供配置时应用的配置。
 var defaultConfig = Config{
 	Level:             InfoLevel,
 	Encoding:          ConsoleEncoding,
@@ -138,10 +136,10 @@ var defaultConfig = Config{
 	TrafficMaxBackups: 10,
 }
 
-// ConfigOption is a functional option for Configure / NewEntry.
+// ConfigOption 是用于 Configure / NewEntry 的 functional option。
 type ConfigOption func(*Config)
 
-// --- Config options ---
+// --- 配置项 ---
 
 func WithLevel(lvl Level) ConfigOption           { return func(c *Config) { c.Level = lvl } }
 func WithEncoding(enc Encoding) ConfigOption     { return func(c *Config) { c.Encoding = enc } }
@@ -159,14 +157,14 @@ func WithTrafficMaxAge(days int) ConfigOption    { return func(c *Config) { c.Tr
 func WithTrafficMaxBackups(n int) ConfigOption   { return func(c *Config) { c.TrafficMaxBackups = n } }
 func WithTrimConfig(tc *TrimConfig) ConfigOption { return func(c *Config) { c.Trimmer = tc } }
 
-// --- Construction ---
+// --- 构造 ---
 
-// Configure initializes the global logger.
+// Configure 初始化全局 logger。
 func Configure(config Config) {
 	global.Store(newEntry(config))
 }
 
-// ConfigureWithOpts initializes the global logger using functional options.
+// ConfigureWithOpts 使用 functional option 初始化全局 logger。
 func ConfigureWithOpts(opts ...ConfigOption) {
 	cfg := defaultConfig
 	for _, o := range opts {
@@ -177,10 +175,10 @@ func ConfigureWithOpts(opts ...ConfigOption) {
 	Configure(cfg)
 }
 
-// NewEntry creates a standalone Entry without affecting the global logger.
+// NewEntry 创建一个不影响全局 logger 的独立 Entry。
 func NewEntry(config Config) Entry { return newEntry(config) }
 
-// NewEntryWithOpts creates a standalone Entry using functional options.
+// NewEntryWithOpts 使用 functional option 创建一个独立 Entry。
 func NewEntryWithOpts(opts ...ConfigOption) Entry {
 	cfg := defaultConfig
 	for _, o := range opts {
@@ -191,7 +189,7 @@ func NewEntryWithOpts(opts ...ConfigOption) Entry {
 	return NewEntry(cfg)
 }
 
-// --- Global state ---
+// --- 全局状态 ---
 
 var global atomic.Pointer[logEntry]
 
@@ -201,26 +199,24 @@ func init() {
 
 func current() *logEntry { return global.Load() }
 
-// L returns the global logger entry.
+// L 返回全局 logger entry。
 func L() Entry { return current() }
 
-// SetLevel adjusts the global log level at runtime. Unlike the v2
-// implementation, the level is wired into the core, so this takes effect
-// immediately for all subsequent calls.
+// SetLevel 在运行时调整全局 log level。与 v2 实现不同,该 level 直接
+// 接入 core,因此对所有后续调用立即生效。
 func SetLevel(lvl Level) {
 	current().SetLevel(lvl)
 }
 
-// GetLevel returns the current global log level.
+// GetLevel 返回当前全局 log level。
 func GetLevel() Level {
 	return current().GetLevel()
 }
 
-// --- Package-level convenience functions ---
+// --- 包级便捷函数 ---
 
-// The package-level logging functions call the underlying SugaredLogger
-// directly. This keeps caller reporting correct: there is one wrapper frame
-// here, just as there is one wrapper frame in the corresponding Entry method.
+// 包级别的日志函数直接调用底层 SugaredLogger。这保证了调用者信息正确:
+// 这里有一个包装帧,与对应 Entry 方法中的那一个包装帧保持一致。
 func Debug(args ...any)                 { current().base.Debug(args...) }
 func Debugf(format string, args ...any) { current().base.Debugf(format, args...) }
 func Debugw(msg string, fields ...any) {

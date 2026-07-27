@@ -1,57 +1,52 @@
 package tracer
 
-// Flag is a bitmask of traffic-mode flags carried through a request's
-// context.
+// Flag 表示一个随请求 context 传递的流量模式标志位掩码。
 //
-// A Flag is cheap (uint8) and safe to share; the zero value FlagNone carries
-// no mode. Build a combination with the bitwise OR operator:
+// Flag 开销很小(uint8)且可安全共享;零值 FlagNone 不携带任何模式。使用
+// 按位 OR 运算符组合多个 flag:
 //
 //	f := tracer.FlagDebug | tracer.FlagShadow
 //
-// The known flags, their names and aliases live in flagTable — that single
-// table is the source of truth for parsing ([ParseFlag]) and rendering
-// ([Flag.String], [Flag.Names]) so adding a mode is a one-line change. uint8
-// (unsigned) gives eight usable flag bits and avoids the sign-bit overflow
-// trap that a signed int8 would hit at bit 7.
+// 已知的 flag、其名称与别名都位于 flagTable 中 —— 这张表是解析
+// ([ParseFlag]) 与渲染([Flag.String]、[Flag.Names])的唯一事实来源,因此
+// 新增一个模式只需改动一行。使用 uint8(无符号)可提供 8 个可用 flag 位,
+// 并避免有符号 int8 在第 7 位上的符号位溢出陷阱。
 type Flag uint8
 
-// Predefined traffic-mode flags.
+// 预定义的流量模式 flag。
 const (
-	// FlagNone is the zero Flag: no mode set.
+	// FlagNone 是零值 Flag:未设置任何模式。
 	FlagNone Flag = 0
-	// FlagDebug enables debug mode: more verbose logging / tracing.
+	// FlagDebug 启用 debug 模式:更详细的 logging / tracing。
 	FlagDebug Flag = 1 << iota
-	// FlagStress marks stress-test traffic: isolate metrics, skip side
-	// effects, etc.
+	// FlagStress 标记压测流量:隔离 metrics、跳过副作用等。
 	FlagStress
-	// FlagShadow marks shadow traffic (record/replay): the request should
-	// not produce real side effects.
+	// FlagShadow 标记影子流量(record/replay):请求不应产生真实副作用。
 	FlagShadow
 )
 
-// flagDef describes one known flag for the registry table.
+// flagDef 描述注册表中的一条已知 flag。
 type flagDef struct {
 	flag Flag
-	// name is the canonical string form, used by ParseFlag and String.
+	// name 是规范字符串形式,供 ParseFlag 和 String 使用。
 	name string
-	// aliases are accepted by ParseFlag in addition to name (case-folded).
-	// May be nil.
+	// aliases 是除 name 之外 ParseFlag 也接受的别名(已做大小写折叠)。
+	// 可为 nil。
 	aliases []string
 }
 
-// flagTable is the single source of truth for known flags. Order matters:
-// String renders bits in this order, and the highest set bit wins the "all
-// known" fast path in String. Add a flag here and parsing/rendering pick it
-// up automatically.
+// flagTable 是已知 flag 的唯一事实来源。顺序很重要:String 按此顺序渲染
+// 各位,且最高有效位在 String 的 "all known" 快速路径中胜出。在此新增一个
+// flag,解析与渲染会自动识别它。
 var flagTable = []flagDef{
 	{flag: FlagDebug, name: "debug"},
 	{flag: FlagStress, name: "stress"},
 	{flag: FlagShadow, name: "shadow"},
 }
 
-// Is reports whether flag f has every bit of x set. FlagNone is not a real
-// flag: Is(FlagNone) returns false (a flag set is never "none"). To test for
-// the absence of all modes, compare f == FlagNone directly.
+// Is 报告 flag f 是否设置了 x 的所有位。FlagNone 不是真实 flag:
+// Is(FlagNone) 返回 false(flag 集合绝不可能是 "none")。要测试是否完全
+// 无模式,直接比较 f == FlagNone。
 func (f Flag) Is(x Flag) bool {
 	if x == FlagNone {
 		return false
@@ -59,23 +54,21 @@ func (f Flag) Is(x Flag) bool {
 	return f&x == x
 }
 
-// HasAll reports whether f contains every bit of flags. It is an alias for
-// Is kept for readability at call sites that pass a combined mask.
-// HasAll(FlagNone) returns false for the same reason Is does.
+// HasAll 报告 f 是否包含 flags 的所有位。它是 Is 的别名,便于在调用处
+// 传入组合掩码时提升可读性。HasAll(FlagNone) 出于同样原因返回 false。
 func (f Flag) HasAll(flags Flag) bool { return f.Is(flags) }
 
-// IsDebug reports whether FlagDebug is set.
+// IsDebug 报告是否设置了 FlagDebug。
 func (f Flag) IsDebug() bool { return f.Is(FlagDebug) }
 
-// IsStress reports whether FlagStress is set.
+// IsStress 报告是否设置了 FlagStress。
 func (f Flag) IsStress() bool { return f.Is(FlagStress) }
 
-// IsShadow reports whether FlagShadow is set.
+// IsShadow 报告是否设置了 FlagShadow。
 func (f Flag) IsShadow() bool { return f.Is(FlagShadow) }
 
-// Names returns the canonical names of every set bit in f, in flagTable
-// order. Returns nil for FlagNone. It is the structured counterpart to
-// String (which joins the same names with "|").
+// Names 返回 f 中所有已设置位的规范名称,顺序遵循 flagTable。对 FlagNone
+// 返回 nil。它是 String 的结构化对应版本(String 用 "|" 连接同名列表)。
 func (f Flag) Names() []string {
 	if f == FlagNone {
 		return nil

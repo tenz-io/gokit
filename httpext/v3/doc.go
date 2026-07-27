@@ -1,22 +1,21 @@
-// Package httpext provides a composable transport-layer interceptor chain for
-// the standard library's *http.Client: header injection, per-request metrics,
-// and request/response traffic logging.
+// Package httpext 为标准库的 *http.Client 提供一个可组合的 transport 层
+// interceptor chain:header injection、per-request metrics,以及
+// request/response traffic 日志。
 //
-// v3 is a clean rewrite with no backwards-compatibility shims, built on
-// logger/v3, monitor/v3, and tracer/v3. It sits alongside the untouched
-// httpext/v2; consumers are not migrated automatically.
+// v3 是一次干净的重写,不带任何向后兼容 shim,构建于
+// logger/v3、monitor/v3 与 tracer/v3 之上。它与未改动的 httpext/v2 并存;
+// 使用方不会被自动迁移。
 //
-// httpext only provides the Interceptor — there is no Client wrapper. Wire
-// the chain onto your own *http.Client via Interceptor.Apply, then keep using
-// the standard library (http.Client.Do, Get, Post) as normal. The active
-// layers run for every request transparently.
+// httpext 仅提供 Interceptor —— 不提供 Client wrapper。通过
+// Interceptor.Apply 将 chain 接入你自己的 *http.Client,然后照常使用
+// 标准库 (http.Client.Do、Get、Post)。激活的层会为每个 request 透明地运行。
 //
-// The chain is wired once onto an *http.Client via Interceptor.Apply, after
-// which every outbound request flows through the active layers in
-// newTransporters order (injectHeader → metrics → traffic). Disabled layers
-// are dropped, so the chain contains only the enabled ones.
+// chain 通过 Interceptor.Apply 一次性接入 *http.Client,此后每个出站
+// request 都按 newTransporters 顺序流经激活的层
+// (injectHeader → metrics → traffic)。禁用的层会被剔除,因此 chain 仅包含
+// 已启用的层。
 //
-// Quick start:
+// 快速开始:
 //
 //	interceptor := httpext.NewInterceptorWithOpts(
 //	    httpext.WithEnableTraffic(true),
@@ -28,19 +27,18 @@
 //	httpCli := &http.Client{}
 //	interceptor.Apply(httpCli)
 //
-//	// Use the standard library client as normal; the chain runs for every call.
+//	// 照常使用标准库 client;chain 会为每次调用运行。
 //	resp, err := httpCli.Get("https://example.com/items")
 //
-// Behavior notes (differ from v2):
-//   - The slow-log transport and Config.SlowLogFloor are removed. Slow requests
-//     are surfaced by monitor/v3's latency histogram (alert on its threshold).
-//   - There is no Client/SimpleRequest/RequestOption surface — use *http.Client
-//     directly. v2's client.go (JSON/DoSimple/Get/Post/...) is removed; the
-//     standard library already covers those verbs.
-//   - Traffic logging records cmd/cost/code/method/url/query and request/
-//     response headers only — it does NOT read or record the request/response
-//     bodies, so it is cheap and never disturbs the body streams. v2 captured
-//     and decoded bodies (JSON/form parse, text truncation); that capture.go
-//     is removed. Traffic uses logger/v3's StartTraffic/End span API instead of
-//     v2's ReqEntity/RespEntity surface.
+// 行为说明 (与 v2 不同):
+//   - slow-log transport 与 Config.SlowLogFloor 已移除。慢请求由 monitor/v3
+//     的 latency histogram 暴露 (基于其阈值告警)。
+//   - 不提供 Client/SimpleRequest/RequestOption 表面 —— 直接使用
+//     *http.Client。v2 的 client.go (JSON/DoSimple/Get/Post/...) 已移除;
+//     标准库已经覆盖这些动词。
+//   - traffic 日志仅记录 cmd/cost/code/method/url/query 以及 request/
+//     response header —— 它不会读取或记录 request/response body,因此开销
+//     很低且绝不干扰 body 流。v2 会捕获并解码 body (JSON/form 解析、文本
+//     截断);该 capture.go 已移除。traffic 使用 logger/v3 的
+//     StartTraffic/End span API,而非 v2 的 ReqEntity/RespEntity 表面。
 package httpext

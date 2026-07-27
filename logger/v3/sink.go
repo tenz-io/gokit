@@ -10,28 +10,27 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-// buildCore assembles the main logging core from console and file sinks.
+// buildCore 从 console 与 file sink 组装主日志 core。
 //
-// Each sink carries its own LevelEnabler so that file output is split by
-// severity: debug.log receives Debug and above, info.log Info and above,
-// warn.log Warn and above, error.log Error and above. Console output sends
-// Info/Debug to stdout and Warn/Error to stderr, each with the appropriate
-// threshold. The global AtomicLevel (passed as *level) gates everything,
-// so raising it suppresses lower-severity output across all sinks uniformly.
+// 每个 sink 自带独立的 LevelEnabler,从而按严重级别拆分文件输出:
+// debug.log 接收 Debug 及以上,info.log 接收 Info 及以上,
+// warn.log 接收 Warn 及以上,error.log 接收 Error 及以上。console 输出将
+// Info/Debug 发往 stdout、Warn/Error 发往 stderr,各自带有相应阈值。全局
+// AtomicLevel(以 *level 传入)统一管控所有 sink,因此调高它即可在所有
+// sink 上一致地抑制更低严重级别的输出。
 func buildCore(cfg Config, enc zapcore.Encoder, level *zap.AtomicLevel) zapcore.Core {
 	sinks := buildSinks(cfg)
 	if len(sinks) == 0 {
-		// Respect an explicitly disabled console. A logger with no configured
-		// destinations is intentionally silent instead of leaking to stdout.
+		// 尊重显式禁用的 console。未配置任何输出目标的 logger 有意保持
+		// 静默,而不是泄露到 stdout。
 		return zapcore.NewNopCore()
 	}
 
 	cores := make([]zapcore.Core, 0, len(sinks))
 	for _, s := range sinks {
-		s := s // capture per-iteration (pre-Go1.22 loop var semantics)
-		// The effective threshold is the stricter of the sink's own enabler
-		// and the global AtomicLevel, so SetLevel can still throttle output
-		// on a sink that would otherwise accept everything.
+		s := s // 按次迭代捕获(兼容 Go1.22 之前的循环变量语义)
+		// 实际阈值为 sink 自身 enabler 与全局 AtomicLevel 二者中更严格者,
+		// 这样 SetLevel 仍能在一个本会接受所有级别的 sink 上限制输出。
 		enabler := zap.LevelEnablerFunc(func(l zapcore.Level) bool {
 			return level.Enabled(l) && s.enabler.Enabled(l)
 		})
@@ -40,23 +39,23 @@ func buildCore(cfg Config, enc zapcore.Encoder, level *zap.AtomicLevel) zapcore.
 	return zapcore.NewTee(cores...)
 }
 
-// sink pairs a destination with the minimum level it accepts.
+// sink 将输出目标与其接受的最低级别配对。
 type sink struct {
 	ws      zapcore.WriteSyncer
 	enabler zapcore.LevelEnabler
 }
 
-// buildSinks assembles the console and file sinks described by cfg.
+// buildSinks 组装 cfg 所描述的 console 与 file sink。
 func buildSinks(cfg Config) []sink {
 	var sinks []sink
 
 	if cfg.Console {
-		// stdout: Debug and Info (anything below Warn).
+		// stdout:Debug 与 Info(低于 Warn 的所有级别)。
 		sinks = append(sinks, sink{
 			ws:      os.Stdout,
 			enabler: zap.LevelEnablerFunc(func(l zapcore.Level) bool { return l < zapcore.WarnLevel }),
 		})
-		// stderr: Warn and Error.
+		// stderr:Warn 与 Error。
 		sinks = append(sinks, sink{
 			ws:      os.Stderr,
 			enabler: zap.LevelEnablerFunc(func(l zapcore.Level) bool { return l >= zapcore.WarnLevel }),
@@ -74,16 +73,16 @@ func buildSinks(cfg Config) []sink {
 	return sinks
 }
 
-// fileSinks returns one lumberjack-backed sink per severity, each with a
-// distinct LevelEnabler. Files are cumulative: debug.log receives every
-// level, while error.log receives only Error entries.
+// fileSinks 按严重级别返回一个由 lumberjack 支撑的 sink,每个 sink 拥有
+// 独立的 LevelEnabler。文件是累积的:debug.log 接收所有级别,
+// 而 error.log 仅接收 Error 条目。
 func fileSinks(cfg Config) []sink {
 	type fileSpec struct {
 		name string
 		min  zapcore.Level
 	}
 	specs := []fileSpec{
-		{"debug", zapcore.DebugLevel}, // Debug+ (everything)
+		{"debug", zapcore.DebugLevel}, // Debug+(全部)
 		{"info", zapcore.InfoLevel},   // Info+
 		{"warn", zapcore.WarnLevel},   // Warn+
 		{"error", zapcore.ErrorLevel}, // Error+
@@ -106,7 +105,7 @@ func fileSinks(cfg Config) []sink {
 	return sinks
 }
 
-// validateConfig fills in defaults for any unset numeric fields.
+// validateConfig 为所有未设置的数值字段填充默认值。
 func validateConfig(cfg *Config) {
 	if cfg.MaxSize <= 0 {
 		cfg.MaxSize = 100

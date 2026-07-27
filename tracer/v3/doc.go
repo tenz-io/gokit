@@ -1,44 +1,41 @@
-// Package tracer provides context-based request ID propagation and traffic
-// mode (debug/stress/shadow) flag management.
+// Package tracer 提供基于 context 的 request ID 传播与流量模式
+// (debug/stress/shadow) flag 管理。
 //
-// v3 is a clean rewrite with no backwards-compatibility shims. It is designed
-// around a data-driven flag registry so that parsing a flag string
-// ("debug|shadow"), rendering a flag back to its string form, and iterating
-// the known flags all read from a single table — callers no longer need to
-// hand-roll a switch per transport.
+// v3 是一次干净重写,不带任何向后兼容垫片。它围绕数据驱动的 flag 注册表
+// 设计,因此解析 flag 字符串("debug|shadow")、把 flag 渲染回字符串形式、
+// 遍历已知 flag 都从同一张表读取 —— 调用方不再需要为每个 transport 手写
+// switch。
 //
-// Quick start:
+// 快速上手:
 //
 //	ctx := tracer.WithRequestID(context.Background(), "req-123")
 //	ctx = tracer.WithFlag(ctx, tracer.FlagDebug|tracer.FlagShadow)
 //
 //	if tracer.FromContext(ctx).IsDebug() {
-//	    // verbose path
+//	    // 详细路径
 //	}
 //
-//	// Parse a header value into a flag set, then stash it on the context.
+//	// 把 header 值解析成 flag 集合,再存入 context。
 //	f := tracer.ParseFlag("debug|shadow")
 //	ctx = tracer.WithFlag(ctx, f)
 //
 //	fmt.Println(tracer.FromContext(ctx)) // "debug|shadow"
 //
-// ID conventions:
-//   - EnsureRequestID: the inbound-boundary primitive — guarantees ctx
-//     carries an id (generates and stores one if absent) so the same id is
-//     seen by logs, response headers and downstream calls for the whole
-//     request. Prefer this in middleware.
-//   - WithRequestID / RequestIDFromCtx: explicitly set, or read the stored id
-//     with fallback generation. Note RequestIDFromCtx does NOT write the
-//     generated id back, so repeated reads of an id-less ctx yield different
-//     ids; use EnsureRequestID to pin one.
-//   - RequestIDFromCtxOr: read without auto-generation; returns "" when
-//     absent, for "is one already present?" checks.
+// ID 约定:
+//   - EnsureRequestID: inbound 边界原语 —— 保证 ctx 携带一个 id(缺失时
+//     生成并存入),使整个请求的日志、响应 header 与下游调用都看到同一
+//     id。middleware 中优先使用它。
+//   - WithRequestID / RequestIDFromCtx:显式设置,或读取已存 id 并在缺失
+//     时回退生成。注意 RequestIDFromCtx 不会把生成的 id 写回,因此对
+//     无 id 的 ctx 反复读取会得到不同 id;用 EnsureRequestID 来固定一个。
+//   - RequestIDFromCtxOr:不自动生成地读取;缺失时返回 "",适用于
+//     "是否已存在?" 的判断。
 //
-// Behavior notes (differ from v2):
-//   - Flag.Is(FlagNone) returns false (v2 returned true). FlagNone is not a
-//     real flag; test for it with f == FlagNone instead.
-//   - Request-id symbols are spelled RequestID (capital ID) to match the Go
-//     naming convention and logger/v3.
-//   - Flag is uint8 (eight usable flag bits, no sign-bit overflow) and context
-//     keys are typed empty structs (zero collision, no string comparison).
+// 行为说明(与 v2 不同):
+//   - Flag.Is(FlagNone) 返回 false(v2 返回 true)。FlagNone 不是真实
+//     flag;改用 f == FlagNone 来测试它。
+//   - request-id 符号拼写为 RequestID(大写 ID),以契合 Go 命名约定与
+//     logger/v3。
+//   - Flag 为 uint8(8 个可用 flag 位,无符号位溢出),context key 为带类型
+//     的空 struct(零碰撞,无需字符串比较)。
 package tracer

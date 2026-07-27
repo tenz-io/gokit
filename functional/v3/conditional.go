@@ -1,8 +1,7 @@
 package fn
 
-// If is a generic ternary operator. Returns ifVal when cond is true, else
-// elseVal. Both branches are eagerly evaluated; for expensive branches use
-// IfElse.
+// If 是通用三元运算符。cond 为 true 时返回 ifVal,否则返回 elseVal。
+// 两个分支都会被急切求值;分支代价高时请用 IfElse。
 func If[T any](cond bool, ifVal, elseVal T) T {
 	if cond {
 		return ifVal
@@ -10,8 +9,7 @@ func If[T any](cond bool, ifVal, elseVal T) T {
 	return elseVal
 }
 
-// When applies fn to val only when cond is true, otherwise returns val
-// unchanged.
+// When 仅在 cond 为 true 时对 val 应用 fn,否则原样返回 val。
 func When[T any](cond bool, val T, fn func(T) T) T {
 	if cond {
 		return fn(val)
@@ -19,9 +17,8 @@ func When[T any](cond bool, val T, fn func(T) T) T {
 	return val
 }
 
-// IfElse lazily evaluates one of two branches based on cond. Use it (over If)
-// when the unselected branch would be expensive or have side effects to
-// compute.
+// IfElse 基于 cond 懒求值两个分支之一。当未选中的分支代价高或有副作用
+// 时,用它(而非 If)。
 func IfElse[T any](cond bool, ifFn, elseFn func() T) T {
 	if cond {
 		return ifFn()
@@ -29,9 +26,8 @@ func IfElse[T any](cond bool, ifFn, elseFn func() T) T {
 	return elseFn()
 }
 
-// Coalesce returns the first argument that is not the zero value of T, or the
-// zero value if all are zero. It is the "first non-empty" idiom, useful for
-// picking the first available config value.
+// Coalesce 返回首个不等于 T 零值的参数,若全部为零则返回零值。
+// 它是 "首个非空" 习惯用法,适合用于挑选首个可用的配置值。
 //
 //	Coalesce(envValue, flagValue, defaultValue)
 func Coalesce[T comparable](vs ...T) T {
@@ -44,8 +40,7 @@ func Coalesce[T comparable](vs ...T) T {
 	return zero
 }
 
-// Default returns v if it is non-zero, otherwise def. It is the two-argument
-// specialization of Coalesce.
+// Default 在 v 非零时返回 v,否则返回 def。它是 Coalesce 的双参特化。
 func Default[T comparable](v, def T) T {
 	var zero T
 	if v != zero {

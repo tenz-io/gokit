@@ -7,10 +7,9 @@ import (
 	"time"
 )
 
-// SetString assigns a string-encoded value into rv (the field value resolved
-// from a Plan). It supports the same scalar set as the v2 setter plus
-// time.Duration and []byte, peeling one pointer level. It is intended for
-// transport binders that receive raw strings (uri/query/header/form).
+// SetString 将字符串编码的值赋入 rv(从 Plan 解析出的 field 值)。它支持
+// 与 v2 setter 相同的 scalar 集合,外加 time.Duration 和 []byte,并剥离一层
+// pointer。面向接收原始字符串(uri/query/header/form)的 transport binder。
 func SetString(rv reflect.Value, s string) error {
 	var err error
 	rv, err = writableValue(rv, "annotation.SetString")
@@ -64,9 +63,8 @@ func SetString(rv reflect.Value, s string) error {
 	return nil
 }
 
-// Set assigns a typed value into rv, converting when the types are assignable or
-// convertible. It is intended for transport binders that already have a typed
-// value (e.g. a file's []byte).
+// Set 将一个有类型的值赋入 rv,在类型可赋值或可转换时进行转换。面向已持有
+// 有类型值的 transport binder(例如文件的 []byte)。
 func Set(rv reflect.Value, v any) error {
 	var err error
 	rv, err = writableValue(rv, "annotation.Set")
@@ -80,12 +78,12 @@ func Set(rv reflect.Value, v any) error {
 	if val.Kind() == reflect.Ptr && val.IsNil() {
 		return nil
 	}
-	// Direct assign.
+	// 直接赋值。
 	if val.Type() == rv.Type() {
 		rv.Set(val)
 		return nil
 	}
-	// Convertible.
+	// 可转换。
 	if val.Type().ConvertibleTo(rv.Type()) {
 		rv.Set(val.Convert(rv.Type()))
 		return nil
@@ -112,8 +110,7 @@ func writableValue(rv reflect.Value, operation string) (reflect.Value, error) {
 	return rv, nil
 }
 
-// peelOnce dereferences a single pointer level, allocating if nil, so callers
-// can write through *T fields uniformly.
+// peelOnce 解引用一层 pointer,为 nil 时分配,使调用方可以统一地写入 *T field。
 func peelOnce(rv reflect.Value) reflect.Value {
 	for {
 		if rv.Kind() != reflect.Ptr {

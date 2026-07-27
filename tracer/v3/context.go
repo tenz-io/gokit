@@ -2,15 +2,14 @@ package tracer
 
 import "context"
 
-// flagCtxKey is the unexported, typed context key under which a Flag is
-// stashed. A typed empty struct key is collision-free (no other package can
-// produce this type) and avoids string-key comparison on the value path.
+// flagCtxKey 是用于存入 Flag 的未导出、带类型 context key。带类型的空
+// struct key 不会碰撞(其他包无法产生此类型),且在取值路径上避免了字符串
+// key 比较。
 type flagCtxKey struct{}
 
-// WithFlag returns a derived context carrying flag. Later WithFlag calls
-// overwrite (replace) rather than OR-combine — use [WithFlags] to set
-// several at once, or OR the bits yourself: WithFlag(ctx, FlagDebug|FlagShadow).
-// A nil ctx is returned unchanged.
+// WithFlag 返回一个携带 flag 的派生 context。后续的 WithFlag 调用会
+// 覆盖(替换)而非 OR 组合 —— 用 [WithFlags] 一次设置多个,或自行 OR
+// 各位:WithFlag(ctx, FlagDebug|FlagShadow)。nil ctx 原样返回。
 func WithFlag(ctx context.Context, flag Flag) context.Context {
 	if ctx == nil {
 		return nil
@@ -18,9 +17,9 @@ func WithFlag(ctx context.Context, flag Flag) context.Context {
 	return context.WithValue(ctx, flagCtxKey{}, flag)
 }
 
-// WithFlags OR-combines the given flags and stores the result on ctx,
-// replacing any flag set previously. With no flags (or only FlagNone) it
-// stores FlagNone. A nil ctx is returned unchanged.
+// WithFlags 将给定 flag 做 OR 组合并把结果存入 ctx,替换此前已设置的
+// 任何 flag 集。无 flag(或只有 FlagNone)时存入 FlagNone。nil ctx 原样
+// 返回。
 func WithFlags(ctx context.Context, flags ...Flag) context.Context {
 	if ctx == nil {
 		return nil
@@ -32,9 +31,8 @@ func WithFlags(ctx context.Context, flags ...Flag) context.Context {
 	return context.WithValue(ctx, flagCtxKey{}, f)
 }
 
-// FromContext returns the Flag stored on ctx by [WithFlag] or [WithFlags],
-// or FlagNone when none is stored (including when ctx is nil). It never
-// panics.
+// FromContext 返回由 [WithFlag] 或 [WithFlags] 存入 ctx 的 Flag,若未
+// 存入(含 ctx 为 nil)则返回 FlagNone。它永不 panic。
 func FromContext(ctx context.Context) Flag {
 	if ctx == nil {
 		return FlagNone

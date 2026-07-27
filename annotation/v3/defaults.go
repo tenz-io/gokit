@@ -5,11 +5,10 @@ import (
 	"reflect"
 )
 
-// ApplyDefaults sets default-tag values on the struct behind ptr for any leaf
-// that is currently the zero value. Unlike v2's ParseDefault it does NOT
-// allocate unrelated nil pointer fields (e.g. a *int with no default tag),
-// so a config struct's optional pointers stay nil unless explicitly defaulted.
-// ptr must be a non-nil pointer to a struct.
+// ApplyDefaults 为 ptr 所指 struct 中当前为零值的叶子设置 default-tag 值。
+// 与 v2 的 ParseDefault 不同,它不会分配无关的 nil pointer field(例如无
+// default tag 的 *int),因此 config struct 的可选 pointer 保持 nil,除非显式
+// 设置了 default。ptr 必须是指向 struct 的非空 pointer。
 func ApplyDefaults(ptr any) error {
 	p, err := PlanFor(ptr)
 	if err != nil {
@@ -23,14 +22,13 @@ func applyDefaults(fields []*Field, parent reflect.Value) error {
 	for _, f := range fields {
 		fv := parent.FieldByIndex(f.Index)
 
-		// Recurse into nested structs; instantiate the pointer only if the
-		// nested struct actually carries a default somewhere (avoids spurious
-		// allocations).
+		// 递归进入嵌套 struct;仅当嵌套 struct 确实在某处带有 default 时才实例化
+		// pointer(避免无谓的分配)。
 		if len(f.children) > 0 {
 			if fv.Kind() == reflect.Ptr {
 				if fv.IsNil() {
 					if !f.hasDefaultDeep() {
-						continue // optional, untouched
+						continue // 可选,保持不变
 					}
 					fv.Set(reflect.New(fv.Type().Elem()))
 				}
@@ -51,7 +49,7 @@ func applyDefaults(fields []*Field, parent reflect.Value) error {
 			continue
 		}
 		if !isZeroValue(fv) {
-			continue // already set, keep caller's value
+			continue // 已设置,保留调用方的值
 		}
 		if err := setFromString(fv, f.Default); err != nil {
 			return fmt.Errorf("field %s: %w", f.Path, err)
@@ -60,8 +58,8 @@ func applyDefaults(fields []*Field, parent reflect.Value) error {
 	return nil
 }
 
-// hasDefaultDeep reports whether f or any descendant carries a default tag.
-// Used to decide whether to instantiate an optional nested *Struct.
+// hasDefaultDeep 报告 f 或任意后代是否带有 default tag。用于决定是否实例化
+// 可选的嵌套 *Struct。
 func (f *Field) hasDefaultDeep() bool {
 	if f.Default != "" {
 		return true
@@ -82,8 +80,8 @@ func setFromString(rv reflect.Value, s string) error {
 	return SetString(rv, s)
 }
 
-// isZeroValue reports whether rv is its type's zero value, for the small set
-// ApplyDefaults cares about (scalars, slices, pointers).
+// isZeroValue 报告 rv 是否为其类型的零值,仅针对 ApplyDefaults 关心的少数集合
+// (scalar、slice、pointer)。
 func isZeroValue(rv reflect.Value) bool {
 	switch rv.Kind() {
 	case reflect.Ptr, reflect.Interface, reflect.Slice, reflect.Map:

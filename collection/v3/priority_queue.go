@@ -2,29 +2,26 @@ package collection
 
 import "cmp"
 
-// Heap is a binary-heap priority queue.
+// Heap 是一个基于二叉堆的 priority queue。
 //
-// The ordering is defined by a less function: less(a, b) == true means a has
-// higher priority than b and therefore leaves the heap first. The common
-// cases — min-heap and max-heap over an ordered type — have dedicated
-// constructors [NewMinHeap] and [NewMaxHeap] so callers rarely hand-write a
-// less func. For custom orderings (multi-field, computed priority) use
-// [NewHeap] with an explicit less.
+// 顺序由一个 less 函数定义:less(a, b) == true 表示 a 的优先级高于 b,因此 a 先出堆。
+// 常见情形 —— 有序类型上的 min-heap 与 max-heap —— 有专用构造器
+// [NewMinHeap] 和 [NewMaxHeap],因此调用方几乎不必手写 less 函数。对于自定义排序
+// (多字段、计算优先级)请使用 [NewHeap] 并显式传入 less。
 //
-// Push and Pop are O(log n); Peek and Len are O(1).
+// Push 和 Pop 是 O(log n);Peek 和 Len 是 O(1)。
 type Heap[T any] struct {
 	data []T
 	less func(a, b T) bool
 }
 
-// NewHeap creates an empty heap ordered by less with the default capacity.
-// less(a, b) == true means a has higher priority than b.
+// NewHeap 创建一个按 less 排序、使用默认 capacity 的空 heap。
+// less(a, b) == true 表示 a 的优先级高于 b。
 func NewHeap[T any](less func(a, b T) bool) *Heap[T] {
 	return NewHeapWithCap[T](defaultCap, less)
 }
 
-// NewHeapWithCap creates an empty heap ordered by less, pre-sized for cap
-// elements. A non-positive cap falls back to the default capacity.
+// NewHeapWithCap 创建一个按 less 排序、为 cap 个元素预分配大小的空 heap。非正的 cap 会回退到默认 capacity。
 func NewHeapWithCap[T any](cap int, less func(a, b T) bool) *Heap[T] {
 	if cap <= 0 {
 		cap = defaultCap
@@ -32,26 +29,23 @@ func NewHeapWithCap[T any](cap int, less func(a, b T) bool) *Heap[T] {
 	return &Heap[T]{data: make([]T, 0, cap), less: less}
 }
 
-// NewMinHeap creates an empty min-heap over an ordered type: the smallest
-// element has the highest priority and leaves first.
+// NewMinHeap 创建一个基于有序类型的空 min-heap:最小元素具有最高优先级,最先出堆。
 func NewMinHeap[T cmp.Ordered]() *Heap[T] {
 	return NewHeap[T](func(a, b T) bool { return cmp.Compare(a, b) < 0 })
 }
 
-// NewMaxHeap creates an empty max-heap over an ordered type: the largest
-// element has the highest priority and leaves first.
+// NewMaxHeap 创建一个基于有序类型的空 max-heap:最大元素具有最高优先级,最先出堆。
 func NewMaxHeap[T cmp.Ordered]() *Heap[T] {
 	return NewHeap[T](func(a, b T) bool { return cmp.Compare(a, b) > 0 })
 }
 
-// Push adds v to the heap. O(log n).
+// Push 将 v 添加到 heap。O(log n)。
 func (h *Heap[T]) Push(v T) {
 	h.data = append(h.data, v)
 	h.siftUp(len(h.data) - 1)
 }
 
-// Pop removes and returns the highest-priority element. It returns (zero,
-// false) when the heap is empty. O(log n).
+// Pop 移除并返回最高优先级的元素。当 heap 为空时返回 (zero, false)。O(log n)。
 func (h *Heap[T]) Pop() (T, bool) {
 	var zero T
 	if len(h.data) == 0 {
@@ -60,7 +54,7 @@ func (h *Heap[T]) Pop() (T, bool) {
 	top := h.data[0]
 	n := len(h.data) - 1
 	h.data[0] = h.data[n]
-	h.data[n] = zero // let the GC reclaim the moved reference
+	h.data[n] = zero // 让 GC 回收被移动的引用
 	h.data = h.data[:n]
 	if n > 0 {
 		h.siftDown(0)
@@ -68,8 +62,7 @@ func (h *Heap[T]) Pop() (T, bool) {
 	return top, true
 }
 
-// Peek returns the highest-priority element without removing it. O(1). It
-// returns (zero, false) when the heap is empty.
+// Peek 返回最高优先级的元素但不移除它。O(1)。当 heap 为空时返回 (zero, false)。
 func (h *Heap[T]) Peek() (T, bool) {
 	var zero T
 	if len(h.data) == 0 {
@@ -78,14 +71,13 @@ func (h *Heap[T]) Peek() (T, bool) {
 	return h.data[0], true
 }
 
-// Len returns the number of elements.
+// Len 返回元素数量。
 func (h *Heap[T]) Len() int { return len(h.data) }
 
-// IsEmpty reports whether the heap has no elements.
+// IsEmpty 报告 heap 是否没有元素。
 func (h *Heap[T]) IsEmpty() bool { return len(h.data) == 0 }
 
-// Clear removes all elements and zeroes the backing array so the GC can
-// reclaim held references. The capacity is retained for reuse.
+// Clear 移除所有元素并清零 backing array,以便 GC 回收持有的引用。capacity 保留以便复用。
 func (h *Heap[T]) Clear() {
 	var zero T
 	for i := range h.data {
@@ -94,24 +86,21 @@ func (h *Heap[T]) Clear() {
 	h.data = h.data[:0]
 }
 
-// Values returns a copy of the underlying heap slice. The order is the heap's
-// internal layout, NOT priority order — to drain in priority order, call Pop
-// until empty. The returned slice is independent.
+// Values 返回底层 heap slice 的副本。顺序是 heap 的内部布局,而非优先级顺序 —— 若要按优先级顺序排空,请调用 Pop 直到为空。返回的 slice 是独立的。
 func (h *Heap[T]) Values() []T {
 	out := make([]T, len(h.data))
 	copy(out, h.data)
 	return out
 }
 
-// Clone returns an independent copy of the heap sharing the same ordering.
+// Clone 返回 heap 的独立副本,共享相同的排序方式。
 func (h *Heap[T]) Clone() *Heap[T] {
 	out := make([]T, len(h.data))
 	copy(out, h.data)
 	return &Heap[T]{data: out, less: h.less}
 }
 
-// siftUp moves the element at index i up the heap until the heap property is
-// restored. O(log n).
+// siftUp 将索引 i 处的元素向上移动,直到恢复 heap 性质。O(log n)。
 func (h *Heap[T]) siftUp(i int) {
 	for i > 0 {
 		parent := (i - 1) / 2
@@ -123,8 +112,7 @@ func (h *Heap[T]) siftUp(i int) {
 	}
 }
 
-// siftDown moves the element at index i down the heap until the heap property
-// is restored. O(log n).
+// siftDown 将索引 i 处的元素向下移动,直到恢复 heap 性质。O(log n)。
 func (h *Heap[T]) siftDown(i int) {
 	n := len(h.data)
 	for {

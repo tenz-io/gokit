@@ -7,38 +7,37 @@ import (
 	"github.com/tenz-io/gokit/monitor/v3"
 )
 
-// newTransporters is the ordered chain builder. Order is outermost-first:
-// injectHeader runs before metrics runs before traffic, so the final
-// http.RoundTripper is traffic(metrics(injectHeader(parent))). Each layer only
-// links in when its active() reports true, so a disabled layer is a no-op pass
-// through rather than a dead wrapper.
+// newTransporters 是有序的 chain 构建器。顺序为最外层优先:
+// injectHeader 先于 metrics,metrics 先于 traffic,因此最终的
+// http.RoundTripper 为 traffic(metrics(injectHeader(parent)))。每一层仅当其
+// active() 返回 true 时才接入 chain,所以禁用的层是 no-op pass through
+// 而非一个死的 wrapper。
 var newTransporters = []newTransporterFunc{
 	newInjectHeaderTransport,
 	newMetricsTransport,
 	newTrafficTransport,
 }
 
-// HeaderName constants name the headers this package sets or reads.
+// HeaderName 常量命名本包设置或读取的 header。
 const (
 	HeaderNameAuthorization = "Authorization"
 	HeaderNameContentType   = "Content-Type"
 )
 
-// transporter is the internal contract a chain layer satisfies: it wraps a
-// parent RoundTripper and reports whether it is active. An inactive layer is
-// dropped from the chain so callers (and tests) see a flat chain of only the
-// enabled layers.
+// transporter 是 chain 层满足的内部契约:它包装一个 parent RoundTripper 并
+// 报告自身是否激活。未激活的层会从 chain 中剔除,因此调用方(以及测试)
+// 看到的是仅由启用层构成的扁平 chain。
 type transporter interface {
 	http.RoundTripper
 	active() bool
 }
 
-// newTransporterFunc builds a chain layer from config over parent.
+// newTransporterFunc 基于 config 在 parent 之上构建一个 chain 层。
 type newTransporterFunc func(config Config, parent http.RoundTripper) transporter
 
-// metricsTransport records per-request latency and a status code counter via
-// monitor/v3. It is a no-op when EnableMetrics is false or when the context
-// carries no Exporter (monitor.Begin returns a nil-safe Recorder then).
+// metricsTransport 通过 monitor/v3 记录每请求的 latency 和 status code 计数。
+// 当 EnableMetrics 为 false,或 context 未携带 Exporter 时
+// (此时 monitor.Begin 返回 nil-safe 的 Recorder),它是 no-op。
 type metricsTransport struct {
 	enable  bool
 	tripper http.RoundTripper
@@ -55,7 +54,7 @@ func (mt *metricsTransport) RoundTrip(req *http.Request) (resp *http.Response, e
 	var (
 		ctx  = req.Context()
 		url  = req.URL.Path
-		code = "1" // sentinel: 1 means the call errored before a status was known
+		code = "1" // 哨兵值:1 表示调用在状态已知之前已出错
 	)
 
 	rec := monitor.Begin(ctx, url)
@@ -77,10 +76,9 @@ func (mt *metricsTransport) active() bool {
 	return mt.enable
 }
 
-// injectHeaderTransport sets the configured headers on every outbound request
-// before delegating to the parent. Header.Set replaces, so a caller that sets
-// the same header on a specific request still loses to the configured value —
-// configure only headers that should be uniform across all calls.
+// injectHeaderTransport 在委托给 parent 之前为每个出站 request 设置已配置的
+// header。Header.Set 是替换语义,因此即便调用方在具体 request 上设置了同名
+// header 仍会被配置值覆盖 —— 仅配置在所有调用中应保持一致的 header。
 type injectHeaderTransport struct {
 	tripper http.RoundTripper
 	headers map[string]string

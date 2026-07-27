@@ -7,22 +7,21 @@ import (
 	"time"
 )
 
-// lruManager adapts the generic [lruCache] (K=string, V=[]byte) to the
-// [Manager] interface. Values are stored as []byte (JSON for blobs, raw bytes
-// for Set/Get). There is no default TTL: a non-positive expire passed to any
-// method means "never expires", matching the local cache.
+// lruManager 将泛型 [lruCache](K=string, V=[]byte)适配到
+// [Manager] interface。值以 []byte 存储(blobs 用 JSON,Set/Get 用原始 bytes)。
+// 没有默认 TTL:传入任何方法的非正 expire 表示"永不过期",与 local cache 一致。
 type lruManager struct {
 	c *lruCache[string, []byte]
 }
 
-// NewLRU creates an LRU-bounded cache implementing [Manager].
+// NewLRU 创建一个基于 LRU 容量限定的 cache,实现 [Manager]。
 //
-//   - capability caps the entry count; a non-positive value defaults to 120.
-//   - onEvict is an optional callback invoked (outside the cache's lock) when
-//     an entry is evicted by capacity pressure, expiration, or removal.
+//   - capability 限定条目数;非正值默认为 120。
+//   - onEvict 是一个可选回调,在条目因容量压力、过期或删除被 evict 时调用
+//     (在 cache 锁外调用)。
 //
-// Options: [WithNow] (injectable clock). [WithEvictInterval] is ignored —
-// the LRU expires entries lazily on access.
+// Options:[WithNow](可注入 clock)。[WithEvictInterval] 被忽略 ——
+// LRU 在访问时 lazy 过期。
 func NewLRU(
 	capability int,
 	onEvict func(key string, val []byte),
@@ -67,8 +66,8 @@ func (m *lruManager) SetNx(key string, raw string, expire time.Duration) (bool, 
 	if !m.active() {
 		return false, ErrInactive
 	}
-	// lruCache.setNx does the existence check and the write under one lock,
-	// so concurrent SetNx callers cannot both observe "absent" and both write.
+	// lruCache.setNx 在一把锁内完成存在性检查与写入,
+	// 因此并发 SetNx 调用方不会同时看到"缺失"并同时写入。
 	return m.c.setNx(key, []byte(raw), expire), nil
 }
 
@@ -110,37 +109,34 @@ func (m *lruManager) Expire(key string, expire time.Duration) error {
 	if !m.active() {
 		return ErrInactive
 	}
-	// lruCache.expire checks present-and-unexpired under one lock and returns
-	// ok=false for a missing or expired key, so we never resurrect an expired
-	// entry nor race a concurrent writer.
+	// lruCache.expire 在一把锁内检查"存在且未过期",对缺失或已过期的 key
+	// 返回 ok=false,因此我们既不会复活已过期条目,也不会与并发写者竞争。
 	if ok := m.c.expire(key, expire); !ok {
 		return ErrNotFound
 	}
 	return nil
 }
 
-// Close is a no-op for the LRU backend, which has no background resources to
-// release. It satisfies the [Manager] lifecycle contract.
+// Close 对 LRU backend 是一个 no-op,因为它没有后台资源需要释放。
+// 它满足 [Manager] 生命周期契约。
 func (m *lruManager) Close() error { return nil }
 
-// lruCache is a generic, concurrency-safe LRU cache with optional per-entry
-// TTL expiration. It backs [lruManager]. A zero-value lruCache is not ready
-// for use; construct one with [newLRU].
+// lruCache 是一个泛型、并发安全的 LRU cache,支持可选的每条目
+// TTL 过期。它是 [lruManager] 的底层实现。零值 lruCache 不可直接使用;
+// 请用 [newLRU] 构造。
 //
-// Every mutation and read is guarded by a sync.Mutex, so it can be shared
-// across goroutines without external locking (unlike the v2 lru, which was
-// explicitly not safe for concurrent access).
+// 每次变更与读取都由 sync.Mutex 保护,因此可跨 goroutine 共享
+// 而无需外部加锁(不同于 v2 的 lru,后者明确不支持并发访问)。
 //
-// Eviction callbacks (onEvict) run *outside* the cache's lock: a method reaps
-// any purged entries under the lock, releases the lock, and only then invokes
-// the callback. This lets a callback safely call back into the same cache
-// (e.g. to read or count) without deadlocking, and keeps a slow callback from
-// blocking unrelated readers.
+// Eviction 回调(onEvict)在 cache 锁*外*运行:某方法在锁内
+// 收集所有被清理的条目,释放锁,然后才调用回调。这让回调可以安全地
+// 重入同一个 cache(例如读取或计数)而不死锁,也避免慢回调
+// 阻塞无关的读者。
 type lruCache[K comparable, V any] struct {
 	capability int
-	// onEvict, when non-nil, is called for every item purged from the cache:
-	// capacity eviction, explicit remove/removeOldest, expiration, and clear.
-	// It is invoked after the lock is released (see the type doc).
+	// onEvict 在非 nil 时,对每个被从 cache 清理的 item 调用:
+	// 容量驱逐、显式 remove/removeOldest、过期以及 clear。
+	// 它在锁释放后被调用(见类型注释)。
 	onEvict func(key K, val V)
 
 	ll      *list.List
@@ -150,17 +146,17 @@ type lruCache[K comparable, V any] struct {
 	mu sync.Mutex
 }
 
-// lruEntry is one element of the LRU. It holds the key (for eviction callbacks
-// and map removal), the value, and an absolute expiration time.
+// lruEntry 是 LRU 中的一个元素。它持有 key(用于 eviction 回调
+// 与 map 删除)、value,以及一个绝对过期时间。
 type lruEntry[K comparable, V any] struct {
 	key      K
 	val      V
 	expireAt time.Time
 }
 
-// expired reports whether the entry's deadline has passed. A zero expireAt
-// means the entry never expires. The boundary is inclusive: at the exact
-// deadline the entry is considered expired.
+// expired 判断条目 deadline 是否已过。零值 expireAt
+// 表示该条目永不过期。边界是包含的:恰在 deadline 时刻
+// 即视为已过期。
 func (e *lruEntry[K, V]) expired(now time.Time) bool {
 	if e.expireAt.IsZero() {
 		return false
@@ -168,16 +164,14 @@ func (e *lruEntry[K, V]) expired(now time.Time) bool {
 	return !now.Before(e.expireAt)
 }
 
-// newLRU creates an LRU cache.
+// newLRU 创建一个 LRU cache。
 //
-//   - capability caps the entry count; a non-positive value means no limit
-//     (expiration is then the only reclamation mechanism).
-//   - onEvict is an optional callback invoked (outside the lock) when an item
-//     is purged.
+//   - capability 限定条目数;非正值表示无限制
+//     (此时过期是唯一的回收机制)。
+//   - onEvict 是一个可选回调,在 item 被清理时调用(在锁外)。
 //
-// There is no default TTL: every set/setNx takes an explicit duration, where a
-// non-positive value means "never expires". The cache is safe for concurrent
-// use.
+// 没有默认 TTL:每个 set/setNx 都接受显式 duration,
+// 非正值表示"永不过期"。该 cache 支持并发使用。
 func newLRU[K comparable, V any](
 	capability int,
 	onEvict func(key K, val V),
@@ -191,8 +185,8 @@ func newLRU[K comparable, V any](
 	}
 }
 
-// withNow injects a clock used for all expiration checks. Returns the cache
-// for chaining. Tests use it to advance time without real sleeps.
+// withNow 注入用于所有过期判断的 clock。返回 cache
+// 以便链式调用。测试用它在不真实 sleep 的情况下推进时间。
 func (c *lruCache[K, V]) withNow(now func() time.Time) *lruCache[K, V] {
 	if now != nil {
 		c.nowFunc = now
@@ -200,9 +194,9 @@ func (c *lruCache[K, V]) withNow(now func() time.Time) *lruCache[K, V] {
 	return c
 }
 
-// deadlineFor returns the absolute expiration time for a new entry given a
-// per-call duration. A non-positive duration means the entry never expires
-// (the zero time.Time); a positive duration gives now+duration.
+// deadlineFor 根据每次调用的 duration 返回新条目的绝对过期时间。
+// 非正 duration 表示条目永不过期(零值 time.Time);
+// 正 duration 则返回 now+duration。
 func deadlineFor(now time.Time, duration time.Duration) time.Time {
 	if duration <= 0 {
 		return time.Time{}
@@ -210,8 +204,8 @@ func deadlineFor(now time.Time, duration time.Duration) time.Time {
 	return now.Add(duration)
 }
 
-// set adds (or updates) val under key with the given expiration. A
-// non-positive duration means the entry never expires.
+// set 以指定过期时间在 key 下新增(或更新)val。非正
+// duration 表示条目永不过期。
 func (c *lruCache[K, V]) set(key K, val V, duration time.Duration) {
 	now := c.nowFunc()
 	expireAt := deadlineFor(now, duration)
@@ -223,8 +217,8 @@ func (c *lruCache[K, V]) set(key K, val V, duration time.Duration) {
 	c.fireOnEvict(evicted)
 }
 
-// setLocked inserts or updates key and returns any entry purged by capacity
-// pressure so the caller can fire callbacks after unlocking. Caller holds c.mu.
+// setLocked 插入或更新 key,并返回因容量压力被清理的条目,
+// 以便调用方在解锁后触发回调。调用方持有 c.mu。
 func (c *lruCache[K, V]) setLocked(key K, val V, expireAt time.Time, now time.Time) []lruEntry[K, V] {
 	if c.cache == nil {
 		c.cache = make(map[K]*list.Element)
@@ -248,13 +242,12 @@ func (c *lruCache[K, V]) setLocked(key K, val V, expireAt time.Time, now time.Ti
 	return evicted
 }
 
-// setNx atomically writes val under key only when key is absent or has
-// expired. It returns existing=true when the key was present and unexpired
-// (in which case no write happens), and existing=false when the write went
-// through. Unlike a get-then-set sequence, the existence check and the write
-// happen under a single lock, so concurrent setNx callers cannot both see
-// "absent" and both write. A capacity eviction triggered by the insert fires
-// its onEvict callback after the lock is released.
+// setNx 仅当 key 缺失或已过期时原子地把 val 写入 key。
+// 当 key 存在且未过期时返回 existing=true(此时不发生写入),
+// 写入成功时返回 existing=false。与"先 get 再 set"的序列不同,
+// 存在性检查与写入在同一把锁内完成,因此并发 setNx 调用方
+// 不会同时看到"缺失"并同时写入。由插入触发的容量驱逐
+// 其 onEvict 回调在锁释放后触发。
 func (c *lruCache[K, V]) setNx(key K, val V, duration time.Duration) (existing bool) {
 	now := c.nowFunc()
 	expireAt := deadlineFor(now, duration)
@@ -268,12 +261,12 @@ func (c *lruCache[K, V]) setNx(key K, val V, duration time.Duration) (existing b
 	if ee, ok := c.cache[key]; ok {
 		e := ee.Value.(*lruEntry[K, V])
 		if !e.expired(now) {
-			// Present and unexpired: do not overwrite.
+			// 存在且未过期:不覆盖。
 			c.mu.Unlock()
 			return true
 		}
-		// Expired: treat as absent. Overwrite in place (no eviction callback
-		// — same as set's in-place update).
+		// 已过期:视作缺失。原地覆盖(无 eviction 回调
+		// —— 与 set 的原地更新一致)。
 		c.ll.MoveToFront(ee)
 		e.val = val
 		e.expireAt = expireAt
@@ -292,9 +285,9 @@ func (c *lruCache[K, V]) setNx(key K, val V, duration time.Duration) (existing b
 	return false
 }
 
-// get looks up key. On a hit the entry is moved to the front (most-recently
-// used). An expired entry is removed (and its onEvict fired after unlock) and
-// reported as a miss.
+// get 查找 key。命中时条目被移至链表前端(最近使用)。
+// 已过期条目会被删除(其 onEvict 在解锁后触发)并
+// 作为未命中返回。
 func (c *lruCache[K, V]) get(key K) (val V, ok bool) {
 	var zero V
 	now := c.nowFunc()
@@ -322,11 +315,11 @@ func (c *lruCache[K, V]) get(key K) (val V, ok bool) {
 	return result, true
 }
 
-// expire updates key's expiration and reports whether the update applied. A
-// non-positive duration makes the entry never expire. A missing or expired
-// key is left untouched and returns ok=false — expire cannot resurrect a key
-// that has logically expired. The check and the update happen under one lock,
-// so no concurrent writer can slip between them.
+// expire 更新 key 的过期时间,并报告更新是否生效。非正
+// duration 使条目永不过期。缺失或已过期的 key 不被改动,
+// 并返回 ok=false —— expire 无法复活一个在逻辑上已过期的 key。
+// 检查与更新在同一把锁内完成,因此不会有并发写者
+// 插入两者之间。
 func (c *lruCache[K, V]) expire(key K, duration time.Duration) (ok bool) {
 	now := c.nowFunc()
 	expireAt := deadlineFor(now, duration)
@@ -343,7 +336,7 @@ func (c *lruCache[K, V]) expire(key K, duration time.Duration) (ok bool) {
 	}
 	e := ele.Value.(*lruEntry[K, V])
 	if e.expired(now) {
-		// Do not resurrect an expired entry; the caller should set it again.
+		// 不复活已过期条目;调用方应重新 set。
 		return false
 	}
 	e.expireAt = expireAt
@@ -351,8 +344,8 @@ func (c *lruCache[K, V]) expire(key K, duration time.Duration) (ok bool) {
 	return true
 }
 
-// remove deletes key from the cache. A missing key is a no-op. The eviction
-// callback (if any) fires after the lock is released.
+// remove 从 cache 删除 key。缺失 key 为 no-op。
+// eviction 回调(若有)在锁释放后触发。
 func (c *lruCache[K, V]) remove(key K) {
 	c.mu.Lock()
 	if c.cache == nil {
@@ -368,8 +361,8 @@ func (c *lruCache[K, V]) remove(key K) {
 	c.fireOnEvict(evicted)
 }
 
-// removeOldest evicts the least-recently-used entry; the eviction callback
-// fires after unlock.
+// removeOldest 驱逐最久未使用的条目;eviction 回调
+// 在解锁后触发。
 func (c *lruCache[K, V]) removeOldest() {
 	now := c.nowFunc()
 	c.mu.Lock()
@@ -380,8 +373,8 @@ func (c *lruCache[K, V]) removeOldest() {
 	}
 }
 
-// removeOldestLocked evicts the back element and returns its entry (without
-// firing the callback). Caller holds c.mu.
+// removeOldestLocked 驱逐链表尾部元素并返回其条目(不触发
+// 回调)。调用方持有 c.mu。
 func (c *lruCache[K, V]) removeOldestLocked(now time.Time) *lruEntry[K, V] {
 	if c.cache == nil || c.ll == nil {
 		return nil
@@ -395,8 +388,7 @@ func (c *lruCache[K, V]) removeOldestLocked(now time.Time) *lruEntry[K, V] {
 	return e
 }
 
-// removeExpired scans and evicts every expired entry; callbacks fire after
-// unlock.
+// removeExpired 扫描并驱逐所有过期条目;回调在解锁后触发。
 func (c *lruCache[K, V]) removeExpired() {
 	now := c.nowFunc()
 	c.mu.Lock()
@@ -416,15 +408,14 @@ func (c *lruCache[K, V]) removeExpired() {
 	c.fireOnEvict(evicted)
 }
 
-// removeElementLocked unlinks ele from the list and map without firing the
-// callback. Caller holds c.mu.
+// removeElementLocked 从 list 与 map 中移除 ele,但不触发
+// 回调。调用方持有 c.mu。
 func (c *lruCache[K, V]) removeElementLocked(ele *list.Element) {
 	c.ll.Remove(ele)
 	delete(c.cache, ele.Value.(*lruEntry[K, V]).key)
 }
 
-// len returns the current entry count (including any not-yet-lazily-expired
-// entries).
+// len 返回当前条目数(包含尚未被 lazy 过期的条目)。
 func (c *lruCache[K, V]) len() int {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -434,7 +425,7 @@ func (c *lruCache[K, V]) len() int {
 	return c.ll.Len()
 }
 
-// clear removes all entries, invoking onEvict for each after unlock.
+// clear 删除所有条目,每个条目的 onEvict 在解锁后触发。
 func (c *lruCache[K, V]) clear() {
 	c.mu.Lock()
 	if c.cache == nil {
@@ -452,9 +443,9 @@ func (c *lruCache[K, V]) clear() {
 	c.fireOnEvict(evicted)
 }
 
-// fireOnEvict invokes the onEvict callback for each entry. It is a no-op when
-// there is no callback or nothing to report. Callers must have released c.mu
-// before calling, since a callback may re-enter the cache.
+// fireOnEvict 对每个条目调用 onEvict 回调。当不存在回调或
+// 没有需要上报的内容时为 no-op。调用方在调用前必须已释放 c.mu,
+// 因为回调可能重入 cache。
 func (c *lruCache[K, V]) fireOnEvict(entries []lruEntry[K, V]) {
 	if c.onEvict == nil || len(entries) == 0 {
 		return

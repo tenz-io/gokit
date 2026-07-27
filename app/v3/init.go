@@ -15,17 +15,17 @@ import (
 	"github.com/tenz-io/gokit/logger/v3"
 )
 
-// UnmarshalFunc decodes raw config bytes into the config value. yaml.Unmarshal
-// and json.Unmarshal satisfy it.
+// UnmarshalFunc 将原始 config 字节解码到 config 值。yaml.Unmarshal
+// 与 json.Unmarshal 满足该签名。
 type UnmarshalFunc func([]byte, any) error
 
-// WithYamlConfig decodes the YAML config file named by the `config` flag into
-// conf, applying annotation defaults first and validating after. Returns no
-// cleanup (file I/O is one-shot).
+// WithYamlConfig 将由 `config` flag 命名的 YAML config 文件解码到
+// conf,先应用 annotation default 再校验。不返回
+// cleanup(文件 I/O 为一次性)。
 func WithYamlConfig() InitFunc { return decodeConfig(yaml.Unmarshal) }
 
-// WithJsonConfig decodes the JSON config file named by the `config` flag into
-// conf, applying annotation defaults first and validating after.
+// WithJsonConfig 将由 `config` flag 命名的 JSON config 文件解码到
+// conf,先应用 annotation default 再校验。
 func WithJsonConfig() InitFunc { return decodeConfig(json.Unmarshal) }
 
 func decodeConfig(unmarshal UnmarshalFunc) InitFunc {
@@ -44,8 +44,8 @@ func decodeConfig(unmarshal UnmarshalFunc) InitFunc {
 	}
 }
 
-// WithDotEnvConfig loads the given .env files into the process environment.
-// With no filenames it loads the default ".env".
+// WithDotEnvConfig 将给定 .env 文件加载到进程环境。
+// 无文件名时加载默认 ".env"。
 func WithDotEnvConfig(filenames ...string) InitFunc {
 	return func(_ *Context, _ any) (CleanFunc, error) {
 		if len(filenames) == 0 {
@@ -58,10 +58,10 @@ func WithDotEnvConfig(filenames ...string) InitFunc {
 	}
 }
 
-// WithLogger reconfigures the global logger from flags, optionally enabling the
-// traffic logger. It is a thin wrapper over logger/v3 so callers that want
-// traffic logging can opt in with one line; the package already configures a
-// basic logger in Run, so this is only needed for the Traffic flag.
+// WithLogger 根据 flag 重新配置全局 logger,可选启用
+// traffic logger。它是 logger/v3 的薄封装,使希望
+// 开启 traffic 日志的调用方一行即可启用;包已在 Run 中
+// 配置了基础 logger,因此仅当需要 Traffic flag 时才用到。
 func WithLogger(trafficEnabled bool) InitFunc {
 	return func(c *Context, _ any) (CleanFunc, error) {
 		logDir := c.Flags().String(FlagNameLog)
@@ -91,10 +91,10 @@ func WithLogger(trafficEnabled bool) InitFunc {
 	}
 }
 
-// WithAdminHTTPServer starts the admin HTTP server on the `admin-port` flag and
-// mounts /debug/pprof, /metrics and /ping on its own ServeMux (never the global
-// DefaultServeMux, which v2 polluted). The returned CleanFunc performs a
-// graceful Shutdown with a timeout.
+// WithAdminHTTPServer 在 `admin-port` flag 上启动 admin HTTP server,并将
+// /debug/pprof、/metrics 与 /ping 挂载到其自身 ServeMux 上(绝非全局
+// DefaultServeMux,v2 曾污染它)。返回的 CleanFunc 执行
+// 带 timeout 的 graceful Shutdown。
 func WithAdminHTTPServer() InitFunc {
 	return func(c *Context, _ any) (CleanFunc, error) {
 		port := c.Flags().Int(FlagNameAdminPort)
@@ -110,7 +110,7 @@ func WithAdminHTTPServer() InitFunc {
 		srv := &http.Server{
 			Addr:    fmt.Sprintf(":%d", port),
 			Handler: mux,
-			// Conservative timeouts so a stuck admin request can't hold shutdown.
+			// 保守的 timeout,使卡住的 admin 请求不会阻塞 shutdown。
 			ReadHeaderTimeout: 5 * time.Second,
 			ReadTimeout:       10 * time.Second,
 			WriteTimeout:      30 * time.Second,
@@ -135,7 +135,7 @@ func WithAdminHTTPServer() InitFunc {
 			return nil
 		}
 
-		// Surface a listen error that arrived before Run wired up errC.
+		// 呈现一个在 Run 装配 errC 之前到达的 listen 错误。
 		select {
 		case err := <-errC:
 			_ = clean(context.Background())
@@ -146,20 +146,21 @@ func WithAdminHTTPServer() InitFunc {
 	}
 }
 
-// ReadConfig reads the config file at path, applies annotation defaults,
-// expands ${VAR} placeholders against the process environment, then
-// unmarshals the bytes into conf, then validates. The order is:
+// ReadConfig 读取 path 处的 config 文件,应用 annotation default,
+// 针对进程环境展开 ${VAR} 占位符,然后将
+// 字节 unmarshal 到 conf,再校验。顺序为:
 //
-//	ApplyDefaults  — struct-tag defaults on conf (set field zero values)
-//	Expand         — replace ${VAR} / ${VAR:-x} / ${VAR:?m} in the raw bytes
-//	                using os.LookupEnv (so .env values loaded by
-//	                WithDotEnvConfig are visible; place that Init first)
+//	ApplyDefaults  — 在 conf 上应用 struct-tag default(置字段零值)
+//	Expand         — 使用 os.LookupEnv 替换原始字节中的
+//	                ${VAR} / ${VAR:-x} / ${VAR:?m}
+//	                (从而使 WithDotEnvConfig 加载的 .env 值
+//	                可见;将该 Init 放在最前)
 //	unmarshal      — bytes → conf
-//	Validate       — run annotation rules
+//	Validate       — 运行 annotation 规则
 //
-// A placeholder referencing an unset variable with no :-default or :?error is
-// an error, so a missing sensitive value fails startup instead of leaking the
-// literal "${VAR}" into the decoded config.
+// 引用未设置变量且无 :-default 或 :?error 的占位符视为
+// 错误,因此缺失敏感值会启动失败,而不会将
+// 字面量 "${VAR}" 泄漏到解码后的 config。
 func ReadConfig(path string, conf any, unmarshal UnmarshalFunc) error {
 	bs, err := os.ReadFile(path)
 	if err != nil {

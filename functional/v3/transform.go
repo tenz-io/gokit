@@ -1,11 +1,11 @@
 package fn
 
-// --- Map ---
+// --- 映射(Map) ---
 
-// Map applies f to each element of s and returns a new slice of results.
+// Map 对 s 中每个元素应用 f,返回结果的新 slice。
 //
-// It allocates a slice of length len(s) and writes by index (faster than a
-// grow-by-append loop). The input slice is not modified.
+// 它分配一个长度为 len(s) 的 slice 并按 index 写入(比按 append 增长更快)。
+// 输入 slice 不会被修改。
 func Map[T, U any](s []T, f func(T) U) []U {
 	out := make([]U, len(s))
 	for i := range s {
@@ -14,7 +14,7 @@ func Map[T, U any](s []T, f func(T) U) []U {
 	return out
 }
 
-// MapIdx is like Map but the function also receives the element's index.
+// MapIdx 类似 Map,但函数还接收元素的 index。
 func MapIdx[T, U any](s []T, f func(int, T) U) []U {
 	out := make([]U, len(s))
 	for i := range s {
@@ -23,11 +23,10 @@ func MapIdx[T, U any](s []T, f func(int, T) U) []U {
 	return out
 }
 
-// MapInPlace applies f to each element of s, writing the result back into the
-// same slice. The slice length is unchanged. It is the zero-allocation hot
-// path when the output type equals the input type.
+// MapInPlace 对 s 中每个元素应用 f,并将结果写回同一个 slice。slice
+// 长度不变。当输出类型与输入类型相同时,它是 zero-allocation 热路径。
 //
-// Returns s for chaining.
+// 返回 s 以便链式调用。
 func MapInPlace[T any](s []T, f func(T) T) []T {
 	for i := range s {
 		s[i] = f(s[i])
@@ -35,13 +34,13 @@ func MapInPlace[T any](s []T, f func(T) T) []T {
 	return s
 }
 
-// --- Filter ---
+// --- 过滤(Filter) ---
 
-// Filter returns a new slice holding the elements of s for which pred returns
-// true, preserving order. The input slice is not modified.
+// Filter 返回一个持有 s 中 pred 返回 true 元素的新 slice,保留顺序。
+// 输入 slice 不会被修改。
 //
-// The result is preallocated to len(s)/2 (rounded up) as a heuristic for
-// typical selectivity; it grows via append if more elements survive.
+// 结果按 len(s)/2(向上取整)预分配,作为典型选择率的一个启发式估计;
+// 若幸存元素更多则通过 append 增长。
 func Filter[T any](s []T, pred func(T) bool) []T {
 	out := make([]T, 0, (len(s)+1)/2)
 	for _, v := range s {
@@ -52,7 +51,7 @@ func Filter[T any](s []T, pred func(T) bool) []T {
 	return out
 }
 
-// FilterIdx is like Filter but the predicate also receives the index.
+// FilterIdx 类似 Filter,但 predicate 还接收 index。
 func FilterIdx[T any](s []T, pred func(int, T) bool) []T {
 	out := make([]T, 0, (len(s)+1)/2)
 	for i, v := range s {
@@ -63,13 +62,11 @@ func FilterIdx[T any](s []T, pred func(int, T) bool) []T {
 	return out
 }
 
-// FilterInPlace rewrites s in place, keeping only elements for which pred
-// returns true, and returns the (shortened) prefix s[:k]. It reuses the
-// backing array of s — no allocation — and is the preferred hot path when the
-// caller owns s and no longer needs the dropped tail.
+// FilterInPlace 原地重写 s,仅保留 pred 返回 true 的元素,并返回
+// (缩短后的)前缀 s[:k]。它复用 s 的 backing array——无分配——
+// 是调用方拥有 s 且不再需要被丢弃尾部时的首选热路径。
 //
-// The returned slice aliases s's backing memory; do not retain references to
-// the dropped elements.
+// 返回的 slice alias s 的 backing 内存;不要保留对被丢弃元素的引用。
 func FilterInPlace[T any](s []T, pred func(T) bool) []T {
 	k := 0
 	for i := range s {
@@ -78,17 +75,15 @@ func FilterInPlace[T any](s []T, pred func(T) bool) []T {
 			k++
 		}
 	}
-	// Zero out the dropped tail so the retained elements don't keep live
-	// references through the backing array. For value types this is a no-op
-	// cost; for pointer/iface types it avoids unintentional retention.
+	// 将被丢弃的尾部清零,使幸存元素不会通过 backing array 保留活跃引用。
+	// 对值类型而言这是 no-op 成本;对 pointer/iface 类型可避免无意中的引用残留。
 	clear(s[k:])
 	return s[:k]
 }
 
-// --- Reduce / ForEach ---
+// --- 归约 / 遍历 ---
 
-// Reduce folds s into a single value using reducer and an initial accumulator.
-// Returns initial unchanged when s is empty.
+// Reduce 使用 reducer 和初始累加值将 s 折叠为单个值。s 为空时返回 initial 不变。
 func Reduce[T, U any](s []T, reducer func(acc U, elem T) U, initial U) U {
 	acc := initial
 	for _, v := range s {
@@ -97,7 +92,7 @@ func Reduce[T, U any](s []T, reducer func(acc U, elem T) U, initial U) U {
 	return acc
 }
 
-// ReduceIdx is like Reduce but the reducer also receives the element's index.
+// ReduceIdx 类似 Reduce,但 reducer 还接收元素的 index。
 func ReduceIdx[T, U any](s []T, reducer func(acc U, idx int, elem T) U, initial U) U {
 	acc := initial
 	for i, v := range s {
@@ -106,24 +101,24 @@ func ReduceIdx[T, U any](s []T, reducer func(acc U, idx int, elem T) U, initial 
 	return acc
 }
 
-// ForEach calls fn on each element of s in order. It is for side effects.
+// ForEach 按顺序对 s 中每个元素调用 fn。用于产生副作用。
 func ForEach[T any](s []T, fn func(T)) {
 	for _, v := range s {
 		fn(v)
 	}
 }
 
-// ForEachIdx is like ForEach but the callback also receives the index.
+// ForEachIdx 类似 ForEach,但 callback 还接收 index。
 func ForEachIdx[T any](s []T, fn func(int, T)) {
 	for i, v := range s {
 		fn(i, v)
 	}
 }
 
-// --- Flatten / FlatMap ---
+// --- 展平 / FlatMap ---
 
-// Flatten concatenates the sub-slices of s into a single flat slice. The
-// total length is computed up front so the result is allocated once.
+// Flatten 将 s 的各 sub-slice 拼接为一个扁平 slice。总长度预先计算,
+// 因此结果只分配一次。
 func Flatten[T any](s [][]T) []T {
 	total := 0
 	for _, sub := range s {
@@ -136,11 +131,10 @@ func Flatten[T any](s [][]T) []T {
 	return out
 }
 
-// FlatMap applies f to each element of s (which returns a slice) and
-// concatenates the results. It is the composition of Map then Flatten in a
-// single pass.
+// FlatMap 对 s 中每个元素应用 f(返回一个 slice)并拼接结果。
+// 它是 Map 再 Flatten 在单次扫描中完成的组合。
 func FlatMap[T, U any](s []T, f func(T) []U) []U {
-	// Two passes: size the output, then fill. Avoids append regrowth.
+	// 两轮扫描:先确定输出大小,再填充。避免 append 再扩容。
 	total := 0
 	for _, v := range s {
 		total += len(f(v))
@@ -152,10 +146,9 @@ func FlatMap[T, U any](s []T, f func(T) []U) []U {
 	return out
 }
 
-// --- Reverse ---
+// --- 反转 ---
 
-// Reverse returns a new slice with the elements of s in reverse order. The
-// input slice is not modified.
+// Reverse 返回元素顺序与 s 相反的新 slice。输入 slice 不会被修改。
 func Reverse[T any](s []T) []T {
 	n := len(s)
 	out := make([]T, n)
@@ -165,7 +158,7 @@ func Reverse[T any](s []T) []T {
 	return out
 }
 
-// ReverseInPlace reverses s in place and returns s (for chaining).
+// ReverseInPlace 原地反转 s 并返回 s(以便链式调用)。
 func ReverseInPlace[T any](s []T) []T {
 	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
 		s[i], s[j] = s[j], s[i]
@@ -173,10 +166,10 @@ func ReverseInPlace[T any](s []T) []T {
 	return s
 }
 
-// --- Chunk / Window ---
+// --- 分块 / 窗口 ---
 
-// Chunk splits s into consecutive chunks of at most size elements. The final
-// chunk may be shorter. Returns nil for an empty input.
+// Chunk 将 s 切分为至多 size 个元素的连续 chunk。最后一个 chunk 可能更短。
+// 空输入返回 nil。
 //
 //	Chunk([1,2,3,4,5], 2) -> [[1,2],[3,4],[5]]
 func Chunk[T any](s []T, size int) [][]T {
@@ -193,7 +186,7 @@ func Chunk[T any](s []T, size int) [][]T {
 		if end > len(s) {
 			end = len(s)
 		}
-		// Copy so chunks don't alias the input backing array.
+		// 复制以避免 chunk alias 输入的 backing array。
 		chunk := make([]T, end-i)
 		copy(chunk, s[i:end])
 		out = append(out, chunk)
@@ -201,11 +194,11 @@ func Chunk[T any](s []T, size int) [][]T {
 	return out
 }
 
-// Window returns all sliding windows of size n over s.
+// Window 返回 s 上大小为 n 的全部滑动窗口。
 //
 //	Window([1,2,3,4], 3) -> [[1,2,3],[2,3,4]]
 //
-// Returns nil if n <= 0 or len(s) < n.
+// 当 n <= 0 或 len(s) < n 时返回 nil。
 func Window[T any](s []T, n int) [][]T {
 	if n <= 0 || len(s) < n {
 		return nil
@@ -220,10 +213,10 @@ func Window[T any](s []T, n int) [][]T {
 	return out
 }
 
-// --- Zip / Concat / Repeat ---
+// --- 拼合 / 拼接 / 重复 ---
 
-// Zip pairs elements from a and b by index up to the shorter length.
-// The i-th Pair holds a[i] and b[i].
+// Zip 按 index 将 a 与 b 的元素配对,直到较短者结束。第 i 个 Pair 持有
+// a[i] 与 b[i]。
 func Zip[A, B any](a []A, b []B) []Pair[A, B] {
 	n := len(a)
 	if len(b) < n {
@@ -236,8 +229,8 @@ func Zip[A, B any](a []A, b []B) []Pair[A, B] {
 	return out
 }
 
-// Concat concatenates the given slices into a single slice. The total length
-// is summed up front so the result is allocated once.
+// Concat 将给定的多个 slice 拼接为单个 slice。总长度预先求和,
+// 因此结果只分配一次。
 func Concat[T any](slices ...[]T) []T {
 	total := 0
 	for _, sl := range slices {
@@ -250,8 +243,8 @@ func Concat[T any](slices ...[]T) []T {
 	return out
 }
 
-// Repeat returns a slice of length count where every element is v.
-// count must be non-negative; a count of zero returns an empty slice.
+// Repeat 返回长度为 count 的 slice,每个元素都是 v。
+// count 必须非负;count 为零时返回空 slice。
 func Repeat[T any](v T, count int) []T {
 	if count < 0 {
 		panic("fn.Repeat: count must be non-negative")
