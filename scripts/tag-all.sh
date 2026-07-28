@@ -125,9 +125,13 @@ if [ "$DRY_RUN" != true ]; then
   fi
   # Let git operations against github.com use the gh token (idempotent).
   gh auth setup-git >/dev/null 2>&1 || true
-  # Confirm we can reach the target repo.
-  if ! gh repo view --repo "$REPO" >/dev/null 2>&1; then
-    echo "ERROR: cannot access repo '$REPO'. Check --repo and gh auth scope." >&2
+  # `gh repo view` accepts the repository as a positional argument (unlike
+  # release commands, it has no --repo flag). Keep stderr visible on failure
+  # so authentication, repository, and CLI usage errors remain distinguishable.
+  if ! REPO_VIEW_ERROR=$(gh repo view "$REPO" --json nameWithOwner 2>&1); then
+    echo "ERROR: cannot access repo '$REPO'." >&2
+    echo "$REPO_VIEW_ERROR" >&2
+    echo "Check --repo and gh auth scope." >&2
     exit 1
   fi
 fi
